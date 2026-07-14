@@ -1,56 +1,84 @@
-import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/components/useColorScheme';
-
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from 'expo-router';
-
-export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
-};
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
-
-export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
-
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
-
-  return <RootLayoutNav />;
-}
+import { useEffect } from "react";
+import { ActivityIndicator, useColorScheme, View } from "react-native";
+// Hatalı olan @react-navigation/native importunu kaldırıp, temaları expo-router'dan alıyoruz:
+import {
+  DarkTheme,
+  DefaultTheme,
+  Stack,
+  ThemeProvider,
+  useRouter,
+  useSegments,
+} from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import Colors from "../constants/Colors";
+import { useAuth } from "../hooks/useAuth";
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+  // Normalize ColorSchemeName to only 'light' | 'dark' so it can safely index Colors
+  const rawScheme = useColorScheme();
+  const colorScheme: "light" | "dark" =
+    rawScheme === "light" ? "light" : "dark";
+  const colors = Colors[colorScheme];
+  const { user, loading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (loading) return;
+
+    // Kullanıcının şu an (auth) grubu içinde olup olmadığını kontrol et
+    const inAuthGroup = segments[0] === "(auth)";
+
+    if (!user && !inAuthGroup) {
+      // Kullanıcı giriş yapmamışsa ve auth sayfalarında değilse giriş ekranına yönlendir
+      router.replace("/(auth)/login");
+    } else if (user && inAuthGroup) {
+      // Kullanıcı giriş yapmışsa ve hala login/register sayfalarındaysa ana sayfaya yönlendir
+      router.replace("/(tabs)");
+    }
+  }, [user, loading, segments]);
+
+  // İlk yükleme esnasında şık bir loading göstergesi sunalım
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: colors.background,
+        }}
+      >
+        <ActivityIndicator size="large" color={colors.tint} />
+      </View>
+    );
+  }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <Stack>
+        {/* Alt Menü (Tab) Yapısı */}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+
+        {/* (auth) satırını sildik, Expo Router alt rotaları kendisi eşleştirecek */}
+
+        {/* Sonuç Detay Ekranı */}
+        <Stack.Screen
+          name="caption/[id]"
+          options={{
+            presentation: "modal",
+            title: "Capshion Detay",
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: colors.background },
+            headerTintColor: colors.text,
+          }}
+        />
       </Stack>
+      <StatusBar style="auto" />
     </ThemeProvider>
   );
+}
+
+export default function RootLayout() {
+  return <RootLayoutNav />;
 }
