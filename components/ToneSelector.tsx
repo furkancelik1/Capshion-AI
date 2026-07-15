@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useColorScheme } from '@/components/useColorScheme';
-import Colors from '@/constants/Colors';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { GlassTheme } from '@/constants/LiquidGlass';
+import HapticButton from '@/components/HapticButton';
 
 interface ToneOption {
   id: string;
@@ -24,52 +24,41 @@ interface ToneSelectorProps {
 }
 
 export default function ToneSelector({ selectedTone, onToneSelect }: ToneSelectorProps) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme];
-
   const renderTone = useCallback(
     (tone: ToneOption) => {
       const isSelected = selectedTone === tone.id;
 
       return (
-        <TouchableOpacity
+        <HapticButton
           key={tone.id}
           style={[
             styles.card,
             {
-              backgroundColor: colors.card,
-              borderColor: isSelected ? colors.tint : colors.border,
+              backgroundColor: isSelected ? GlassTheme.panelStrong : GlassTheme.panel,
+              borderColor: isSelected ? GlassTheme.border : GlassTheme.border,
             },
-            isSelected && { shadowColor: colors.tint },
+            isSelected && { borderWidth: 2 },
           ]}
           onPress={() => onToneSelect(tone.id)}
           activeOpacity={0.7}
         >
           <Text style={styles.emoji}>{tone.emoji}</Text>
           <Text
-            style={[
-              styles.name,
-              { color: colors.text },
-              !isSelected && { opacity: 0.6 },
-            ]}
+            style={[styles.name, { color: GlassTheme.textMain }]}
             numberOfLines={1}
           >
             {tone.name}
           </Text>
           <Text
-            style={[
-              styles.prompt,
-              { color: colors.icon },
-              !isSelected && { opacity: 0.5 },
-            ]}
+            style={[styles.prompt, { color: GlassTheme.textMuted }]}
             numberOfLines={1}
           >
             {tone.prompt}
           </Text>
-        </TouchableOpacity>
+        </HapticButton>
       );
     },
-    [selectedTone, onToneSelect, colors]
+    [selectedTone, onToneSelect]
   );
 
   return (
@@ -90,21 +79,18 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
     gap: 10,
   },
   card: {
     width: 120,
     paddingVertical: 16,
     paddingHorizontal: 12,
-    borderRadius: 14,
-    borderWidth: 1.5,
+    borderRadius: GlassTheme.radiusMd,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
+    ...GlassTheme.cardShadow,
   },
   emoji: {
     fontSize: 28,

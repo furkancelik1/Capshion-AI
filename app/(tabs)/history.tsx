@@ -1,21 +1,26 @@
-import { StyleSheet, Text, useColorScheme, View } from "react-native";
-import Colors from "../../constants/Colors";
-export default function HistoryScreen() {
-  const colorScheme = useColorScheme() || "dark";
+import { StyleSheet, Text, View } from "react-native";
+import { GlassTheme } from "../../constants/LiquidGlass";
+import GlassPanel from "../../components/GlassPanel";
+import AmbientGlow from "../../components/AmbientGlow";
+import { ClockIcon } from "../../components/GlassIcons";
 
+export default function HistoryScreen() {
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: Colors[colorScheme as "light" | "dark"].background },
-      ]}
-    >
-      <Text style={[styles.title, { color: Colors[colorScheme as "light" | "dark"].text }]}>
-        Geçmiş
-      </Text>
-      <Text style={{ color: Colors[colorScheme as "light" | "dark"].icon }}>
-        Daha önce ürettiğin açıklamalar burada listelenecek.
-      </Text>
+    <View style={styles.container}>
+      <AmbientGlow />
+      <View style={styles.header}>
+        <View style={styles.headerRow}>
+          <ClockIcon size={22} />
+          <Text style={styles.title}>Geçmiş</Text>
+        </View>
+        <Text style={styles.subtitle}>
+          Daha önce ürettiğin açıklamalar burada listelenecek.
+        </Text>
+      </View>
+      <GlassPanel style={styles.emptyCard}>
+        <ClockIcon size={40} />
+        <Text style={styles.emptyText}>Henüz bir geçmiş kaydın yok.</Text>
+      </GlassPanel>
     </View>
   );
 }
@@ -23,9 +28,39 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: GlassTheme.bg,
     padding: 20,
+    paddingTop: 40,
   },
-  title: { fontSize: 24, fontWeight: "bold", marginBottom: 10 },
+  header: {
+    marginBottom: 24,
+    gap: 8,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: GlassTheme.textMain,
+  },
+  subtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: GlassTheme.textMuted,
+  },
+  emptyCard: {
+    borderRadius: GlassTheme.radiusLg,
+    padding: 32,
+    alignItems: "center",
+    gap: 14,
+  },
+  emptyText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: GlassTheme.textMuted,
+    textAlign: "center",
+  },
 });

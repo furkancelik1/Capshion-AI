@@ -8,18 +8,16 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
-import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/hooks/useAuth';
-import Colors from '@/constants/Colors';
+import HapticButton from '@/components/HapticButton';
+import { GlassTheme } from '@/constants/LiquidGlass';
 
 export default function LoginScreen() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme];
   const { signInWithEmail, loading } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -44,7 +42,7 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.background }]}
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
@@ -53,76 +51,89 @@ export default function LoginScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={[styles.brand, { color: colors.tint }]}>Capshion AI</Text>
-          <Text style={[styles.title, { color: colors.text }]}>Tekrar hoş geldin</Text>
-          <Text style={[styles.subtitle, { color: colors.icon }]}>
+          <Text style={[styles.brand, { color: GlassTheme.textSub }]}>
+            Capshion AI
+          </Text>
+          <Text style={[styles.title, { color: GlassTheme.textMain }]}>
+            Tekrar hoş geldin
+          </Text>
+          <Text style={[styles.subtitle, { color: GlassTheme.textSub }]}>
             Devam etmek için giriş yap
           </Text>
         </View>
 
         <View style={styles.form}>
-          <TextInput
-            style={[
-              styles.input,
-              { backgroundColor: colors.card, borderColor: colors.border, color: colors.text },
-            ]}
-            placeholder="E-posta"
-            placeholderTextColor={colors.icon}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="email"
-          />
-
-          <View style={styles.passwordWrapper}>
+          <BlurView
+            intensity={GlassTheme.blurIntensity}
+            tint="dark"
+            style={styles.inputBlur}
+          >
             <TextInput
-              style={[
-                styles.input,
-                styles.passwordInput,
-                { backgroundColor: colors.card, borderColor: colors.border, color: colors.text },
-              ]}
-              placeholder="Şifre"
-              placeholderTextColor={colors.icon}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
+              style={[styles.input, { color: GlassTheme.textMain }]}
+              placeholder="E-posta"
+              placeholderTextColor={GlassTheme.textPlaceholder}
+              value={email}
+              onChangeText={setEmail}
               autoCapitalize="none"
-              autoComplete="password"
+              keyboardType="email-address"
+              autoComplete="email"
             />
-            <TouchableOpacity
-              style={styles.eyeButton}
-              onPress={() => setShowPassword((prev) => !prev)}
-            >
-              <Ionicons
-                name={showPassword ? 'eye-off' : 'eye'}
-                size={22}
-                color={colors.icon}
-              />
-            </TouchableOpacity>
-          </View>
+          </BlurView>
 
-          <TouchableOpacity
-            style={[styles.submitButton, { backgroundColor: colors.tint }]}
+          <BlurView
+            intensity={GlassTheme.blurIntensity}
+            tint="dark"
+            style={styles.inputBlur}
+          >
+            <View style={styles.passwordRow}>
+              <TextInput
+                style={[styles.input, styles.passwordInput, { color: GlassTheme.textMain }]}
+                placeholder="Şifre"
+                placeholderTextColor={GlassTheme.textPlaceholder}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoComplete="password"
+              />
+              <HapticButton
+                style={styles.eyeButton}
+                onPress={() => setShowPassword((prev) => !prev)}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-off' : 'eye'}
+                  size={22}
+                  color={GlassTheme.textMain}
+                />
+              </HapticButton>
+            </View>
+          </BlurView>
+
+          <HapticButton
+            style={styles.submitButton}
             onPress={handleLogin}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
             disabled={loading}
           >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Text style={styles.submitText}>Giriş Yap</Text>
-            )}
-          </TouchableOpacity>
+            <View style={styles.submitGradient}>
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.submitText}>Giriş Yap</Text>
+              )}
+            </View>
+          </HapticButton>
         </View>
 
         <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: colors.icon }]}>
+          <Text style={[styles.footerText, { color: GlassTheme.textSub }]}>
             Hesabın yok mu?
           </Text>
-          <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-            <Text style={[styles.footerLink, { color: colors.tint }]}>Kaydol</Text>
-          </TouchableOpacity>
+          <HapticButton onPress={() => router.push('/(auth)/register')}>
+            <Text style={[styles.footerLink, { color: GlassTheme.textMain }]}>
+              Kaydol
+            </Text>
+          </HapticButton>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -152,7 +163,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginBottom: 8,
   },
   subtitle: {
@@ -162,32 +173,46 @@ const styles = StyleSheet.create({
   form: {
     gap: 16,
   },
+  inputBlur: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: GlassTheme.glassBorder,
+  },
   input: {
     height: 52,
-    borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
     fontWeight: '400',
+    backgroundColor: GlassTheme.glassCardBg,
   },
-  passwordWrapper: {
+  passwordRow: {
     position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   passwordInput: {
+    flex: 1,
     paddingRight: 48,
   },
   eyeButton: {
     position: 'absolute',
     right: 14,
-    top: 0,
-    bottom: 0,
+    height: '100%',
     justifyContent: 'center',
   },
   submitButton: {
     height: 52,
-    borderRadius: 12,
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginTop: 8,
+    ...GlassTheme.cardShadow,
+  },
+  submitGradient: {
+    flex: 1,
+    backgroundColor: '#6A11CB',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
   },
   submitText: {
     fontSize: 17,

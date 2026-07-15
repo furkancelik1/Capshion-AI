@@ -1,26 +1,29 @@
-import { Ionicons } from "@expo/vector-icons"; // Expo ile dahili gelen ikon kütüphanesi
+import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
-import { useColorScheme } from "react-native";
-import Colors from "../../constants/Colors";
-export default function TabLayout() {
-  const colorScheme = useColorScheme() ?? "dark";
-  const activeColor = Colors[colorScheme as "light" | "dark"].tint;
+import { StyleSheet } from "react-native";
+import { GlassTheme } from "../../constants/LiquidGlass";
 
+export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: activeColor,
-        tabBarStyle: {
-          backgroundColor: Colors[colorScheme as "light" | "dark"].background,
-          borderTopColor: Colors[colorScheme as "light" | "dark"].border,
-          elevation: 0,
-          shadowOpacity: 0,
-        },
-        headerStyle: {
-          backgroundColor: Colors[colorScheme as "light" | "dark"].background,
-        },
+        headerShown: true,
+        headerTransparent: true,
+        headerStyle: { backgroundColor: "transparent" },
+        headerTintColor: GlassTheme.textMain,
+        headerTitleStyle: { color: GlassTheme.textMain },
         headerShadowVisible: false,
-        headerTintColor: Colors[colorScheme as "light" | "dark"].text,
+        tabBarActiveTintColor: GlassTheme.textMain,
+        tabBarInactiveTintColor: GlassTheme.textSub,
+        tabBarStyle: styles.tabBar,
+        tabBarBackground: () => (
+          <BlurView
+            intensity={GlassTheme.blurIntensity}
+            tint="dark"
+            style={styles.tabBarBlur}
+          />
+        ),
       }}
     >
       <Tabs.Screen
@@ -65,3 +68,16 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBar: {
+    position: "absolute",
+    backgroundColor: "transparent",
+    borderTopWidth: 0,
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  tabBarBlur: {
+    flex: 1,
+  },
+});

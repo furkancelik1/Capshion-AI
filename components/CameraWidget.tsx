@@ -1,75 +1,135 @@
-import * as ImagePicker from 'expo-image-picker';
-import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useColorScheme } from '@/components/useColorScheme';
-import Colors from '@/constants/Colors';
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import {
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import HapticButton from "../components/HapticButton";
+import { GlassTheme } from "../constants/LiquidGlass";
 
 interface CameraWidgetProps {
-  selectedImage: string | null;
-  onImageSelect: (uri: string) => void;
+  selectedImages: string[]; // ARTIK BİR DİZİ (ARRAY) BEKLİYORUZ
+  onImagesChange: (uris: string[]) => void;
 }
 
-export default function CameraWidget({ selectedImage, onImageSelect }: CameraWidgetProps) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme];
-
+export default function CameraWidget({
+  selectedImages = [],
+  onImagesChange,
+}: CameraWidgetProps) {
   const pickFromGallery = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('İzin Gerekli', 'Galeriye erişmek için izin vermelisiniz.');
-      return;
-    }
+    try {
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("İzin Gerekli", "Galeriye erişmek için izin vermelisiniz.");
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: false, // Çoklu seçim için kapalı olmalı
+        allowsMultipleSelection: true, // ÇOKLU SEÇİM AKTİF!
+        quality: 0.8,
+      });
 
-    if (!result.canceled && result.assets[0]) {
-      onImageSelect(result.assets[0].uri);
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        // Yeni seçilen fotoğrafların URL'lerini alıp mevcut listeye ekliyoruz
+        const newUris = result.assets.map((asset) => asset.uri);
+        onImagesChange([...selectedImages, ...newUris]);
+      }
+    } catch (error) {
+      console.log("Galeri açılırken hata:", error);
     }
   };
 
   const takePhoto = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('İzin Gerekli', 'Kameraya erişmek için izin vermelisiniz.');
-      return;
-    }
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("İzin Gerekli", "Kameraya erişmek için izin vermelisiniz.");
+        return;
+      }
 
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
 
-    if (!result.canceled && result.assets[0]) {
-      onImageSelect(result.assets[0].uri);
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        // Kameradan çekilen fotoğrafı mevcut listeye ekliyoruz
+        onImagesChange([...selectedImages, result.assets[0].uri]);
+      }
+    } catch (error) {
+      console.log("Kamera açılırken hata:", error);
     }
+  };
+
+  // Belirli bir fotoğrafı listeden çıkarma fonksiyonu
+  const removePhoto = (indexToRemove: number) => {
+    const newImages = selectedImages.filter(
+      (_, index) => index !== indexToRemove,
+    );
+    onImagesChange(newImages);
   };
 
   return (
     <View style={styles.container}>
-      {selectedImage ? (
-        <View style={styles.imageWrapper}>
-          <Image source={{ uri: selectedImage }} style={styles.image} />
-          <View style={styles.buttonRow}>
-            <ActionButton label="Galeri" icon="📷" onPress={pickFromGallery} colors={colors} />
-            <ActionButton label="Kamera" icon="🎥" onPress={takePhoto} colors={colors} />
+      <View style={styles.imageBlur}>
+        {/* Seçilen Görseller Karuseli */}
+        {selectedImages.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.carouselContainer}
+          >
+            {selectedImages.map((uri, index) => (
+              <View key={`${uri}-${index}`} style={styles.imageWrapper}>
+                <Image source={{ uri }} style={styles.image} />
+
+                {/* Çıkarma (X) Butonu */}
+                <TouchableOpacity
+                  style={styles.removeButton}
+                  onPress={() => removePhoto(index)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="close" size={16} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        ) : (
+          /* Hiç Görsel Yoksa Gösterilecek Boş Alan */
+          <View style={styles.emptyState}>
+            <Ionicons
+              name="images-outline"
+              size={40}
+              color={GlassTheme.textMuted}
+            />
+            <Text style={styles.emptyText}>
+              Dump için birden fazla{"\n"}fotoğraf seçebilirsiniz
+            </Text>
           </View>
+        )}
+
+        {/* Aksiyon Butonları (Her Zaman Görünür) */}
+        <View style={styles.buttonRow}>
+          <ActionButton
+            label="Galeri"
+            icon="images-outline"
+            onPress={pickFromGallery}
+          />
+          <ActionButton
+            label="Kamera"
+            icon="camera-outline"
+            onPress={takePhoto}
+          />
         </View>
-      ) : (
-        <View style={[styles.placeholder, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={styles.placeholderIcon}>🖼️</Text>
-          <Text style={[styles.placeholderText, { color: colors.icon }]}>Henüz bir fotoğraf seçilmedi</Text>
-          <View style={styles.buttonRow}>
-            <ActionButton label="Galeriden Seç" icon="📷" onPress={pickFromGallery} colors={colors} />
-            <ActionButton label="Kamera" icon="🎥" onPress={takePhoto} colors={colors} />
-          </View>
-        </View>
-      )}
+      </View>
     </View>
   );
 }
@@ -78,76 +138,107 @@ function ActionButton({
   label,
   icon,
   onPress,
-  colors,
 }: {
   label: string;
   icon: string;
   onPress: () => void;
-  colors: { text: string; tint: string; border: string };
 }) {
   return (
-    <TouchableOpacity
-      style={[styles.actionButton, { borderColor: colors.tint }]}
+    <HapticButton
+      style={[styles.actionButton, { borderColor: GlassTheme.border }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Text style={styles.actionIcon}>{icon}</Text>
-      <Text style={[styles.actionLabel, { color: colors.tint }]}>{label}</Text>
-    </TouchableOpacity>
+      <Ionicons name={icon as any} size={18} color={GlassTheme.textMain} />
+      <Text style={[styles.actionLabel, { color: GlassTheme.textMain }]}>
+        {label}
+      </Text>
+    </HapticButton>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    width: '100%',
-    alignItems: 'center',
+    width: "100%",
+    alignItems: "center",
+  },
+  imageBlur: {
+    width: "100%",
+    borderRadius: GlassTheme.radiusLg,
+    borderWidth: 1,
+    borderColor: GlassTheme.border,
+    overflow: "hidden",
+    alignItems: "center",
+    paddingTop: 16,
+    paddingBottom: 8,
+    paddingHorizontal: 8,
+    backgroundColor: "rgba(0,0,0,0.2)",
+    ...GlassTheme.cardShadow,
+  },
+  carouselContainer: {
+    gap: 12,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
   },
   imageWrapper: {
-    width: '100%',
-    alignItems: 'center',
+    position: "relative",
   },
   image: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: 16,
+    width: 200,
+    height: 200,
+    borderRadius: GlassTheme.radiusMd,
+    backgroundColor: GlassTheme.panelStrong,
   },
-  placeholder: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
+  removeButton: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
   },
-  placeholderIcon: {
-    fontSize: 48,
-    marginBottom: 12,
+  emptyState: {
+    width: "100%",
+    height: 200,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: GlassTheme.border,
+    borderRadius: GlassTheme.radiusMd,
+    backgroundColor: "rgba(255,255,255,0.03)",
+    gap: 12,
   },
-  placeholderText: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 20,
+  emptyText: {
+    color: GlassTheme.textMuted,
+    textAlign: "center",
+    fontSize: 13,
+    lineHeight: 18,
   },
   buttonRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     marginTop: 16,
+    marginBottom: 8,
   },
   actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    borderWidth: 1.5,
-  },
-  actionIcon: {
-    fontSize: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 13,
+    paddingHorizontal: 22,
+    borderRadius: 14,
+    borderWidth: 1,
+    backgroundColor: GlassTheme.panel,
+    ...GlassTheme.cardShadow,
   },
   actionLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

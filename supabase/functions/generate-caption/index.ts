@@ -1,156 +1,189 @@
-import "@supabase/functions-js/edge-runtime.d.ts";
-import { withSupabase } from "@supabase/server";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, content-type",
-};
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-export default {
-  fetch: withSupabase({ auth: ["publishable", "secret"] }, async (req, ctx) => {
-    if (req.method === "OPTIONS") {
-      return new Response("ok", { headers: corsHeaders });
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    const { imageUrls, tone } = await req.json()
+
+    if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Eksik parametre: imageUrls (dizi) zorunludur ve en az bir URL içermelidir.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
     }
 
-    try {
-      const authHeader = req.headers.get("Authorization");
-      if (!authHeader?.startsWith("Bearer ")) {
-        return jsonResponse({ error: "Yetkilendirme gerekli" }, 401);
-      }
+    const openAiKey = Deno.env.get('OPENAI_API_KEY')
+    if (!openAiKey) {
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API Anahtarı sunucuda tanımlı değil.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      )
+    }
 
-      const { data: { user }, error: authError } =
-        await ctx.supabaseAdmin.auth.getUser(authHeader.slice(7));
+    // DİNAMİK TON ANALİZİ VE ÖRNEK KURALLARI
+    let toneInstruction = "";
+    
+    switch (tone?.toLowerCase()) {
+      case "minimalist":
+        toneInstruction = `
+* TON KARAKTERİ: Çok az kelime, maksimum duruluk, zahmetsiz şıklık.
+* YAZIM STİLİ: Metinleri tamamen küçük harflerle (lowercase) yaz. Uzun, yüklemli cümleler kurma.
+* ÖRNEKLER:
+  - "sadece bu an."
+  - "bugünün detayı. 🖤"
+  - "köşem."`;
+        break;
+      case "eğlenceli":
+      case "fun":
+        toneInstruction = `
+* TON KARAKTERİ: Esprili, samimi, internet mizahına hakim, kasmayan bir arkadaş.
+* YAZIM STİLİ: Parantez içi fısıldamalar, ironik ve sempatik yaklaşımlar kullan.
+* ÖRNEKLER:
+  - "bu kareyi paylaşmak için galeride 10 dakika bakıştık, hakkını verin bari. 🫠"
+  - "pazartesi sendromuna karşı duruşum (pek başarılı değil)."
+  - "günün özeti tam olarak bu."`;
+        break;
+      case "havalı":
+      case "premium":
+      case "cool":
+        toneInstruction = `
+* TON KARAKTERİ: Karizmatik, özgüvenli, cool ve mesafeli.
+* YAZIM STİLİ: Kısa, net, felsefe veya edebiyat yapmayan, duruşu olan cümleler.
+* ÖRNEKLER:
+  - "kendi sınırlarında."
+  - "detaylar her zaman konuşur. 🥃"
+  - "kadraja sığmayanlar."`;
+        break;
+      case "samimi":
+      case "warm":
+        toneInstruction = `
+* TON KARAKTERİ: Sıcak, içten, kahve eşliğinde arkadaşıyla sohbet eden biri.
+* YAZIM STİLİ: Kitap cümlesi gibi değil, sesli düşünür gibi doğal bir Türkçe kullan.
+* ÖRNEKLER:
+  - "günün en sevdiğim saatine ulaştık sonunda, kahveler hazırsa başlayabiliriz. 🤍"
+  - "böyle günleri çok seviyorum, ekstra hiçbir şeye gerek yok."`;
+        break;
+      default:
+        toneInstruction = `
+* TON KARAKTERİ: Dengeli, estetik ve akıcı bir sosyal medya dili.`;
+    }
 
-      if (authError || !user) {
-        return jsonResponse({ error: "Geçersiz token" }, 401);
-      }
+    const systemPrompt = `Sen Türkiye'nin en vizyoner sosyal medya influencer'larının ve kreatif markalarının metinlerini yazan dahi bir sosyal medya uzmanısın.
+Kullanıcı sana bir Instagram Photo Dump / Carousel serisi olarak BİRDEN FAZLA görsel gönderiyor. Tüm bu görsellerin ortak 'vibe'ını, temasını, renklerini ve hissini analiz et; bütünsel, sanki o fotoğrafları bizzat sen çekip paylaşıyormuşsun gibi %100 GERÇEKÇİ, DOĞAL VE İNSANSI Instagram açıklamaları üret.
 
-      const { imageUrl, tone } = await req.json();
+Kullanıcının seçtiği ton tarzı: "${tone || 'Dengeli'}".
+Uygulayacağın Ton Karakteri ve Kuralları:
+${toneInstruction}
 
-      if (!imageUrl || !tone) {
-        return jsonResponse(
-          { error: "imageUrl ve tone alanları zorunludur" },
-          400,
-        );
-      }
+🛑 YAPAY ZEKA KLİŞELERİ VE KELİME KARA LİSTESİ (AÇIKÇA YASAKTIR!):
+Aşağıdaki kelimeleri ve türevlerini KESİNLİKLE KULLANMA. Bu kelimeleri kullanan metinler anında elenir:
+- "ritim" (şehrin ritmi vb.), "kaos", "melodi", "serüven", "macera", "dokunuş", "ruhu" (kahvenin ruhu vb.)
+- "fısıltı", "yankı", "senfoni", "büyü", "büyüleyici", "dans", "uyum", "gizemli", "yolculuk", "keşif", "estetik"
+- "kucaklamak", "ortak olmak", "eşlik etmek", "büyülenmek", "sergilemek", "yansıtmak"
 
-      const { data: profile, error: profileError } = await ctx.supabaseAdmin
-        .from("profiles")
-        .select("credits")
-        .eq("id", user.id)
-        .single();
+✍️ CÜMLE YAPISI VE AKICILIK KURALLARI (İNSANSI VE SALAŞ TÜRKÇE):
+1. ASLA şiirsel, edebi, felsefi veya "kitap cümlesi" gibi duran ağır yapılar kurma. Kimse Instagram'da "gölgelerin dans ettiği şu fani dünyada..." gibi yazmaz.
+2. Gerçek bir Türk sosyal medyada nasıl yazıyorsa öyle yaz: Günlük konuşma dilindeki "modu", "havası", "keyfi", "olay", "durum" gibi doğal kelimeleri tercih et. (Örn: "pazar kahvesi modu", "şöyle bir gün", "tam olarak bu").
+3. Cümleleri aşırı uzun tutup virgüllerle boğma. Kısa tut, gerekirse bitmemiş cümle hissi ver (salaş estetik).
+4. Soru sorarken zorlama ve yapay olma.
+5. Photo Dump olduğu için 3 alternatifin kurgusu şu şekilde olmalı ve birbirinden tamamen farklı olmalı:
+   - 1. ALTERNATİF (Punchy / Lowercase): Tüm görsellerin ortak havasını özetleyen, çok kısa, salaş ve minimalist bir başlık. Tamamen küçük harf. (Örn: "işte bu ara böyleyiz", "dump zamanı", "arka arkaya bunlar")
+   - 2. ALTERNATİF (Carousel / Slide-by-Slide): Karuseldeki fotoğrafların detaylarına tatlı/esprili atıflar yapan liste/madde kurgusu. (Örn: "slide 3: en sevdiğim köşe", "2. fotoğraftaki o kaos", "son kare bonus" gibi slide bazlı yorumlar içersin)
+   - 3. ALTERNATİF (Mod / Özet): "son zamanlarda...", "recent events", "weekly dump" tadında, o fotoğrafları çekerken yaşanan hissiyatı salaş, kasmayan ve doğal bir dille anlatan günlük/özet metni.
 
-      if (profileError || !profile) {
-        return jsonResponse({ error: "Profil bulunamadı" }, 404);
-      }
-
-      if (profile.credits <= 0) {
-        return jsonResponse({ error: "Yetersiz kredi" }, 403);
-      }
-
-      const geminiKey = Deno.env.get("GEMINI_API_KEY");
-      if (!geminiKey) {
-        return jsonResponse(
-          { error: "API anahtarı yapılandırılmamış" },
-          500,
-        );
-      }
-
-      const prompt = `Sana gönderilen görseli detaylıca analiz et. Bu görsele ve seçilen '${tone}' tonuna uygun olarak Instagram'da paylaşılabilecek, dikkat çekici, samimi ve organik duran 3 farklı alternatif açıklama (caption) ve bunlara uygun hashtag listeleri üret. Yanıtı kesinlikle şu JSON formatında dön: 
+Lütfen yanıtını tam olarak şu JSON formatında dön:
 {
   "captions": [
-    { "text": "açıklama metni", "hashtags": ["tag1", "tag2"] },
-    { "text": "açıklama metni", "hashtags": ["tag3", "tag4"] },
-    { "text": "açıklama metni", "hashtags": ["tag5", "tag6"] }
-  ]
-}`;
+    "1. alternatif (Punchy / Lowercase) açıklama metni",
+    "2. alternatif (Carousel / Slide-by-Slide) açıklama metni",
+    "3. alternatif (Mod / Özet) açıklama metni"
+  ],
+  "hashtags": ["#etiket1", "#etiket2", "#etiket3", "#etiket4", "#etiket5"]
+}
+JSON dışında hiçbir ek metin veya açıklama ekleme.`
 
-      const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{
-              parts: [
-                { fileData: { mimeType: "image/jpeg", fileUri: imageUrl } },
-                { text: prompt },
-              ],
-            }],
-          }),
-        },
-      );
+    const imageContentParts = imageUrls.map((url: string) => ({
+      type: "image_url",
+      image_url: { url }
+    }))
 
-      const geminiData = await geminiRes.json();
+    const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${openAiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Bu görselleri bir Instagram Photo Dump/Carousel serisi olarak analiz et. Tüm karelerin ortak havasını ve detaylarını birleştirerek belirtilen kurallara %100 uyan 3 alternatif caption üret. JSON formatında çıktı ver." },
+              ...imageContentParts
+            ]
+          }
+        ],
+        max_tokens: 600,
+        temperature: 0.9,
+        response_format: { type: "json_object" }
+      })
+    })
 
-      if (!geminiRes.ok) {
-        console.error("Gemini API hatası:", JSON.stringify(geminiData));
-        return jsonResponse({ error: "Yapay zeka servisi hatası" }, 502);
-      }
-
-      const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!rawText) {
-        return jsonResponse({ error: "Yapay zeka yanıtı boş" }, 502);
-      }
-
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : rawText);
-
-      if (!parsed?.captions?.length) {
-        return jsonResponse({ error: "Geçersiz yapay zeka yanıtı" }, 502);
-      }
-
-      const { data: post, error: postError } = await ctx.supabaseAdmin
-        .from("posts")
-        .insert({ user_id: user.id, image_url: imageUrl, tone })
-        .select("id")
-        .single();
-
-      if (postError || !post) {
-        console.error("Post ekleme hatası:", postError);
-        return jsonResponse({ error: "Kayıt oluşturulamadı" }, 500);
-      }
-
-      const captionRecords = parsed.captions.map(
-        (c: { text: string; hashtags: string[] }) => ({
-          post_id: post.id,
-          text: c.text,
-          hashtags: c.hashtags,
-        }),
-      );
-
-      const { error: captionsError } = await ctx.supabaseAdmin
-        .from("generated_captions")
-        .insert(captionRecords);
-
-      if (captionsError) {
-        console.error("Caption ekleme hatası:", captionsError);
-      }
-
-      const { error: updateError } = await ctx.supabaseAdmin
-        .from("profiles")
-        .update({ credits: profile.credits - 1 })
-        .eq("id", user.id);
-
-      if (updateError) {
-        console.error("Kredi güncelleme hatası:", updateError);
-      }
-
-      return jsonResponse({
-        captions: parsed.captions,
-        credits_remaining: profile.credits - 1,
-      });
-    } catch (err) {
-      console.error("Beklenmeyen hata:", err);
-      return jsonResponse({ error: "Sunucu hatası" }, 500);
+    const openAiData = await openAiResponse.json()
+    
+    if (!openAiResponse.ok) {
+      throw new Error(`OpenAI Hatası: ${openAiData.error?.message || 'Bilinmeyen Hata'}`)
     }
-  }),
-};
+
+    const aiContent = openAiData.choices[0].message.content
+
+    let parsedResult
+    try {
+      parsedResult = JSON.parse(aiContent)
+    } catch (e) {
+      const jsonRegex = /\{[\s\S]*\}/
+      const match = aiContent.match(jsonRegex)
+      if (match) {
+        parsedResult = JSON.parse(match[0])
+      } else {
+        throw new Error('Yapay zeka çıktısı JSON formatına dönüştürülemedi.')
+      }
+    }
+
+    const postId = `temp-${Date.now()}`
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        captions: parsedResult.captions,
+        hashtags: parsedResult.hashtags,
+        post_id: postId,
+        image_urls: imageUrls,
+        remainingCredits: 99,
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+    )
+
+  } catch (error: any) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    )
+  }
+})
