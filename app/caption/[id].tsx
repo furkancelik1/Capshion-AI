@@ -3,21 +3,25 @@ import LiquidToast from "@/components/LiquidToast";
 import { GlassTheme } from "@/constants/LiquidGlass";
 import type { CaptionItem } from "@/hooks/useGenerateCaption";
 import { supabase } from "@/services/supabase";
+import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import * as Clipboard from "expo-clipboard";
 import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
   FadeInUp,
   useAnimatedStyle,
@@ -178,26 +182,29 @@ export default function CaptionDetailScreen() {
     }
   }, []);
 
-  const handleShare = useCallback(() => {
-    Alert.alert(
-      "Instagram Paylaşımı",
-      "Yakında Instagram doğrudan paylaşım özelliği eklenecek!",
-    );
-  }, []);
+  const handleShare = useCallback(async () => {
+    if (captions.length > 0 && copiedIndex === null) {
+      await Clipboard.setStringAsync(captions[0].text);
+      setCopiedIndex(0);
+      setToastVisible(true);
+      setTimeout(() => setCopiedIndex(null), 2000);
+    }
 
-  const renderGradient = () => (
-    <LinearGradient
-      colors={[...GlassTheme.primaryGradient]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={StyleSheet.absoluteFill}
-    />
-  );
+    try {
+      const canOpen = await Linking.canOpenURL("instagram://camera");
+      if (canOpen) {
+        await Linking.openURL("instagram://camera");
+      } else {
+        await Linking.openURL("https://instagram.com");
+      }
+    } catch {
+      Alert.alert("Hata", "Instagram açılamadı.");
+    }
+  }, [captions, copiedIndex]);
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        {renderGradient()}
         <ActivityIndicator size="large" color={GlassTheme.textMain} />
       </View>
     );
@@ -205,12 +212,22 @@ export default function CaptionDetailScreen() {
 
   return (
     <View style={styles.container}>
-      {renderGradient()}
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
+            <Ionicons name="arrow-back" size={24} color={GlassTheme.textMain} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Capshion Detay</Text>
+          <TouchableOpacity onPress={() => {}} style={styles.headerBtn}>
+            <Ionicons name="settings-outline" size={24} color={GlassTheme.textMain} />
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        // 🚀 DIKEY SCROLL YAVAŞLATMA PARAMETRELERİ
         decelerationRate={0.99}
         bounces={true}
       >
@@ -226,7 +243,7 @@ export default function CaptionDetailScreen() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.imageCarousel}
                 // 🚀 PREMIUM VE YUMUŞAK KAYDIRMA PARAMETRELERİ
-                decelerationRate="normal" // 1.4"
+                decelerationRate="fast"
                 snapToInterval={132} // Genişlik (120) + Gap (12)
                 snapToAlignment="start"
                 disableIntervalMomentum={true}
@@ -291,7 +308,7 @@ export default function CaptionDetailScreen() {
           activeOpacity={0.85}
         >
           <LinearGradient
-            colors={[...GlassTheme.primaryGradient]}
+            colors={[...GlassTheme.gradient]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.shareGradient}
@@ -312,17 +329,46 @@ export default function CaptionDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: GlassTheme.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: GlassTheme.background,
+  },
+  safeArea: {
+    backgroundColor: GlassTheme.background,
+    zIndex: 10,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    height: 60,
+  },
+  headerBtn: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: "600",
+    color: GlassTheme.textMain,
+    textAlign: "center",
+    letterSpacing: -0.3,
   },
   scroll: {
     flex: 1,
   },
   content: {
     padding: 20,
+    paddingTop: 18,
     paddingBottom: 48,
   },
 
@@ -394,7 +440,7 @@ const styles = StyleSheet.create({
   },
   cardInner: {
     padding: 20,
-    backgroundColor: GlassTheme.glassCardBg,
+    backgroundColor: GlassTheme.cardBackground,
   },
   cardLabel: {
     fontSize: 12,

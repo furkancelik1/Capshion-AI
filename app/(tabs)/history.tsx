@@ -1,26 +1,149 @@
-import { StyleSheet, Text, View } from "react-native";
-import { GlassTheme } from "../../constants/LiquidGlass";
-import GlassPanel from "../../components/GlassPanel";
+import * as Clipboard from "expo-clipboard";
+import * as Haptics from "expo-haptics";
+import { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import AmbientGlow from "../../components/AmbientGlow";
 import { ClockIcon } from "../../components/GlassIcons";
+import GlassPanel from "../../components/GlassPanel";
+import { GlassTheme } from "../../constants/LiquidGlass";
+import { supabase } from "../../services/supabase";
+
+interface HistoryItem {
+  id: string;
+  caption_text: string;
+  hashtags: string[];
+  created_at: string;
+  post_id: string;
+}
 
 export default function HistoryScreen() {
+  const [data, setData] = useState<HistoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+
+  const fetchHistory = async () => {
+    setLoading(true);
+    setError(null);
+
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) {
+      setError("Oturum bulunamadı. Lütfen tekrar giriş yapın.");
+      setLoading(false);
+      return;
+    }
+
+    const { data: captions, error: fetchError } = await supabase
+      .from("generated_captions")
+      .select("id, caption_text, hashtags, created_at, post_id")
+      .order("created_at", { ascending: false });
+
+    if (fetchError) {
+      setError(fetchError.message);
+      setLoading(false);
+      return;
+    }
+
+    setData((captions as HistoryItem[]) || []);
+    setLoading(false);
+  };
+
+  const handleCopy = useCallback(async (item: HistoryItem) => {
+    await Clipboard.setStringAsync(item.caption_text);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    setCopiedId(item.id);
+    setTimeout(() => setCopiedId(null), 1800);
+  }, []);
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, "0");
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    return `${day}.${month}.${year} ${hours}:${minutes}`;
+  };
+
+  const renderItem = ({ item }: { item: HistoryItem }) => {
+    const showCopied = copiedId === item.id;
+
+    return (
+      <TouchableOpacity activeOpacity={0.7} onPress={() => handleCopy(item)}>
+        <GlassPanel style={styles.card}>
+          <Text style={styles.captionText}>{item.caption_text}</Text>
+
+          <View style={styles.chipsRow}>
+            {(item.hashtags || []).map((tag, i) => (
+              <View key={`${item.id}-tag-${i}`} style={styles.chip}>
+                <Text style={styles.chipText}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.cardFooter}>
+            <Text style={styles.dateText}>{formatDate(item.created_at)}</Text>
+            {showCopied && <Text style={styles.copiedText}>Kopyalandı!</Text>}
+          </View>
+        </GlassPanel>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <AmbientGlow />
+
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <ClockIcon size={22} />
           <Text style={styles.title}>Geçmiş</Text>
         </View>
         <Text style={styles.subtitle}>
-          Daha önce ürettiğin açıklamalar burada listelenecek.
+          Daha önce ürettiğin caption'ları görüntüle ve kopyala.
         </Text>
       </View>
-      <GlassPanel style={styles.emptyCard}>
-        <ClockIcon size={40} />
-        <Text style={styles.emptyText}>Henüz bir geçmiş kaydın yok.</Text>
-      </GlassPanel>
+
+      {loading && (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={GlassTheme.primary} />
+        </View>
+      )}
+
+      {error && (
+        <GlassPanel style={styles.errorCard}>
+          <Text style={styles.errorText}>{error}</Text>
+        </GlassPanel>
+      )}
+
+      {!loading && !error && data.length === 0 && (
+        <GlassPanel style={styles.emptyCard}>
+          <ClockIcon size={40} />
+          <Text style={styles.emptyText}>Henüz bir geçmiş kaydın yok.</Text>
+        </GlassPanel>
+      )}
+
+      {!loading && data.length > 0 && (
+        <FlatList
+          data={data}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 }
@@ -51,6 +174,22 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: GlassTheme.textMuted,
   },
+  loadingWrap: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorCard: {
+    borderRadius: GlassTheme.radiusLg,
+    padding: 20,
+    alignItems: "center",
+  },
+  errorText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: GlassTheme.dangerText,
+    textAlign: "center",
+  },
   emptyCard: {
     borderRadius: GlassTheme.radiusLg,
     padding: 32,
@@ -62,5 +201,53 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: GlassTheme.textMuted,
     textAlign: "center",
+  },
+  listContent: {
+    paddingBottom: 40,
+    gap: 14,
+  },
+  card: {
+    borderRadius: GlassTheme.radiusMd,
+    padding: 16,
+    gap: 12,
+  },
+  captionText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: GlassTheme.textMain,
+    lineHeight: 21,
+  },
+  chipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  chip: {
+    backgroundColor: GlassTheme.panelStrong,
+    borderRadius: GlassTheme.radiusPill,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: GlassTheme.border,
+  },
+  chipText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: GlassTheme.textMuted,
+  },
+  cardFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  dateText: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: GlassTheme.textMuted,
+  },
+  copiedText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: GlassTheme.primary,
   },
 });

@@ -22,7 +22,7 @@ export function useGenerateCaption() {
   const [error, setError] = useState<string | null>(null);
 
   // 2. Parametreyi `localUri: string` yerine `localUris: string[]` olarak değiştirdik
-  const generate = async (localUris: string[], tone: string): Promise<GenerateCaptionResponse | null> => {
+  const generate = async (localUris: string[], tone: string, gender?: string, ageRange?: string): Promise<GenerateCaptionResponse | null> => {
     setGenerating(true);
     setError(null);
 
@@ -37,7 +37,7 @@ export function useGenerateCaption() {
 
       // 5. Backend'e direkt URL dizisini gönderiyoruz
       const { data, error: functionError } = await supabase.functions.invoke('generate-caption', {
-        body: { imageUrls, tone },
+        body: { imageUrls, tone, gender: gender || "neutral", ageRange: ageRange || null },
       });
 
       if (functionError) {

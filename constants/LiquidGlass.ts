@@ -1,5 +1,11 @@
 export const GlassTheme = {
-  bg: '#050505',
+  background: '#0A0A0A',
+  primary: '#7A53FF',
+  secondary: '#3B82F6',
+  gradient: ['#7A53FF', '#3B82F6'],
+  cardBackground: 'rgba(25, 25, 25, 0.95)',
+
+  bg: '#0A0A0A',
   panel: 'rgba(255, 255, 255, 0.06)',
   panelStrong: 'rgba(255, 255, 255, 0.13)',
   border: 'rgba(255, 255, 255, 0.15)',
@@ -20,7 +26,7 @@ export const GlassTheme = {
   glassBorder: 'rgba(255, 255, 255, 0.16)',
   textSub: '#b8bfd3',
   cardBorderRadius: 26,
-  blurIntensity: 25,
+  blurIntensity: 20,
   selectedBorder: 'rgba(255, 255, 255, 0.16)',
   vibrantBorder: 'rgba(255, 255, 255, 0.16)',
   dangerBorder: 'rgba(255, 75, 75, 0.6)',
@@ -30,6 +36,8 @@ export const GlassTheme = {
   titleWeight: '700' as const,
   bodyWeight: '400' as const,
   textPlaceholder: '#6B6B6B',
+
+  overlayBg: 'rgba(0, 0, 0, 0.7)',
 
   cardShadow: {
     shadowColor: '#000',

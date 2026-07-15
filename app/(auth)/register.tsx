@@ -14,8 +14,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
+import AgeRangeSelector from '@/components/AgeRangeSelector';
 import HapticButton from '@/components/HapticButton';
 import { GlassTheme } from '@/constants/LiquidGlass';
+import { supabase } from '@/services/supabase';
 
 export default function RegisterScreen() {
   const { signUpWithEmail, loading } = useAuth();
@@ -25,6 +27,7 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [ageRange, setAgeRange] = useState<string | null>(null);
 
   const handleRegister = async () => {
     if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
@@ -42,11 +45,24 @@ export default function RegisterScreen() {
       return;
     }
 
-    const { error } = await signUpWithEmail(email.trim(), password);
+    const { data, error } = await signUpWithEmail(email.trim(), password);
 
     if (error) {
       Alert.alert('Kayıt Başarısız', error.message);
       return;
+    }
+
+    const userId = data?.data?.user?.id;
+    if (userId) {
+      const { error: profileError } = await supabase.from('profiles').upsert({
+        id: userId,
+        email: email.trim(),
+        age_range: ageRange || null,
+        credits: 5,
+      });
+      if (profileError) {
+        console.log('Profil oluşturma hatası:', profileError.message);
+      }
     }
 
     Alert.alert(
@@ -153,6 +169,8 @@ export default function RegisterScreen() {
               </HapticButton>
             </View>
           </BlurView>
+
+          <AgeRangeSelector value={ageRange} onChange={setAgeRange} />
 
           <HapticButton
             style={styles.submitButton}

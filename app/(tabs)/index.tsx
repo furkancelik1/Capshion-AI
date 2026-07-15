@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import AmbientGlow from "../../components/AmbientGlow";
 import CameraWidget from "../../components/CameraWidget";
+import GeneratingModal from "../../components/GeneratingModal";
+import HowItWorksModal from "../../components/HowItWorksModal";
 import {
   FeedIcon,
   HashtagIcon,
@@ -18,10 +20,11 @@ import {
 } from "../../components/GlassIcons";
 import GlassPanel from "../../components/GlassPanel";
 import HapticButton from "../../components/HapticButton";
-import LiquidLoading from "../../components/LiquidLoading";
 import ToneSelector from "../../components/ToneSelector";
 import { GlassTheme } from "../../constants/LiquidGlass";
+import { useAuth } from "../../hooks/useAuth";
 import { useGenerateCaption } from "../../hooks/useGenerateCaption";
+import { supabase } from "../../services/supabase";
 
 const STATS_DATA = [
   { value: "12K+", label: "caption üretildi" },
@@ -87,13 +90,29 @@ function PulseDot() {
 }
 
 export default function HomeScreen() {
-  // 🚀 TEK GÖRSEL YERİNE ÇOKLU GÖRSEL STATE'İ KULLANIYORUZ
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [selectedTone, setSelectedTone] = useState<string | null>(null);
+  const [selectedGender, setSelectedGender] = useState<string>("erkek");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [ageRange, setAgeRange] = useState<string | null>(null);
 
-  const { generate, loading, error } = useGenerateCaption();
+  const { user } = useAuth();
+  const { generate, error } = useGenerateCaption();
 
-  const handleCreateCapshion = async () => {
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("age_range")
+      .eq("id", user.id)
+      .single()
+      .then(({ data }) => {
+        if (data?.age_range) setAgeRange(data.age_range);
+      });
+  }, [user]);
+
+  const handleGenerate = async () => {
     if (selectedImages.length === 0 || !selectedTone) {
       Alert.alert(
         "Eksik Bilgi",
@@ -102,39 +121,42 @@ export default function HomeScreen() {
       return;
     }
 
-    // Artık seçilen tüm görsellerin (URL'lerin) dizisini gönderiyoruz
-    const result = await generate(selectedImages, selectedTone);
+    setIsGenerating(true);
 
-    if (result) {
-      router.push({
-        pathname: "/caption/[id]",
-        params: {
-          id: result.post_id,
-          data: JSON.stringify({
-            captions: result.captions,
-            image_url: result.image_urls?.[0] || result.image_url,
-            image_urls: result.image_urls, // Tüm diziyi de gönderiyoruz
-            credits_remaining: result.credits_remaining,
-          }),
-        },
-      });
-      // Başarılı işlem sonrası state'leri sıfırla
-      setSelectedImages([]);
-      setSelectedTone(null);
-    } else if (error) {
-      Alert.alert("Hata", error);
+    try {
+      const result = await generate(selectedImages, selectedTone, selectedGender, ageRange || undefined);
+
+      if (result) {
+        router.push({
+          pathname: "/caption/[id]",
+          params: {
+            id: result.post_id,
+            data: JSON.stringify({
+              captions: result.captions,
+              image_url: result.image_urls?.[0] || result.image_url,
+              image_urls: result.image_urls,
+              credits_remaining: result.credits_remaining,
+            }),
+          },
+        });
+        setSelectedImages([]);
+        setSelectedTone(null);
+      } else if (error) {
+        Alert.alert("Hata", error);
+      }
+    } catch (err: any) {
+      Alert.alert("Hata", err.message || "Beklenmedik bir hata oluştu.");
+    } finally {
+      setIsGenerating(false);
     }
   };
 
   const handleHowItWorks = () => {
-    Alert.alert(
-      "Nasıl Çalışır?",
-      "1. Fotoğraflarını seç (Photo Dump)\n2. Gönderi tonunu belirle\n3. Yapay zeka ortak caption'ı oluştursun\n4. Kopyala ve paylaş!",
-    );
+    setShowHowItWorks(true);
   };
 
-  // En az bir görsel ve bir ton seçildiyse buton aktif olur
-  const canGenerate = selectedImages.length > 0 && selectedTone;
+  // En az bir görsel ve bir ton seçildiyse ve işlem yapılmıyorsa buton aktif olur
+  const canGenerate = selectedImages.length > 0 && !!selectedTone && !isGenerating;
 
   return (
     <View style={styles.root}>
@@ -142,7 +164,9 @@ export default function HomeScreen() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.container}
-        scrollEnabled={!loading}
+        scrollEnabled={!isGenerating}
+        decelerationRate={0.99}
+        bounces={true}
       >
         {/* ── Top Nav ── */}
         <GlassPanel style={styles.topNav}>
@@ -177,7 +201,7 @@ export default function HomeScreen() {
                 styles.primaryButton,
                 !canGenerate && styles.primaryButtonMuted,
               ]}
-              onPress={handleCreateCapshion}
+              onPress={handleGenerate}
               activeOpacity={0.85}
               disabled={!canGenerate}
             >
@@ -260,16 +284,24 @@ export default function HomeScreen() {
             CapshionAI ile fikri metne dönüştür, paylaşım ritmini hiç düşürme.
           </Text>
           <HapticButton
-            style={styles.primaryButton}
-            onPress={handleCreateCapshion}
+            style={[
+              styles.primaryButton,
+              !canGenerate && styles.primaryButtonMuted,
+            ]}
+            onPress={handleGenerate}
             activeOpacity={0.85}
+            disabled={!canGenerate}
           >
             <Text style={styles.primaryButtonText}>Ücretsiz dene</Text>
           </HapticButton>
         </GlassPanel>
       </ScrollView>
 
-      {loading && <LiquidLoading />}
+      <GeneratingModal visible={isGenerating} />
+      <HowItWorksModal
+        visible={showHowItWorks}
+        onClose={() => setShowHowItWorks(false)}
+      />
     </View>
   );
 }
@@ -369,7 +401,7 @@ const styles = StyleSheet.create({
     ...GlassTheme.cardShadow,
   },
   primaryButtonMuted: {
-    opacity: 0.4,
+    opacity: 0.5,
   },
   primaryButtonText: {
     fontSize: 15,

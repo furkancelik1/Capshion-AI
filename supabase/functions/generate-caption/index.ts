@@ -14,10 +14,14 @@ serve(async (req) => {
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        db: { schema: 'public' },
+        auth: { persistSession: false }
+      }
     )
 
-    const { imageUrls, tone } = await req.json()
+    const { imageUrls, tone, gender, ageRange } = await req.json()
 
     if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
       return new Response(
@@ -34,87 +38,33 @@ serve(async (req) => {
       )
     }
 
-    // DİNAMİK TON ANALİZİ VE ÖRNEK KURALLARI
-    let toneInstruction = "";
-    
-    switch (tone?.toLowerCase()) {
-      case "minimalist":
-        toneInstruction = `
-* TON KARAKTERİ: Çok az kelime, maksimum duruluk, zahmetsiz şıklık.
-* YAZIM STİLİ: Metinleri tamamen küçük harflerle (lowercase) yaz. Uzun, yüklemli cümleler kurma.
-* ÖRNEKLER:
-  - "sadece bu an."
-  - "bugünün detayı. 🖤"
-  - "köşem."`;
-        break;
-      case "eğlenceli":
-      case "fun":
-        toneInstruction = `
-* TON KARAKTERİ: Esprili, samimi, internet mizahına hakim, kasmayan bir arkadaş.
-* YAZIM STİLİ: Parantez içi fısıldamalar, ironik ve sempatik yaklaşımlar kullan.
-* ÖRNEKLER:
-  - "bu kareyi paylaşmak için galeride 10 dakika bakıştık, hakkını verin bari. 🫠"
-  - "pazartesi sendromuna karşı duruşum (pek başarılı değil)."
-  - "günün özeti tam olarak bu."`;
-        break;
-      case "havalı":
-      case "premium":
-      case "cool":
-        toneInstruction = `
-* TON KARAKTERİ: Karizmatik, özgüvenli, cool ve mesafeli.
-* YAZIM STİLİ: Kısa, net, felsefe veya edebiyat yapmayan, duruşu olan cümleler.
-* ÖRNEKLER:
-  - "kendi sınırlarında."
-  - "detaylar her zaman konuşur. 🥃"
-  - "kadraja sığmayanlar."`;
-        break;
-      case "samimi":
-      case "warm":
-        toneInstruction = `
-* TON KARAKTERİ: Sıcak, içten, kahve eşliğinde arkadaşıyla sohbet eden biri.
-* YAZIM STİLİ: Kitap cümlesi gibi değil, sesli düşünür gibi doğal bir Türkçe kullan.
-* ÖRNEKLER:
-  - "günün en sevdiğim saatine ulaştık sonunda, kahveler hazırsa başlayabiliriz. 🤍"
-  - "böyle günleri çok seviyorum, ekstra hiçbir şeye gerek yok."`;
-        break;
-      default:
-        toneInstruction = `
-* TON KARAKTERİ: Dengeli, estetik ve akıcı bir sosyal medya dili.`;
-    }
+    const ageStyle = ageRange === "18-24"
+      ? "Daha genç, samimi, trend ve dijital dille yaz. Güncel sosyal medya akışlarına hakim bir üslup kullan."
+      : ageRange === "25-34"
+      ? "Dengeli, olgun ama modern bir dil kullan. Profesyonellik ile samimiyet arasında bir ton tercih et."
+      : ageRange === "35-44" || ageRange === "45+"
+      ? "Daha olgun, güven veren, sofistike ve zamansız bir dil kullan. Abartıdan uzak, duru bir anlatım tercih et."
+      : "Doğal ve her yaşa hitap eden dengeli bir dil kullan."
 
-    const systemPrompt = `Sen Türkiye'nin en vizyoner sosyal medya influencer'larının ve kreatif markalarının metinlerini yazan dahi bir sosyal medya uzmanısın.
-Kullanıcı sana bir Instagram Photo Dump / Carousel serisi olarak BİRDEN FAZLA görsel gönderiyor. Tüm bu görsellerin ortak 'vibe'ını, temasını, renklerini ve hissini analiz et; bütünsel, sanki o fotoğrafları bizzat sen çekip paylaşıyormuşsun gibi %100 GERÇEKÇİ, DOĞAL VE İNSANSI Instagram açıklamaları üret.
+    const genderStyle = gender === "erkek" || gender === "male"
+      ? "Maskülen, özgüvenli, kısa ve cool bir dil kullan. Gereksiz sıfatlardan kaçın, az ve öz yaz."
+      : gender === "kadın" || gender === "female"
+      ? "Estetik, sofistike, etkileyici ve akıcı bir dil kullan. Zarif ve hisli bir anlatım tercih et."
+      : "Dengeli ve doğal bir üslup kullan, cinsiyet vurgusu yapma."
 
-Kullanıcının seçtiği ton tarzı: "${tone || 'Dengeli'}".
-Uygulayacağın Ton Karakteri ve Kuralları:
-${toneInstruction}
+    const systemPrompt = `Sen gerçek bir sosyal medya kullanıcısısın. Bir arkadaşının fotoğrafına yorum yapar gibi doğal ve samimi caption'lar yazıyorsun.
 
-🛑 YAPAY ZEKA KLİŞELERİ VE KELİME KARA LİSTESİ (AÇIKÇA YASAKTIR!):
-Aşağıdaki kelimeleri ve türevlerini KESİNLİKLE KULLANMA. Bu kelimeleri kullanan metinler anında elenir:
-- "ritim" (şehrin ritmi vb.), "kaos", "melodi", "serüven", "macera", "dokunuş", "ruhu" (kahvenin ruhu vb.)
-- "fısıltı", "yankı", "senfoni", "büyü", "büyüleyici", "dans", "uyum", "gizemli", "yolculuk", "keşif", "estetik"
-- "kucaklamak", "ortak olmak", "eşlik etmek", "büyülenmek", "sergilemek", "yansıtmak"
+🚨 BU KURALLARIN İHLALİ KESİNLİKLE YASAKTIR:
+1. TEK GÖRSEL KURALI: Kullanıcı SADECE 1 (BİR) fotoğraf yükledi. ASLA "slide 1", "slayt", "görsel 1", "fotoğraf 2", "ilk kare", "sonraki slide", "carousel", "dump", "kaydır", "sonraki kare", "1/3", "2/3" gibi numaralandırılmış veya çoklu görsel kurgusu barındıran hiçbir ibare kullanma. Her alternatif tek bir fotoğrafa ait tek parça, akıcı bir metin olmalıdır.
+2. ${genderStyle}
+3. ${ageStyle}
+4. ASLA yapay, robotik veya spam metin yazma. Etkileşim kasmak için soru sorma, "beğenmeyi unutma" gibi ifadeler kullanma. Gerçek bir insan gibi yaz.
+5. Aşırı emoji kullanma. Maksimum 1 emoji, sadece doğal akışta gerekiyorsa.
+6. Çıktıyı SADECE JSON formatında ver. Açıklama, not veya başka metin ekleme.
 
-✍️ CÜMLE YAPISI VE AKICILIK KURALLARI (İNSANSI VE SALAŞ TÜRKÇE):
-1. ASLA şiirsel, edebi, felsefi veya "kitap cümlesi" gibi duran ağır yapılar kurma. Kimse Instagram'da "gölgelerin dans ettiği şu fani dünyada..." gibi yazmaz.
-2. Gerçek bir Türk sosyal medyada nasıl yazıyorsa öyle yaz: Günlük konuşma dilindeki "modu", "havası", "keyfi", "olay", "durum" gibi doğal kelimeleri tercih et. (Örn: "pazar kahvesi modu", "şöyle bir gün", "tam olarak bu").
-3. Cümleleri aşırı uzun tutup virgüllerle boğma. Kısa tut, gerekirse bitmemiş cümle hissi ver (salaş estetik).
-4. Soru sorarken zorlama ve yapay olma.
-5. Photo Dump olduğu için 3 alternatifin kurgusu şu şekilde olmalı ve birbirinden tamamen farklı olmalı:
-   - 1. ALTERNATİF (Punchy / Lowercase): Tüm görsellerin ortak havasını özetleyen, çok kısa, salaş ve minimalist bir başlık. Tamamen küçük harf. (Örn: "işte bu ara böyleyiz", "dump zamanı", "arka arkaya bunlar")
-   - 2. ALTERNATİF (Carousel / Slide-by-Slide): Karuseldeki fotoğrafların detaylarına tatlı/esprili atıflar yapan liste/madde kurgusu. (Örn: "slide 3: en sevdiğim köşe", "2. fotoğraftaki o kaos", "son kare bonus" gibi slide bazlı yorumlar içersin)
-   - 3. ALTERNATİF (Mod / Özet): "son zamanlarda...", "recent events", "weekly dump" tadında, o fotoğrafları çekerken yaşanan hissiyatı salaş, kasmayan ve doğal bir dille anlatan günlük/özet metni.
+Kullanıcının tonu: ${tone || 'Dengeli'} | Cinsiyet: ${gender || 'nötr'} | Yaş: ${ageRange || 'belirtilmemiş'}
 
-Lütfen yanıtını tam olarak şu JSON formatında dön:
-{
-  "captions": [
-    "1. alternatif (Punchy / Lowercase) açıklama metni",
-    "2. alternatif (Carousel / Slide-by-Slide) açıklama metni",
-    "3. alternatif (Mod / Özet) açıklama metni"
-  ],
-  "hashtags": ["#etiket1", "#etiket2", "#etiket3", "#etiket4", "#etiket5"]
-}
-JSON dışında hiçbir ek metin veya açıklama ekleme.`
+{"captions":["1. alternatif","2. alternatif","3. alternatif"],"hashtags":["#etiket1","#etiket2","#etiket3","#etiket4","#etiket5"]}`
 
     const imageContentParts = imageUrls.map((url: string) => ({
       type: "image_url",
@@ -134,7 +84,7 @@ JSON dışında hiçbir ek metin veya açıklama ekleme.`
           {
             role: "user",
             content: [
-              { type: "text", text: "Bu görselleri bir Instagram Photo Dump/Carousel serisi olarak analiz et. Tüm karelerin ortak havasını ve detaylarını birleştirerek belirtilen kurallara %100 uyan 3 alternatif caption üret. JSON formatında çıktı ver." },
+              { type: "text", text: `Bu görseli analiz et ve tek kareye uygun 3 alternatif caption üret. JSON formatında çıktı ver.` },
               ...imageContentParts
             ]
           }
@@ -166,14 +116,54 @@ JSON dışında hiçbir ek metin veya açıklama ekleme.`
       }
     }
 
-    const postId = `temp-${Date.now()}`
+    // 🚀 BÖLÜM 1: KULLANICIYI TESPİT ETME
+    const authHeader = req.headers.get('Authorization')
+    const token = authHeader?.replace('Bearer ', '')
+    const { data: { user } } = await supabaseClient.auth.getUser(token ?? '')
+
+    // 🚀 DOĞRU SÜTUN ADIYLA GÜNCELLENMİŞ KISIM:
+const postInsertData: any = {
+  image_url: imageUrls[0], // Geriye dönük uyumluluk
+  image_urls: imageUrls,   // Yeni çoklu görsel desteği
+  selected_tone: tone      // 👈 'tone' olan anahtar adını 'selected_tone' yaptık!
+}
+    
+    // Eğer kullanıcı giriş yapmışsa user_id'yi ekle
+    if (user) {
+      postInsertData.user_id = user.id
+    }
+
+    const { data: savedPost, error: postError } = await supabaseClient
+      .from('posts')
+      .insert(postInsertData)
+      .select()
+      .single()
+
+    if (postError) {
+      throw new Error(`Post veritabanına kaydedilemedi: ${postError.message}`)
+    }
+
+    // 🚀 BÖLÜM 3: ÜRETİLEN CAPTION'LARI VERİTABANINA KAYDETME
+    const captionInserts = parsedResult.captions.map((item: string) => ({
+      post_id: savedPost.id,
+      caption_text: item,
+      hashtags: parsedResult.hashtags
+    }))
+
+    const { error: captionsError } = await supabaseClient
+      .from('generated_captions')
+      .insert(captionInserts)
+
+    if (captionsError) {
+      console.error("Caption'lar kaydedilirken hata oluştu:", captionsError.message)
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         captions: parsedResult.captions,
         hashtags: parsedResult.hashtags,
-        post_id: postId,
+        post_id: savedPost.id, // Artık gerçek veritabanı ID'sini dönüyoruz
         image_urls: imageUrls,
         remainingCredits: 99,
       }),
@@ -181,8 +171,9 @@ JSON dışında hiçbir ek metin veya açıklama ekleme.`
     )
 
   } catch (error: any) {
+    console.error("Fonksiyon Hatası Detayı:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || 'Bilinmeyen Sunucu Hatası' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     )
   }

@@ -37,7 +37,7 @@ function RootLayoutNav() {
     return (
       <View style={{ flex: 1 }}>
         <LinearGradient
-          colors={[...GlassTheme.primaryGradient]}
+          colors={[...GlassTheme.gradient]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
@@ -69,12 +69,8 @@ function RootLayoutNav() {
           <Stack.Screen
             name="caption/[id]"
             options={{
+              headerShown: false,
               presentation: "modal",
-              title: "Capshion Detay",
-              headerShadowVisible: false,
-              headerTransparent: true,
-              headerStyle: { backgroundColor: "transparent" },
-              headerTintColor: "#FFFFFF",
             }}
           />
         </Stack>
