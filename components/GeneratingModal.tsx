@@ -40,10 +40,10 @@ export default function GeneratingModal({ visible }: GeneratingModalProps) {
             color={GlassTheme.primary}
           />
           <Text style={styles.title}>
-            Sizin için en uygun Caption hazırlanıyor{dots}
+            Sizin için en uygun metin hazırlanıyor{dots}
           </Text>
           <Text style={styles.subtitle}>
-            Fotoğrafların analiz ediliyor, en uygun caption oluşturuluyor...
+            Fotoğrafların analiz ediliyor, en uygun metin oluşturuluyor...
           </Text>
         </View>
       </View>

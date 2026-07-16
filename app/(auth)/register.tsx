@@ -30,11 +30,6 @@ export default function RegisterScreen() {
   const [ageRange, setAgeRange] = useState<string | null>(null);
 
   const handleRegister = async () => {
-    if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
-      Alert.alert('Uyarı', 'Tüm alanlar zorunludur.');
-      return;
-    }
-
     if (password.length < 6) {
       Alert.alert('Uyarı', 'Şifre en az 6 karakter olmalıdır.');
       return;
@@ -52,7 +47,7 @@ export default function RegisterScreen() {
       return;
     }
 
-    const userId = data?.data?.user?.id;
+    const userId = data?.user?.id;
     if (userId) {
       const { error: profileError } = await supabase.from('profiles').upsert({
         id: userId,
@@ -84,13 +79,13 @@ export default function RegisterScreen() {
       >
         <View style={styles.header}>
           <Text style={[styles.brand, { color: GlassTheme.textSub }]}>
-            Capshion AI
+            Capshion
           </Text>
           <Text style={[styles.title, { color: GlassTheme.textMain }]}>
             Hesap Oluştur
           </Text>
           <Text style={[styles.subtitle, { color: GlassTheme.textSub }]}>
-            Yapay zeka destekli caption'lara katıl
+            Yaratıcı platformumuza katıl
           </Text>
         </View>
 

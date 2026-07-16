@@ -112,7 +112,7 @@ export default function HistoryScreen() {
           <Text style={styles.title}>Geçmiş</Text>
         </View>
         <Text style={styles.subtitle}>
-          Daha önce ürettiğin caption'ları görüntüle ve kopyala.
+          Daha önce ürettiğin içerikleri görüntüle ve kopyala.
         </Text>
       </View>
 

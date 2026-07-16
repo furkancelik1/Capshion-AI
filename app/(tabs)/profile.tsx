@@ -1,12 +1,15 @@
-import { LinearGradient } from "expo-linear-gradient";
+import AgeRangeSelector from "@/components/AgeRangeSelector";
+import AmbientGlow from "@/components/AmbientGlow";
+import FeedbackModal from "@/components/FeedbackModal";
+import { LogOutIcon, PersonIcon } from "@/components/GlassIcons";
+import GlassPanel from "@/components/GlassPanel";
+import HapticButton from "@/components/HapticButton";
+import PaymentWebViewModal from "@/components/PaymentWebViewModal";
+import { CREDIT_PACKAGES } from "@/constants/Packages";
+import { GlassTheme } from "@/constants/LiquidGlass";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/services/supabase";
-import { GlassTheme } from "@/constants/LiquidGlass";
-import HapticButton from "@/components/HapticButton";
-import GlassPanel from "@/components/GlassPanel";
-import AmbientGlow from "@/components/AmbientGlow";
-import AgeRangeSelector from "@/components/AgeRangeSelector";
-import { PersonIcon, LogOutIcon, SparkleIcon } from "@/components/GlassIcons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -19,17 +22,24 @@ import {
 
 interface UserProfile {
   email: string;
-  credits: number;
+  credits_remaining: number; // credits -> credits_remaining olarak güncellendi
   age_range: string | null;
 }
 
 export default function ProfileScreen() {
+  console.log("Paketler:", CREDIT_PACKAGES);
   const { user, signOut } = useAuth();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [editingAge, setEditingAge] = useState(false);
   const [ageRange, setAgeRange] = useState<string | null>(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+
+  // Ödeme Akışı Stateleri
+  const [isPaymentVisible, setIsPaymentVisible] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState("");
+  const [startingPayment, setStartingPayment] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -37,9 +47,10 @@ export default function ProfileScreen() {
       setLoadingProfile(true);
       const { data, error } = await supabase
         .from("profiles")
-        .select("email, credits, age_range")
+        .select("email, credits_remaining, age_range") // Sütun adı güncellendi
         .eq("id", user.id)
         .single();
+
       if (error) throw error;
       if (data) {
         setProfile(data);
@@ -81,6 +92,41 @@ export default function ProfileScreen() {
     );
   };
 
+  // Kredi Satın Alma Fonksiyonu
+  const handleBuyCredits = async (credits: number, price: number) => {
+    try {
+      setStartingPayment(true);
+
+      console.log(`Ödeme isteği gönderiliyor... ${credits} kredi, ₺${price}`);
+
+      const { data, error } = await supabase.functions.invoke(
+        "iyzico-payment",
+        {
+          body: { price: price.toString(), credits },
+        },
+      );
+
+      console.log("Supabase Yanıtı:", data);
+      console.log("Supabase Hatası (varsa):", error);
+
+      if (error) {
+        throw new Error(error.message || JSON.stringify(error));
+      }
+
+      if (!data?.paymentUrl) {
+        throw new Error("Ödeme linki alınamadı. Yanıt yapısı hatalı.");
+      }
+
+      setPaymentUrl(data.paymentUrl);
+      setIsPaymentVisible(true);
+    } catch (error: any) {
+      console.error("Ödeme Başlatma Arayüz Hatası:", error);
+      Alert.alert("Hata", "Ödeme başlatılamadı: " + error.message);
+    } finally {
+      setStartingPayment(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <AmbientGlow />
@@ -97,23 +143,20 @@ export default function ProfileScreen() {
           >
             <View style={styles.avatarInner}>
               <Text style={styles.avatarText}>
-                {profile?.email ? profile.email[0].toUpperCase() : (
+                {profile?.email ? (
+                  profile.email[0].toUpperCase()
+                ) : (
                   <PersonIcon size={32} />
                 )}
               </Text>
             </View>
           </LinearGradient>
-          <Text style={styles.emailText}>
-            {profile?.email || user?.email}
-          </Text>
+          <Text style={styles.emailText}>{profile?.email || user?.email}</Text>
         </View>
 
         <View style={styles.content}>
+          {/* Kredi Bakiyesi Kartı */}
           <GlassPanel style={styles.card}>
-            <View style={styles.cardHeader}>
-              <SparkleIcon size={20} />
-              <Text style={styles.cardTitle}>Yapay Zeka Kredisi</Text>
-            </View>
             {loadingProfile ? (
               <ActivityIndicator
                 size="small"
@@ -121,16 +164,63 @@ export default function ProfileScreen() {
                 style={{ marginVertical: 8 }}
               />
             ) : (
-              <Text style={styles.creditCount}>
-                {profile?.credits !== undefined ? profile.credits : 0}{" "}
+              <>
+                <Text style={styles.balanceLabel}>Mevcut Bakiye</Text>
+                <Text style={styles.creditCount}>
+                  {profile?.credits_remaining !== undefined
+                    ? profile.credits_remaining
+                    : 0}
+                </Text>
                 <Text style={styles.creditLabel}>Kredi</Text>
-              </Text>
+                <Text style={styles.cardSubText}>
+                  Kredi bakiyeniz içerik üretimiyle güncellenir
+                </Text>
+              </>
             )}
-            <Text style={styles.cardSubText}>
-              Her caption üretimi 1 kredi tüketir.
-            </Text>
           </GlassPanel>
 
+          {/* Kredi Paketleri — Bakiyeni Yükselt */}
+          <View style={styles.packagesSection}>
+            <Text style={styles.sectionTitle}>Bakiyeni Yükselt</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.packagesRow}
+            >
+              <HapticButton
+                style={styles.packageCard}
+                onPress={() => handleBuyCredits(10, 50)}
+                disabled={startingPayment}
+              >
+                <Text style={styles.packageCredits}>10</Text>
+                <Text style={styles.packageLabel}>Kredi</Text>
+                <View style={styles.packageDivider} />
+                <Text style={styles.packagePrice}>₺50</Text>
+              </HapticButton>
+              <HapticButton
+                style={[styles.packageCard, styles.packageCardPopular]}
+                onPress={() => handleBuyCredits(30, 120)}
+                disabled={startingPayment}
+              >
+                <Text style={styles.packageCredits}>30</Text>
+                <Text style={styles.packageLabel}>Kredi</Text>
+                <View style={styles.packageDivider} />
+                <Text style={styles.packagePrice}>₺120</Text>
+              </HapticButton>
+              <HapticButton
+                style={styles.packageCard}
+                onPress={() => handleBuyCredits(50, 200)}
+                disabled={startingPayment}
+              >
+                <Text style={styles.packageCredits}>50</Text>
+                <Text style={styles.packageLabel}>Kredi</Text>
+                <View style={styles.packageDivider} />
+                <Text style={styles.packagePrice}>₺200</Text>
+              </HapticButton>
+            </ScrollView>
+          </View>
+
+          {/* Yaş Aralığı */}
           <GlassPanel style={styles.card}>
             <Text style={styles.cardTitle}>Yaş Aralığı</Text>
             {editingAge ? (
@@ -169,15 +259,48 @@ export default function ProfileScreen() {
             )}
           </GlassPanel>
 
+          {/* Deneyimini Geliştir */}
           <HapticButton
-            style={styles.signOutButton}
-            onPress={handleSignOut}
+            style={styles.feedbackButton}
+            onPress={() => setShowFeedback(true)}
           >
+            <Text style={styles.feedbackText}>Deneyimini Geliştir</Text>
+          </HapticButton>
+
+          {/* Çıkış Yap */}
+          <HapticButton style={styles.signOutButton} onPress={handleSignOut}>
             <LogOutIcon size={20} />
             <Text style={styles.signOutText}>Çıkış Yap</Text>
           </HapticButton>
         </View>
       </ScrollView>
+
+      <FeedbackModal
+        visible={showFeedback}
+        onClose={() => setShowFeedback(false)}
+        userId={user?.id}
+      />
+
+      {/* İyzico WebView Modalı */}
+      <PaymentWebViewModal
+        visible={isPaymentVisible}
+        paymentUrl={paymentUrl}
+        successUrl="https://rkacxgouberhvygsefqu.supabase.co/functions/v1/iyzico-payment-callback?status=success"
+        failureUrl="https://rkacxgouberhvygsefqu.supabase.co/functions/v1/iyzico-payment-callback?status=failure"
+        onSuccess={() => {
+          setIsPaymentVisible(false);
+          fetchProfile(); // Bakiyeyi anında güncellemek için profili yeniden çekiyoruz
+          Alert.alert("Başarılı!", "Kredileriniz hesabınıza tanımlandı.");
+        }}
+        onFailure={(error) => {
+          setIsPaymentVisible(false);
+          Alert.alert(
+            "Ödeme Başarısız",
+            error || "İşlem sırasında bir hata oluştu.",
+          );
+        }}
+        onClose={() => setIsPaymentVisible(false)}
+      />
     </View>
   );
 }
@@ -229,36 +352,91 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: GlassTheme.radiusLg,
     gap: 12,
-  },
-  cardHeader: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: 8,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: "600",
     color: GlassTheme.textMain,
   },
+  balanceLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: GlassTheme.textMuted,
+    letterSpacing: 0.5,
+  },
   creditCount: {
-    fontSize: 36,
-    fontWeight: "700",
+    fontSize: 52,
+    fontWeight: "800",
     color: GlassTheme.textMain,
-    marginVertical: 4,
+    lineHeight: 60,
   },
   creditLabel: {
     fontSize: 18,
-    fontWeight: "400",
+    fontWeight: "500",
     color: GlassTheme.textMuted,
+    marginTop: -4,
   },
   cardSubText: {
     fontSize: 12,
     color: GlassTheme.textMuted,
+    marginTop: 4,
+  },
+  packagesSection: {
+    gap: 14,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: GlassTheme.textMain,
+    paddingHorizontal: 2,
+  },
+  packagesRow: {
+    flexDirection: "row",
+    gap: 12,
+    paddingRight: 24,
+  },
+  packageCard: {
+    width: 130,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: GlassTheme.border,
+    backgroundColor: GlassTheme.panel,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    gap: 4,
+  },
+  packageCardPopular: {
+    borderColor: GlassTheme.primary,
+    borderWidth: 1.5,
+  },
+  packageCredits: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: GlassTheme.textMain,
+  },
+  packageLabel: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: GlassTheme.textMuted,
+  },
+  packageDivider: {
+    width: 32,
+    height: 1,
+    backgroundColor: GlassTheme.border,
+    marginVertical: 6,
+  },
+  packagePrice: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: GlassTheme.primary,
   },
   ageDisplay: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    width: "100%",
   },
   ageValue: {
     fontSize: 16,
@@ -279,6 +457,7 @@ const styles = StyleSheet.create({
   },
   ageEditWrap: {
     gap: 12,
+    width: "100%",
   },
   ageActions: {
     flexDirection: "row",
@@ -311,6 +490,19 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: GlassTheme.textMuted,
   },
+  feedbackButton: {
+    height: 48,
+    borderRadius: GlassTheme.radiusSm,
+    borderWidth: 1,
+    borderColor: GlassTheme.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  feedbackText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: GlassTheme.textMuted,
+  },
   signOutButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -322,6 +514,7 @@ const styles = StyleSheet.create({
     borderColor: GlassTheme.dangerBorder,
     backgroundColor: GlassTheme.dangerBg,
     marginTop: 8,
+    marginBottom: 12,
   },
   signOutText: {
     color: GlassTheme.dangerText,

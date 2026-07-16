@@ -11,17 +11,17 @@ const STEPS = [
   {
     emoji: "📸",
     title: "Fotoğrafını Seç",
-    desc: "Galerinden bir veya birden fazla fotoğraf yükle. CapshionAI içeriğini analiz etmeye hemen başlasın.",
+    desc: "Galerinden bir veya birden fazla fotoğraf yükle. Capshion içeriğini analiz etmeye hemen başlasın.",
   },
   {
     emoji: "🤖",
-    title: "AI Analizini Bekle",
-    desc: "Yapay zeka fotoğraflarını tarar, marka sesine ve seçtiğin tona en uygun caption'ı üretir.",
+    title: "Akıllı Analiz",
+    desc: "Fotoğraflarını analiz eder, marka sesine ve seçtiğin tona en uygun metni üretir.",
   },
   {
     emoji: "📋",
-    title: "Caption'ı Kopyala",
-    desc: "Beğendiğin caption'ı tek dokunuşla panoya kopyala ve Instagram'da yayınlamaya hazır.",
+    title: "Metni Kopyala",
+    desc: "Beğendiğin metni tek dokunuşla panoya kopyala ve Instagram'da yayınlamaya hazır.",
   },
 ];
 

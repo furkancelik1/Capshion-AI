@@ -12,6 +12,8 @@ import AmbientGlow from "../../components/AmbientGlow";
 import CameraWidget from "../../components/CameraWidget";
 import GeneratingModal from "../../components/GeneratingModal";
 import HowItWorksModal from "../../components/HowItWorksModal";
+import OutOfCreditsModal from "../../components/OutOfCreditsModal";
+import PaymentWebViewModal from "../../components/PaymentWebViewModal";
 import {
   FeedIcon,
   HashtagIcon,
@@ -27,7 +29,7 @@ import { useGenerateCaption } from "../../hooks/useGenerateCaption";
 import { supabase } from "../../services/supabase";
 
 const STATS_DATA = [
-  { value: "12K+", label: "caption üretildi" },
+  { value: "12K+", label: "içerik üretildi" },
   { value: "%94", label: "etkileşim artışı" },
   { value: "3 sn", label: "ortalama üretim" },
 ] as const;
@@ -36,7 +38,7 @@ const FEATURES_DATA = [
   {
     icon: "tone" as const,
     title: "Ton eşleştirme",
-    text: "Marka sesini yakalar; eğlenceli, sade ya da premium tonda caption önerileri sunar.",
+    text: "Marka sesini yakalar; eğlenceli, sade ya da premium tonda metin önerileri sunar.",
   },
   {
     icon: "hashtag" as const,
@@ -51,7 +53,7 @@ const FEATURES_DATA = [
 ] as const;
 
 const SAMPLE_PROMPT =
-  "Yeni ürün lansmanı için modern ve enerjik bir caption yaz.";
+  "Yeni ürün lansmanı için modern ve enerjik bir metin yaz.";
 const SAMPLE_OUTPUT =
   "✨ Yeni koleksiyon yayında! Stilini bir üst seviyeye taşı, farkını feed'de hissettir. #newdrop #styleinspo";
 
@@ -95,20 +97,27 @@ export default function HomeScreen() {
   const [selectedGender, setSelectedGender] = useState<string>("erkek");
   const [isGenerating, setIsGenerating] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [showOutOfCreditsModal, setShowOutOfCreditsModal] = useState(false);
+  const [credits, setCredits] = useState<number | null>(null);
   const [ageRange, setAgeRange] = useState<string | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState("");
+  const [paymentSuccessUrl, setPaymentSuccessUrl] = useState("");
+  const [paymentFailureUrl, setPaymentFailureUrl] = useState("");
 
   const { user } = useAuth();
-  const { generate, error } = useGenerateCaption();
+  const { generate } = useGenerateCaption();
 
   useEffect(() => {
     if (!user) return;
     supabase
       .from("profiles")
-      .select("age_range")
+      .select("age_range, credits")
       .eq("id", user.id)
       .single()
       .then(({ data }) => {
         if (data?.age_range) setAgeRange(data.age_range);
+        if (data?.credits !== undefined) setCredits(data.credits);
       });
   }, [user]);
 
@@ -121,12 +130,18 @@ export default function HomeScreen() {
       return;
     }
 
+    if (credits !== null && credits <= 0) {
+      setShowOutOfCreditsModal(true);
+      return;
+    }
+
     setIsGenerating(true);
 
     try {
       const result = await generate(selectedImages, selectedTone, selectedGender, ageRange || undefined);
 
       if (result) {
+        setCredits(result.credits_remaining);
         router.push({
           pathname: "/caption/[id]",
           params: {
@@ -141,11 +156,14 @@ export default function HomeScreen() {
         });
         setSelectedImages([]);
         setSelectedTone(null);
-      } else if (error) {
-        Alert.alert("Hata", error);
       }
     } catch (err: any) {
-      Alert.alert("Hata", err.message || "Beklenmedik bir hata oluştu.");
+      const msg = err.message || "Beklenmedik bir hata oluştu.";
+      if (msg.toLowerCase().includes("yetersiz kredi")) {
+        setShowOutOfCreditsModal(true);
+      } else {
+        Alert.alert("Hata", msg);
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -153,6 +171,44 @@ export default function HomeScreen() {
 
   const handleHowItWorks = () => {
     setShowHowItWorks(true);
+  };
+
+  const handleBuy = async () => {
+    setShowOutOfCreditsModal(false);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke(
+        "iyzico-payment",
+        { body: { price: 25, packageName: "10 Kredi Paketi" } },
+      );
+      if (fnError || !data?.success) {
+        Alert.alert("Hata", data?.error || "Ödeme başlatılamadı.");
+        return;
+      }
+      setPaymentUrl(data.paymentUrl);
+      setPaymentSuccessUrl(data.successUrl);
+      setPaymentFailureUrl(data.failureUrl);
+      setShowPaymentModal(true);
+    } catch (err: any) {
+      Alert.alert("Hata", err.message || "Ödeme başlatılamadı.");
+    }
+  };
+
+  const handlePaymentSuccess = () => {
+    setShowPaymentModal(false);
+    Alert.alert("Ödeme Başarılı! 🎉", "Kredin hesabına eklendi.");
+    supabase
+      .from("profiles")
+      .select("credits")
+      .eq("id", user?.id)
+      .single()
+      .then(({ data }) => {
+        if (data?.credits !== undefined) setCredits(data.credits);
+      });
+  };
+
+  const handlePaymentFailure = (error?: string) => {
+    setShowPaymentModal(false);
+    Alert.alert("Ödeme Başarısız", error || "Lütfen tekrar deneyin.");
   };
 
   // En az bir görsel ve bir ton seçildiyse ve işlem yapılmıyorsa buton aktif olur
@@ -172,7 +228,7 @@ export default function HomeScreen() {
         <GlassPanel style={styles.topNav}>
           <View style={styles.brandRow}>
             <SparkleIcon size={20} />
-            <Text style={styles.brandText}>CapshionAI</Text>
+            <Text style={styles.brandText}>Capshion</Text>
           </View>
           <GlassPanel style={styles.betaPill}>
             <Text style={styles.betaText}>Beta erişim</Text>
@@ -183,15 +239,15 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <GlassPanel style={styles.heroBadge}>
             <Text style={styles.heroBadgeText}>
-              Premium Instagram caption generator
+              Premium İçerik Stüdyosu
             </Text>
           </GlassPanel>
 
           <Text style={styles.heroTitle}>
-            Paylaşmadan önce{"\n"}caption'ını parlat.
+            Paylaşmadan önce{"\n"}metnini parlat.
           </Text>
           <Text style={styles.heroSubtitle}>
-            CapshionAI ile gönderine en uygun metni saniyeler içinde üret; daha
+            Capshion ile gönderine en uygun metni saniyeler içinde üret; daha
             güçlü etkileşim, daha tutarlı marka dili.
           </Text>
 
@@ -205,7 +261,7 @@ export default function HomeScreen() {
               activeOpacity={0.85}
               disabled={!canGenerate}
             >
-              <Text style={styles.primaryButtonText}>Caption Üret</Text>
+              <Text style={styles.primaryButtonText}>Metin Üret</Text>
             </HapticButton>
             <HapticButton
               style={styles.secondaryButton}
@@ -237,7 +293,7 @@ export default function HomeScreen() {
         {selectedImages.length === 0 && (
           <GlassPanel style={styles.previewCard}>
             <View style={styles.previewHead}>
-              <Text style={styles.previewHeadText}>AI Caption Studio</Text>
+              <Text style={styles.previewHeadText}>İçerik Stüdyosu</Text>
               <PulseDot />
             </View>
             <Text style={styles.previewPrompt}>{SAMPLE_PROMPT}</Text>
@@ -278,10 +334,10 @@ export default function HomeScreen() {
         {/* ── Closing CTA ── */}
         <GlassPanel style={styles.closingCta}>
           <Text style={styles.closingTitle}>
-            Bir sonraki post için{"\n"}caption hazır mı?
+            Bir sonraki post için{"\n"}metnin hazır mı?
           </Text>
           <Text style={styles.closingText}>
-            CapshionAI ile fikri metne dönüştür, paylaşım ritmini hiç düşürme.
+            Capshion ile fikri metne dönüştür, paylaşım ritmini hiç düşürme.
           </Text>
           <HapticButton
             style={[
@@ -301,6 +357,20 @@ export default function HomeScreen() {
       <HowItWorksModal
         visible={showHowItWorks}
         onClose={() => setShowHowItWorks(false)}
+      />
+      <OutOfCreditsModal
+        visible={showOutOfCreditsModal}
+        onClose={() => setShowOutOfCreditsModal(false)}
+        onBuy={handleBuy}
+      />
+      <PaymentWebViewModal
+        visible={showPaymentModal}
+        paymentUrl={paymentUrl}
+        successUrl={paymentSuccessUrl}
+        failureUrl={paymentFailureUrl}
+        onSuccess={handlePaymentSuccess}
+        onFailure={handlePaymentFailure}
+        onClose={() => setShowPaymentModal(false)}
       />
     </View>
   );

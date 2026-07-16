@@ -52,7 +52,7 @@ export default function LoginScreen() {
       >
         <View style={styles.header}>
           <Text style={[styles.brand, { color: GlassTheme.textSub }]}>
-            Capshion AI
+            Capshion
           </Text>
           <Text style={[styles.title, { color: GlassTheme.textMain }]}>
             Tekrar hoş geldin

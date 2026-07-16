@@ -47,7 +47,7 @@ export default function LiquidToast({
         tint="dark"
         style={styles.blur}
       >
-        <Text style={styles.text}>Başarıyla kopyalandı! ✅</Text>
+        <Text style={styles.text}>Kopyalandı! 📋</Text>
       </BlurView>
     </Animated.View>
   );

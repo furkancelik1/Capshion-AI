@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.21.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,174 +7,176 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // CORS (Ön uçuş) isteğini onayla
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
+    // 1. Yetkilendirme Kontrolü (Token)
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Yetkisiz erişim: Auth header eksik.' }), { 
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      })
+    }
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        db: { schema: 'public' },
-        auth: { persistSession: false }
-      }
+      { auth: { persistSession: false } }
     )
 
-    const { imageUrls, tone, gender, ageRange } = await req.json()
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(authHeader.replace('Bearer ', ''))
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Geçersiz veya süresi dolmuş token.' }), { 
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      })
+    }
+
+    // 2. Kredi Bakiye Kontrolü
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('credits_remaining')
+      .eq('id', user.id)
+      .single()
+
+    // Hata 1: Veritabanı sorgusunda bir hata varsa
+    if (profileError) {
+      return new Response(JSON.stringify({ 
+        error: `Profil sorgu hatası: ${profileError.message}` 
+      }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // Hata 2: Kullanıcının profiles tablosunda satırı yoksa
+    if (!profile) {
+      return new Response(JSON.stringify({ 
+        error: `Profil bulunamadı! Aranan User ID: ${user.id}` 
+      }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // Hata 3: Kredi gerçekten 0 veya altındaysa
+    if (profile.credits_remaining <= 0) {
+      return new Response(JSON.stringify({ 
+        error: `Sistemdeki güncel bakiyen: ${profile.credits_remaining}. Lütfen kredi satın alın.` 
+      }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // 3. Frontend'den gelen verileri al
+    const body = await req.json()
+    const { imageUrls, tone, gender, ageRange } = body
 
     if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'Eksik parametre: imageUrls (dizi) zorunludur ve en az bir URL içermelidir.' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
+      throw new Error('Görsel URL listesi eksik veya hatalı.')
     }
 
-    const openAiKey = Deno.env.get('OPENAI_API_KEY')
-    if (!openAiKey) {
-      return new Response(
-        JSON.stringify({ error: 'OpenAI API Anahtarı sunucuda tanımlı değil.' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      )
-    }
-
-    const ageStyle = ageRange === "18-24"
-      ? "Daha genç, samimi, trend ve dijital dille yaz. Güncel sosyal medya akışlarına hakim bir üslup kullan."
-      : ageRange === "25-34"
-      ? "Dengeli, olgun ama modern bir dil kullan. Profesyonellik ile samimiyet arasında bir ton tercih et."
-      : ageRange === "35-44" || ageRange === "45+"
-      ? "Daha olgun, güven veren, sofistike ve zamansız bir dil kullan. Abartıdan uzak, duru bir anlatım tercih et."
-      : "Doğal ve her yaşa hitap eden dengeli bir dil kullan."
-
-    const genderStyle = gender === "erkek" || gender === "male"
-      ? "Maskülen, özgüvenli, kısa ve cool bir dil kullan. Gereksiz sıfatlardan kaçın, az ve öz yaz."
-      : gender === "kadın" || gender === "female"
-      ? "Estetik, sofistike, etkileyici ve akıcı bir dil kullan. Zarif ve hisli bir anlatım tercih et."
-      : "Dengeli ve doğal bir üslup kullan, cinsiyet vurgusu yapma."
-
-    const systemPrompt = `Sen gerçek bir sosyal medya kullanıcısısın. Bir arkadaşının fotoğrafına yorum yapar gibi doğal ve samimi caption'lar yazıyorsun.
-
-🚨 BU KURALLARIN İHLALİ KESİNLİKLE YASAKTIR:
-1. TEK GÖRSEL KURALI: Kullanıcı SADECE 1 (BİR) fotoğraf yükledi. ASLA "slide 1", "slayt", "görsel 1", "fotoğraf 2", "ilk kare", "sonraki slide", "carousel", "dump", "kaydır", "sonraki kare", "1/3", "2/3" gibi numaralandırılmış veya çoklu görsel kurgusu barındıran hiçbir ibare kullanma. Her alternatif tek bir fotoğrafa ait tek parça, akıcı bir metin olmalıdır.
-2. ${genderStyle}
-3. ${ageStyle}
-4. ASLA yapay, robotik veya spam metin yazma. Etkileşim kasmak için soru sorma, "beğenmeyi unutma" gibi ifadeler kullanma. Gerçek bir insan gibi yaz.
-5. Aşırı emoji kullanma. Maksimum 1 emoji, sadece doğal akışta gerekiyorsa.
-6. Çıktıyı SADECE JSON formatında ver. Açıklama, not veya başka metin ekleme.
-
-Kullanıcının tonu: ${tone || 'Dengeli'} | Cinsiyet: ${gender || 'nötr'} | Yaş: ${ageRange || 'belirtilmemiş'}
-
-{"captions":["1. alternatif","2. alternatif","3. alternatif"],"hashtags":["#etiket1","#etiket2","#etiket3","#etiket4","#etiket5"]}`
-
-    const imageContentParts = imageUrls.map((url: string) => ({
+    // 4. OpenAI'a Gönderilecek Mesajı Hazırlama (Vision Modeli)
+    // Gönderilen tüm resimleri OpenAI'ın anlayacağı formata çeviriyoruz
+    const imageContents = imageUrls.map((url: string) => ({
       type: "image_url",
-      image_url: { url }
+      image_url: { url: url }
     }))
 
-    const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
+    const promptText = `
+      Sen profesyonel bir sosyal medya uzmanısın. Kullanıcının gönderdiği görselleri analiz ederek etkileyici sosyal medya altyazıları (caption) üreteceksin.
+      - Dil: Türkçe
+      - Hedef Kitle Yaş Aralığı: ${ageRange || 'Belirtilmedi'}
+      - İstenen Ton: ${tone || 'Doğal'}
+      - Karakter/Cinsiyet Yansıması: ${gender || 'Nötr'}
+      
+      Lütfen tam olarak 3 farklı altyazı seçeneği ve konuyla ilgili 5 ila 8 adet popüler hashtag üret.
+      Yanıtını KESİNLİKLE aşağıdaki JSON formatında ver:
+      {
+        "captions": ["Açıklama 1", "Açıklama 2", "Açıklama 3"],
+        "hashtags": ["#etiket1", "#etiket2"]
+      }
+    `
+
+    // 5. OpenAI API İsteği
+    const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${openAiKey}`
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: 'gpt-4o', // Vision destekli en güncel model
+        response_format: { type: "json_object" }, // JSON dönmeye zorluyoruz
         messages: [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
+          { role: 'system', content: promptText },
+          { 
+            role: 'user', 
             content: [
-              { type: "text", text: `Bu görseli analiz et ve tek kareye uygun 3 alternatif caption üret. JSON formatında çıktı ver.` },
-              ...imageContentParts
-            ]
+              { type: "text", text: "Bu görseller için istenen ayarlarda altyazı üret." },
+              ...imageContents
+            ] 
           }
-        ],
-        max_tokens: 600,
-        temperature: 0.9,
-        response_format: { type: "json_object" }
+        ]
       })
     })
 
-    const openAiData = await openAiResponse.json()
-    
+    const aiData = await openAiResponse.json()
     if (!openAiResponse.ok) {
-      throw new Error(`OpenAI Hatası: ${openAiData.error?.message || 'Bilinmeyen Hata'}`)
+      console.error('OpenAI Hatası:', aiData)
+      throw new Error('Yapay zeka üretimi sırasında bir hata oluştu.')
     }
 
-    const aiContent = openAiData.choices[0].message.content
+    // OpenAI'dan gelen JSON'ı parse et
+    const generatedResult = JSON.parse(aiData.choices[0].message.content)
+    const generatedCaptions = generatedResult.captions || []
+    const generatedHashtags = generatedResult.hashtags || []
 
-    let parsedResult
-    try {
-      parsedResult = JSON.parse(aiContent)
-    } catch (e) {
-      const jsonRegex = /\{[\s\S]*\}/
-      const match = aiContent.match(jsonRegex)
-      if (match) {
-        parsedResult = JSON.parse(match[0])
-      } else {
-        throw new Error('Yapay zeka çıktısı JSON formatına dönüştürülemedi.')
-      }
-    }
-
-    // 🚀 BÖLÜM 1: KULLANICIYI TESPİT ETME
-    const authHeader = req.headers.get('Authorization')
-    const token = authHeader?.replace('Bearer ', '')
-    const { data: { user } } = await supabaseClient.auth.getUser(token ?? '')
-
-    // 🚀 DOĞRU SÜTUN ADIYLA GÜNCELLENMİŞ KISIM:
-const postInsertData: any = {
-  image_url: imageUrls[0], // Geriye dönük uyumluluk
-  image_urls: imageUrls,   // Yeni çoklu görsel desteği
-  selected_tone: tone      // 👈 'tone' olan anahtar adını 'selected_tone' yaptık!
-}
-    
-    // Eğer kullanıcı giriş yapmışsa user_id'yi ekle
-    if (user) {
-      postInsertData.user_id = user.id
-    }
-
-    const { data: savedPost, error: postError } = await supabaseClient
+    // 6. Veritabanına Postu Kaydetme (Geçmişte görebilmek için)
+    const { data: postData, error: postError } = await supabaseClient
       .from('posts')
-      .insert(postInsertData)
-      .select()
+      .insert({
+        user_id: user.id,
+        image_urls: imageUrls,
+        captions: generatedCaptions,
+        hashtags: generatedHashtags,
+        tone: tone,
+        status: 'completed'
+      })
+      .select('id')
       .single()
 
-    if (postError) {
-      throw new Error(`Post veritabanına kaydedilemedi: ${postError.message}`)
+    // Eğer veritabanında 'posts' tablon yoksa burası hata verir. Şimdilik rastgele bir UUID atıyoruz.
+    const postId = postData?.id || crypto.randomUUID()
+
+    // 7. Krediyi Düşme İşlemi (Tahsilat)
+    const newCreditBalance = profile.credits_remaining - 1
+    const { error: updateError } = await supabaseClient
+      .from('profiles')
+      .update({ credits_remaining: newCreditBalance })
+      .eq('id', user.id)
+
+    if (updateError) {
+      console.error('Kredi düşme hatası:', updateError)
+      // Önemli uyarı: Kredi düşemezse işlemi yine de veriyoruz ama logluyoruz. 
+      // İsteğe bağlı olarak burada exception fırlatabilirsin.
     }
 
-    // 🚀 BÖLÜM 3: ÜRETİLEN CAPTION'LARI VERİTABANINA KAYDETME
-    const captionInserts = parsedResult.captions.map((item: string) => ({
-      post_id: savedPost.id,
-      caption_text: item,
-      hashtags: parsedResult.hashtags
-    }))
-
-    const { error: captionsError } = await supabaseClient
-      .from('generated_captions')
-      .insert(captionInserts)
-
-    if (captionsError) {
-      console.error("Caption'lar kaydedilirken hata oluştu:", captionsError.message)
-    }
-
+    // 8. Frontend'in Beklediği Formatta Yanıt Dön
     return new Response(
       JSON.stringify({
         success: true,
-        captions: parsedResult.captions,
-        hashtags: parsedResult.hashtags,
-        post_id: savedPost.id, // Artık gerçek veritabanı ID'sini dönüyoruz
+        captions: generatedCaptions,
+        hashtags: generatedHashtags,
+        post_id: postId,
         image_urls: imageUrls,
-        remainingCredits: 99,
+        remainingCredits: newCreditBalance
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     )
 
   } catch (error: any) {
-    console.error("Fonksiyon Hatası Detayı:", error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Bilinmeyen Sunucu Hatası' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    )
+    console.error('Caption Error:', error)
+    return new Response(JSON.stringify({ error: error.message || 'Beklenmeyen bir sunucu hatası.' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
   }
 })
