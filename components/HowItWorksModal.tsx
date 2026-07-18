@@ -1,4 +1,5 @@
 import { BlurView } from "expo-blur";
+import { useTranslation } from "react-i18next";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GlassTheme } from "../constants/LiquidGlass";
 
@@ -7,28 +8,29 @@ interface HowItWorksModalProps {
   onClose: () => void;
 }
 
-const STEPS = [
-  {
-    emoji: "📸",
-    title: "Fotoğrafını Seç",
-    desc: "Galerinden bir veya birden fazla fotoğraf yükle. Capshion içeriğini analiz etmeye hemen başlasın.",
-  },
-  {
-    emoji: "🤖",
-    title: "Akıllı Analiz",
-    desc: "Fotoğraflarını analiz eder, marka sesine ve seçtiğin tona en uygun metni üretir.",
-  },
-  {
-    emoji: "📋",
-    title: "Metni Kopyala",
-    desc: "Beğendiğin metni tek dokunuşla panoya kopyala ve Instagram'da yayınlamaya hazır.",
-  },
-];
-
 export default function HowItWorksModal({
   visible,
   onClose,
 }: HowItWorksModalProps) {
+  const { t } = useTranslation();
+
+  const STEPS = [
+    {
+      emoji: "📸",
+      title: t("howItWorks.step1Title"),
+      desc: t("howItWorks.step1Desc"),
+    },
+    {
+      emoji: "🤖",
+      title: t("howItWorks.step2Title"),
+      desc: t("howItWorks.step2Desc"),
+    },
+    {
+      emoji: "📋",
+      title: t("howItWorks.step3Title"),
+      desc: t("howItWorks.step3Desc"),
+    },
+  ];
   return (
     <Modal
       visible={visible}

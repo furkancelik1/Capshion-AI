@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Modal,
@@ -13,6 +14,7 @@ interface GeneratingModalProps {
 }
 
 export default function GeneratingModal({ visible }: GeneratingModalProps) {
+  const { t } = useTranslation();
   const [dots, setDots] = useState("");
 
   useEffect(() => {
@@ -40,10 +42,10 @@ export default function GeneratingModal({ visible }: GeneratingModalProps) {
             color={GlassTheme.primary}
           />
           <Text style={styles.title}>
-            Sizin için en uygun metin hazırlanıyor{dots}
+            {t("generating.title")}{dots}
           </Text>
           <Text style={styles.subtitle}>
-            Fotoğrafların analiz ediliyor, en uygun metin oluşturuluyor...
+            {t("generating.subtitle")}
           </Text>
         </View>
       </View>

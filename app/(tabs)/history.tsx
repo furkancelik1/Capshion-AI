@@ -1,6 +1,7 @@
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   FlatList,
@@ -13,7 +14,7 @@ import AmbientGlow from "../../components/AmbientGlow";
 import { ClockIcon } from "../../components/GlassIcons";
 import GlassPanel from "../../components/GlassPanel";
 import { GlassTheme } from "../../constants/LiquidGlass";
-import { supabase } from "../../services/supabase";
+import { api, getToken } from "../../services/api";
 
 interface HistoryItem {
   id: string;
@@ -24,6 +25,7 @@ interface HistoryItem {
 }
 
 export default function HistoryScreen() {
+  const { t } = useTranslation();
   const [data, setData] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -37,26 +39,20 @@ export default function HistoryScreen() {
     setLoading(true);
     setError(null);
 
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) {
-      setError("Oturum bulunamadı. Lütfen tekrar giriş yapın.");
+    if (!getToken()) {
+      setError(t("history.errorSession"));
       setLoading(false);
       return;
     }
 
-    const { data: captions, error: fetchError } = await supabase
-      .from("generated_captions")
-      .select("id, caption_text, hashtags, created_at, post_id")
-      .order("created_at", { ascending: false });
-
-    if (fetchError) {
-      setError(fetchError.message);
+    try {
+      const captions = await api.getCaptions();
+      setData(captions || []);
+    } catch (err: any) {
+      setError(err.message || t("history.errorSession"));
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setData((captions as HistoryItem[]) || []);
-    setLoading(false);
   };
 
   const handleCopy = useCallback(async (item: HistoryItem) => {
@@ -95,7 +91,7 @@ export default function HistoryScreen() {
 
           <View style={styles.cardFooter}>
             <Text style={styles.dateText}>{formatDate(item.created_at)}</Text>
-            {showCopied && <Text style={styles.copiedText}>Kopyalandı!</Text>}
+            {showCopied && <Text style={styles.copiedText}>{t("history.copied")}</Text>}
           </View>
         </GlassPanel>
       </TouchableOpacity>
@@ -109,10 +105,10 @@ export default function HistoryScreen() {
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <ClockIcon size={22} />
-          <Text style={styles.title}>Geçmiş</Text>
+          <Text style={styles.title}>{t("history.title")}</Text>
         </View>
         <Text style={styles.subtitle}>
-          Daha önce ürettiğin içerikleri görüntüle ve kopyala.
+          {t("history.subtitle")}
         </Text>
       </View>
 
@@ -131,7 +127,7 @@ export default function HistoryScreen() {
       {!loading && !error && data.length === 0 && (
         <GlassPanel style={styles.emptyCard}>
           <ClockIcon size={40} />
-          <Text style={styles.emptyText}>Henüz bir geçmiş kaydın yok.</Text>
+          <Text style={styles.emptyText}>{t("history.empty")}</Text>
         </GlassPanel>
       )}
 

@@ -1,5 +1,5 @@
 export const CREDIT_PACKAGES = [
-  { credits: 5, price: 25, label: "5 Kredi" },
-  { credits: 10, price: 50, label: "10 Kredi" },
-  { credits: 25, price: 100, label: "25 Kredi" },
+  { credits: 10, priceTR: 50, priceEN: 2.99 },
+  { credits: 30, priceTR: 120, priceEN: 6.99 },
+  { credits: 50, priceTR: 200, priceEN: 11.99 },
 ] as const;

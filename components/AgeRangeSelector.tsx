@@ -1,6 +1,7 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GlassTheme } from "../constants/LiquidGlass";
 
+const GOLD = "#D4AF37";
 const AGE_RANGES = ["18-24", "25-34", "35-44", "45+"] as const;
 
 interface AgeRangeSelectorProps {
@@ -56,14 +57,14 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: GlassTheme.radiusSm,
     borderWidth: 1,
-    borderColor: GlassTheme.border,
-    backgroundColor: GlassTheme.panel,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "#1E1E1E",
     alignItems: "center",
     justifyContent: "center",
   },
   chipSelected: {
-    borderColor: GlassTheme.primary,
-    backgroundColor: "rgba(122, 83, 255, 0.15)",
+    borderColor: GOLD,
+    backgroundColor: "rgba(212, 175, 55, 0.12)",
   },
   chipText: {
     fontSize: 13,

@@ -1,6 +1,7 @@
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useTranslation } from "react-i18next";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GlassTheme } from "../constants/LiquidGlass";
 
@@ -15,6 +16,7 @@ export default function OutOfCreditsModal({
   onClose,
   onBuy,
 }: OutOfCreditsModalProps) {
+  const { t } = useTranslation();
 
   return (
     <Modal
@@ -35,11 +37,10 @@ export default function OutOfCreditsModal({
             <Ionicons name="flash" size={36} color="#A78BFA" />
           </View>
 
-          <Text style={styles.title}>Kredi Bakiyeniz Tükendi ⚡</Text>
+          <Text style={styles.title}>{t("outOfCredits.title")}</Text>
 
           <Text style={styles.description}>
-            Harika içerikler üretmeye devam etmek için kredini yenileyebilirsin.
-            Sana özel paketleri görmek için aşağıdaki butona göz at.
+            {t("outOfCredits.description")}
           </Text>
 
           <TouchableOpacity
@@ -59,7 +60,7 @@ export default function OutOfCreditsModal({
                 color="#FFFFFF"
                 style={{ marginRight: 6 }}
               />
-              <Text style={styles.buyText}>Kredi Satın Al</Text>
+              <Text style={styles.buyText}>{t("outOfCredits.buyButton")}</Text>
             </LinearGradient>
           </TouchableOpacity>
 
@@ -68,7 +69,7 @@ export default function OutOfCreditsModal({
             onPress={onClose}
             activeOpacity={0.6}
           >
-            <Text style={styles.laterText}>Daha Sonra</Text>
+            <Text style={styles.laterText}>{t("outOfCredits.later")}</Text>
           </TouchableOpacity>
         </View>
       </View>

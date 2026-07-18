@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Image,
@@ -13,7 +14,7 @@ import HapticButton from "../components/HapticButton";
 import { GlassTheme } from "../constants/LiquidGlass";
 
 interface CameraWidgetProps {
-  selectedImages: string[]; // ARTIK BİR DİZİ (ARRAY) BEKLİYORUZ
+  selectedImages: string[];
   onImagesChange: (uris: string[]) => void;
 }
 
@@ -21,23 +22,24 @@ export default function CameraWidget({
   selectedImages = [],
   onImagesChange,
 }: CameraWidgetProps) {
+  const { t } = useTranslation();
+
   const pickFromGallery = async () => {
     try {
       const permission =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert("İzin Gerekli", "Galeriye erişmek için izin vermelisiniz.");
+        Alert.alert(t("home.alertPermissionTitle"), t("home.alertPermissionGallery"));
         return;
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        allowsEditing: false, // Çoklu seçim için kapalı olmalı
-        allowsMultipleSelection: true, // ÇOKLU SEÇİM AKTİF!
+        allowsEditing: false,
+        allowsMultipleSelection: true,
         quality: 0.8,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        // Yeni seçilen fotoğrafların URL'lerini alıp mevcut listeye ekliyoruz
         const newUris = result.assets.map((asset) => asset.uri);
         onImagesChange([...selectedImages, ...newUris]);
       }
@@ -50,7 +52,7 @@ export default function CameraWidget({
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert("İzin Gerekli", "Kameraya erişmek için izin vermelisiniz.");
+        Alert.alert(t("home.alertPermissionTitle"), t("home.alertPermissionCamera"));
         return;
       }
 
@@ -61,7 +63,6 @@ export default function CameraWidget({
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        // Kameradan çekilen fotoğrafı mevcut listeye ekliyoruz
         onImagesChange([...selectedImages, result.assets[0].uri]);
       }
     } catch (error) {
@@ -69,7 +70,6 @@ export default function CameraWidget({
     }
   };
 
-  // Belirli bir fotoğrafı listeden çıkarma fonksiyonu
   const removePhoto = (indexToRemove: number) => {
     const newImages = selectedImages.filter(
       (_, index) => index !== indexToRemove,
@@ -80,7 +80,6 @@ export default function CameraWidget({
   return (
     <View style={styles.container}>
       <View style={styles.imageBlur}>
-        {/* Seçilen Görseller Karuseli */}
         {selectedImages.length > 0 ? (
           <ScrollView
             horizontal
@@ -90,8 +89,6 @@ export default function CameraWidget({
             {selectedImages.map((uri, index) => (
               <View key={`${uri}-${index}`} style={styles.imageWrapper}>
                 <Image source={{ uri }} style={styles.image} />
-
-                {/* Çıkarma (X) Butonu */}
                 <TouchableOpacity
                   style={styles.removeButton}
                   onPress={() => removePhoto(index)}
@@ -103,7 +100,6 @@ export default function CameraWidget({
             ))}
           </ScrollView>
         ) : (
-          /* Hiç Görsel Yoksa Gösterilecek Boş Alan */
           <View style={styles.emptyState}>
             <Ionicons
               name="images-outline"
@@ -111,20 +107,19 @@ export default function CameraWidget({
               color={GlassTheme.textMuted}
             />
             <Text style={styles.emptyText}>
-              Dump için birden fazla{"\n"}fotoğraf seçebilirsiniz
+              {t("home.uploadPlaceholder")}
             </Text>
           </View>
         )}
 
-        {/* Aksiyon Butonları (Her Zaman Görünür) */}
         <View style={styles.buttonRow}>
           <ActionButton
-            label="Galeri"
+            label={t("home.gallery")}
             icon="images-outline"
             onPress={pickFromGallery}
           />
           <ActionButton
-            label="Kamera"
+            label={t("home.camera")}
             icon="camera-outline"
             onPress={takePhoto}
           />

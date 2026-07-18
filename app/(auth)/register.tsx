@@ -11,23 +11,25 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import AgeRangeSelector from '@/components/AgeRangeSelector';
 import HapticButton from '@/components/HapticButton';
 import { GlassTheme } from '@/constants/LiquidGlass';
-import { supabase } from '@/services/supabase';
+import { api } from '@/services/api';
+
+const GOLD = '#D4AF37';
 
 export default function RegisterScreen() {
-  const { signUpWithEmail, loading } = useAuth();
-
+  const { signUpWithEmail } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [ageRange, setAgeRange] = useState<string | null>(null);
+  const [focusedField, setFocusedField] = useState<'email' | 'password' | 'confirmPassword' | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleRegister = async () => {
     if (password.length < 6) {
@@ -40,31 +42,22 @@ export default function RegisterScreen() {
       return;
     }
 
-    const { data, error } = await signUpWithEmail(email.trim(), password);
+    setSubmitting(true);
 
-    if (error) {
-      Alert.alert('Kayıt Başarısız', error.message);
-      return;
-    }
+    try {
+      const { error } = await signUpWithEmail(email.trim(), password, ageRange);
 
-    const userId = data?.user?.id;
-    if (userId) {
-      const { error: profileError } = await supabase.from('profiles').upsert({
-        id: userId,
-        email: email.trim(),
-        age_range: ageRange || null,
-        credits: 5,
-      });
-      if (profileError) {
-        console.log('Profil oluşturma hatası:', profileError.message);
+      if (error) {
+        Alert.alert('Kayıt Başarısız', error);
+        return;
       }
-    }
 
-    Alert.alert(
-      'Kayıt Başarılı',
-      'E-postanızı doğrulayın veya giriş yapın.',
-      [{ text: 'Tamam', onPress: () => router.replace('/(tabs)') }]
-    );
+      router.replace('/(tabs)');
+    } catch (err: any) {
+      Alert.alert('Kayıt Başarısız', err.message || 'Bilinmeyen bir hata oluştu.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -72,53 +65,54 @@ export default function RegisterScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={[styles.brand, { color: GlassTheme.textSub }]}>
-            Capshion
-          </Text>
-          <Text style={[styles.title, { color: GlassTheme.textMain }]}>
-            Hesap Oluştur
-          </Text>
-          <Text style={[styles.subtitle, { color: GlassTheme.textSub }]}>
-            Yaratıcı platformumuza katıl
-          </Text>
+          <Text style={styles.brand}>CAPSHION</Text>
+          <Text style={styles.title}>Hesap Oluştur</Text>
+          <Text style={styles.subtitle}>Yaratıcı platformumuza katıl</Text>
         </View>
 
         <View style={styles.form}>
-          <BlurView
-            intensity={GlassTheme.blurIntensity}
-            tint="dark"
-            style={styles.inputBlur}
+          <View
+            style={[
+              styles.inputOuter,
+              focusedField === 'email' && styles.inputFocused,
+            ]}
           >
             <TextInput
-              style={[styles.input, { color: GlassTheme.textMain }]}
+              style={styles.input}
               placeholder="E-posta"
-              placeholderTextColor={GlassTheme.textPlaceholder}
+              placeholderTextColor="#888"
               value={email}
               onChangeText={setEmail}
+              onFocus={() => setFocusedField('email')}
+              onBlur={() => setFocusedField(null)}
               autoCapitalize="none"
               keyboardType="email-address"
               autoComplete="email"
             />
-          </BlurView>
+          </View>
 
-          <BlurView
-            intensity={GlassTheme.blurIntensity}
-            tint="dark"
-            style={styles.inputBlur}
+          <View
+            style={[
+              styles.inputOuter,
+              focusedField === 'password' && styles.inputFocused,
+            ]}
           >
             <View style={styles.passwordRow}>
               <TextInput
-                style={[styles.input, styles.passwordInput, { color: GlassTheme.textMain }]}
+                style={[styles.input, styles.passwordInput]}
                 placeholder="Şifre"
-                placeholderTextColor={GlassTheme.textPlaceholder}
+                placeholderTextColor="#888"
                 value={password}
                 onChangeText={setPassword}
+                onFocus={() => setFocusedField('password')}
+                onBlur={() => setFocusedField(null)}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 autoComplete="new-password"
@@ -130,24 +124,27 @@ export default function RegisterScreen() {
                 <Ionicons
                   name={showPassword ? 'eye-off' : 'eye'}
                   size={22}
-                  color={GlassTheme.textMain}
+                  color={GlassTheme.textMuted}
                 />
               </HapticButton>
             </View>
-          </BlurView>
+          </View>
 
-          <BlurView
-            intensity={GlassTheme.blurIntensity}
-            tint="dark"
-            style={styles.inputBlur}
+          <View
+            style={[
+              styles.inputOuter,
+              focusedField === 'confirmPassword' && styles.inputFocused,
+            ]}
           >
             <View style={styles.passwordRow}>
               <TextInput
-                style={[styles.input, styles.passwordInput, { color: GlassTheme.textMain }]}
+                style={[styles.input, styles.passwordInput]}
                 placeholder="Şifre Tekrar"
-                placeholderTextColor={GlassTheme.textPlaceholder}
+                placeholderTextColor="#888"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
+                onFocus={() => setFocusedField('confirmPassword')}
+                onBlur={() => setFocusedField(null)}
                 secureTextEntry={!showConfirmPassword}
                 autoCapitalize="none"
                 autoComplete="new-password"
@@ -159,11 +156,11 @@ export default function RegisterScreen() {
                 <Ionicons
                   name={showConfirmPassword ? 'eye-off' : 'eye'}
                   size={22}
-                  color={GlassTheme.textMain}
+                  color={GlassTheme.textMuted}
                 />
               </HapticButton>
             </View>
-          </BlurView>
+          </View>
 
           <AgeRangeSelector value={ageRange} onChange={setAgeRange} />
 
@@ -171,26 +168,20 @@ export default function RegisterScreen() {
             style={styles.submitButton}
             onPress={handleRegister}
             activeOpacity={0.85}
-            disabled={loading}
+            disabled={submitting}
           >
-            <View style={styles.submitGradient}>
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text style={styles.submitText}>Kaydol</Text>
-              )}
-            </View>
+            {submitting ? (
+              <ActivityIndicator color="#000" size="small" />
+            ) : (
+              <Text style={styles.submitText}>Kaydol</Text>
+            )}
           </HapticButton>
         </View>
 
         <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: GlassTheme.textSub }]}>
-            Zaten hesabın var mı?
-          </Text>
+          <Text style={styles.footerText}>Zaten hesabın var mı?</Text>
           <HapticButton onPress={() => router.push('/(auth)/login')}>
-            <Text style={[styles.footerLink, { color: GlassTheme.textMain }]}>
-              Giriş Yap
-            </Text>
+            <Text style={styles.footerLink}>Giriş Yap</Text>
           </HapticButton>
         </View>
       </ScrollView>
@@ -201,6 +192,7 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: GlassTheme.background,
   },
   content: {
     flexGrow: 1,
@@ -213,36 +205,42 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   brand: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    marginBottom: 12,
+    letterSpacing: 4,
+    color: GOLD,
+    marginBottom: 16,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
+    color: GlassTheme.textMain,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
     fontWeight: '400',
+    color: GlassTheme.textMuted,
   },
   form: {
     gap: 16,
   },
-  inputBlur: {
+  inputOuter: {
     borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: '#1E1E1E',
     overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: GlassTheme.glassBorder,
+  },
+  inputFocused: {
+    borderColor: GOLD,
   },
   input: {
     height: 52,
     paddingHorizontal: 16,
     fontSize: 16,
     fontWeight: '400',
-    backgroundColor: GlassTheme.glassCardBg,
+    color: GlassTheme.textMain,
   },
   passwordRow: {
     position: 'relative',
@@ -262,20 +260,15 @@ const styles = StyleSheet.create({
   submitButton: {
     height: 52,
     borderRadius: 14,
-    overflow: 'hidden',
-    marginTop: 8,
-    ...GlassTheme.cardShadow,
-  },
-  submitGradient: {
-    flex: 1,
-    backgroundColor: '#6A11CB',
+    backgroundColor: GOLD,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 8,
   },
   submitText: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#000',
   },
   footer: {
     flexDirection: 'row',
@@ -287,9 +280,11 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 14,
     fontWeight: '400',
+    color: GlassTheme.textMuted,
   },
   footerLink: {
     fontSize: 14,
     fontWeight: '600',
+    color: GOLD,
   },
 });

@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -31,6 +32,7 @@ export default function PaymentWebViewModal({
   onFailure,
   onClose,
 }: PaymentWebViewModalProps) {
+  const { t } = useTranslation();
   const webViewRef = useRef<WebView>(null);
   const handledRef = useRef(false);
   const [loading, setLoading] = useState(true);
@@ -98,14 +100,14 @@ export default function PaymentWebViewModal({
           <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
             <Ionicons name="close" size={26} color={GlassTheme.textMain} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Kredi Satın Al</Text>
+          <Text style={styles.headerTitle}>{t("outOfCredits.buyButton")}</Text>
           <View style={styles.closeBtn} />
         </View>
 
         {loading && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color={GlassTheme.primary} />
-            <Text style={styles.loadingText}>Ödeme sayfası yükleniyor...</Text>
+            <Text style={styles.loadingText}>{t("payment.loading")}</Text>
           </View>
         )}
 

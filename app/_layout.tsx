@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, useColorScheme, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import {
@@ -11,9 +11,11 @@ import {
 } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GlassTheme } from "../constants/LiquidGlass";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth, AuthProvider } from "../hooks/useAuth";
+import i18next, { initPromise } from "../i18n";
 
 function RootLayoutNav() {
+  const [i18nReady, setI18nReady] = useState(false);
   const rawScheme = useColorScheme();
   const colorScheme: "light" | "dark" =
     rawScheme === "light" ? "light" : "dark";
@@ -22,7 +24,11 @@ function RootLayoutNav() {
   const router = useRouter();
 
   useEffect(() => {
-    if (loading) return;
+    initPromise.then(() => setI18nReady(true));
+  }, []);
+
+  useEffect(() => {
+    if (loading || !i18nReady) return;
 
     const inAuthGroup = segments[0] === "(auth)";
 
@@ -31,9 +37,9 @@ function RootLayoutNav() {
     } else if (user && inAuthGroup) {
       router.replace("/(tabs)");
     }
-  }, [user, loading, segments]);
+  }, [user, loading, segments, i18nReady]);
 
-  if (loading) {
+  if (loading || !i18nReady) {
     return (
       <View style={{ flex: 1 }}>
         <LinearGradient
@@ -55,16 +61,22 @@ function RootLayoutNav() {
     );
   }
 
+  const inAuth = segments[0] === "(auth)";
+
   return (
-    <View style={{ flex: 1 }}>
-      <LinearGradient
-        colors={[...GlassTheme.primaryGradient]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-      />
+    <View style={{ flex: 1, backgroundColor: GlassTheme.background }}>
+      {!inAuth && (
+        <LinearGradient
+          colors={[...GlassTheme.primaryGradient]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+        />
+      )}
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
         <Stack>
+          <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)/register" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
             name="caption/[id]"
@@ -81,5 +93,9 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  return <RootLayoutNav />;
+  return (
+    <AuthProvider>
+      <RootLayoutNav />
+    </AuthProvider>
+  );
 }

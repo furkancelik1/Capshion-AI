@@ -1,6 +1,5 @@
 import HapticButton from "@/components/HapticButton";
 import { GlassTheme } from "@/constants/LiquidGlass";
-import type { CaptionItem } from "@/hooks/useGenerateCaption";
 import { supabase } from "@/services/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
@@ -8,6 +7,7 @@ import * as Clipboard from "expo-clipboard";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -31,6 +31,11 @@ import Reanimated, {
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
+
+interface CaptionItem {
+  text?: string;
+  hashtags?: string[];
+}
 
 interface DetailScreenData {
   captions: CaptionItem[];
@@ -83,11 +88,13 @@ function GlassCard({
   index,
   onCopy,
   copiedIndex,
+  t,
 }: {
   caption: CaptionItem;
   index: number;
   onCopy: (text: string, index: number) => void;
   copiedIndex: number | null;
+  t: (key: string) => string;
 }) {
   const scale = useSharedValue(1);
 
@@ -117,13 +124,13 @@ function GlassCard({
             style={styles.cardBlur}
           >
             <View style={styles.cardInner}>
-              <Text style={styles.cardLabel}>Alternatif {index + 1}</Text>
+              <Text style={styles.cardLabel}>{t("common.alternative")} {index + 1}</Text>
 
-              <Text style={styles.cardText}>{caption.text}</Text>
+              <Text style={styles.cardText}>{caption.text ?? ''}</Text>
 
-              {caption.hashtags.length > 0 && (
+              {(caption.hashtags ?? []).length > 0 && (
                 <View style={styles.hashtagRow}>
-                  {caption.hashtags.map((tag, tagIndex) => (
+                  {(caption.hashtags ?? []).map((tag, tagIndex) => (
                     <View key={tagIndex} style={styles.hashtag}>
                       <Text style={styles.hashtagText}>{tag}</Text>
                     </View>
@@ -133,11 +140,11 @@ function GlassCard({
 
               <HapticButton
                 style={styles.copyButton}
-                onPress={() => onCopy(caption.text, index)}
+                onPress={() => onCopy(caption.text ?? '', index)}
                 activeOpacity={0.7}
               >
                 <Text style={styles.copyButtonText}>
-                  {copiedIndex === index ? "Kopyalandı ✅" : "Kopyala 📋"}
+                  {copiedIndex === index ? t("common.copied") : t("common.copyLabel")}
                 </Text>
               </HapticButton>
             </View>
@@ -149,6 +156,7 @@ function GlassCard({
 }
 
 export default function CaptionDetailScreen() {
+  const { t } = useTranslation();
   const { id, data: dataParam } = useLocalSearchParams<{
     id: string;
     data?: string;
@@ -164,7 +172,9 @@ export default function CaptionDetailScreen() {
   }, [dataParam]);
 
   const [captions, setCaptions] = useState<CaptionItem[]>(
-    inlineData?.captions ?? [],
+    (inlineData?.captions ?? []).map((item: any) =>
+      typeof item === "string" ? { text: item, hashtags: [] } : item,
+    ),
   );
 
   const [imageUrls, setImageUrls] = useState<string[]>(
@@ -210,12 +220,16 @@ export default function CaptionDetailScreen() {
 
       const { data: captionRows } = await supabase
         .from("generated_captions")
-        .select("text, hashtags")
+        .select("caption_text, hashtags")
         .eq("post_id", id)
         .order("id");
 
       if (captionRows) {
-        setCaptions(captionRows as CaptionItem[]);
+        setCaptions(
+          (captionRows as { caption_text: string; hashtags: string[] }[]).map(
+            (row) => ({ text: row.caption_text, hashtags: row.hashtags }),
+          ),
+        );
       }
 
       setLoading(false);
@@ -229,10 +243,10 @@ export default function CaptionDetailScreen() {
       try {
         await Clipboard.setStringAsync(text);
         setCopiedIndex(index);
-        showToast("Açıklama kopyalandı! 📋");
+        showToast(t("common.copiedDesc"));
         setTimeout(() => setCopiedIndex(null), 2000);
       } catch {
-        Alert.alert("Hata", "Panoya kopyalanamadı.");
+        Alert.alert(t("home.alertError"), t("common.alertClipboardError"));
       }
     },
     [showToast],
@@ -241,18 +255,18 @@ export default function CaptionDetailScreen() {
   const handleShare = useCallback(async () => {
     if (captions.length > 0) {
       try {
-        await Share.share({ message: captions[0].text });
+        await Share.share({ message: captions[0]?.text ?? '' });
       } catch {
-        Alert.alert("Hata", "Paylaşım açılamadı.");
+        Alert.alert(t("home.alertError"), t("common.alertShareError"));
       }
     }
   }, [captions]);
 
   const handleInstagramShare = useCallback(async () => {
     if (captions.length > 0) {
-      await Clipboard.setStringAsync(captions[0].text);
+      await Clipboard.setStringAsync(captions[0]?.text ?? '');
       setCopiedIndex(0);
-      showToast("Açıklama kopyalandı! 📋");
+      showToast(t("common.copiedDesc"));
       setTimeout(() => setCopiedIndex(null), 2000);
     }
 
@@ -262,12 +276,12 @@ export default function CaptionDetailScreen() {
         await Linking.openURL("instagram://sharesheet");
       } else {
         Alert.alert(
-          "Instagram Bulunamadı",
-          "Instagram uygulaması yüklü değil. Lütfen yükleyip tekrar deneyin.",
+          t("common.alertInstagramNotFound"),
+          t("common.alertInstagramNotInstalled"),
         );
       }
     } catch {
-      Alert.alert("Hata", "Instagram açılamadı.");
+      Alert.alert(t("home.alertError"), t("common.alertInstagramOpenError"));
     }
   }, [captions, showToast]);
 
@@ -301,10 +315,10 @@ export default function CaptionDetailScreen() {
         setShowCreditModal(false);
         setShowWebView(true);
       } else {
-        Alert.alert("Hata", result?.error || "Ödeme linki oluşturulamadı.");
+        Alert.alert(t("home.alertError"), result?.error || t("outOfCredits.paymentLinkError"));
       }
     } catch (error) {
-      Alert.alert("Bağlantı Hatası", "Sunucuya ulaşılamadı.");
+      Alert.alert(t("outOfCredits.connectionError"), t("outOfCredits.connectionErrorDesc"));
     } finally {
       setIsProcessingPayment(false);
     }
@@ -317,13 +331,13 @@ export default function CaptionDetailScreen() {
     // Şimdilik standart "success" ve "failure" kelimelerini arıyoruz.
     if (url.includes("success")) {
       setShowWebView(false);
-      Alert.alert("Ödeme Başarılı! 🎉", "Kredilerin hesabına yüklendi.");
+      Alert.alert(t("outOfCredits.paymentSuccessTitle"), t("outOfCredits.paymentSuccessDesc"));
       if (creditsRemaining !== null) {
         setCreditsRemaining(creditsRemaining + 10);
       }
     } else if (url.includes("failure") || url.includes("error")) {
       setShowWebView(false);
-      Alert.alert("Ödeme Başarısız", "İşleminiz tamamlanamadı.");
+      Alert.alert(t("outOfCredits.paymentFailureTitle"), t("outOfCredits.paymentFailureDesc"));
     }
   };
 
@@ -345,7 +359,7 @@ export default function CaptionDetailScreen() {
           >
             <Ionicons name="arrow-back" size={24} color={GlassTheme.textMain} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Capshion Detay</Text>
+          <Text style={styles.headerTitle}>{t("common.details")}</Text>
           <TouchableOpacity onPress={() => {}} style={styles.headerBtn}>
             <Ionicons
               name="settings-outline"
@@ -398,7 +412,7 @@ export default function CaptionDetailScreen() {
                 activeOpacity={0.7}
               >
                 <Text style={styles.creditBadge}>
-                  Kalan kredi: {creditsRemaining} (Kredi Yükle 🔋)
+                  {t("common.creditRemaining", { count: creditsRemaining })}
                 </Text>
               </TouchableOpacity>
             )}
@@ -409,7 +423,7 @@ export default function CaptionDetailScreen() {
           entering={FadeInUp.springify().damping(14)}
           style={styles.sectionTitle}
         >
-          Oluşturulan Açıklamalar
+          {t("common.outputs")}
         </Reanimated.Text>
 
         {captions.length === 0 ? (
@@ -418,7 +432,7 @@ export default function CaptionDetailScreen() {
             tint="dark"
             style={styles.emptyCard}
           >
-            <Text style={styles.emptyText}>Henüz açıklama bulunamadı.</Text>
+            <Text style={styles.emptyText}>{t("common.emptyTexts")}</Text>
           </BlurView>
         ) : (
           <ScrollView
@@ -426,15 +440,19 @@ export default function CaptionDetailScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.cardsRow}
           >
-            {captions.map((caption, index) => (
-              <GlassCard
-                key={index}
-                caption={caption}
-                index={index}
-                onCopy={handleCopy}
-                copiedIndex={copiedIndex}
-              />
-            ))}
+            {captions.map((caption, index) => {
+              console.log("GlassCard'a gelen veri:", JSON.stringify(caption, null, 2));
+              return (
+                <GlassCard
+                  key={index}
+                  caption={caption}
+                  index={index}
+                  onCopy={handleCopy}
+                  copiedIndex={copiedIndex}
+                  t={t}
+                />
+              );
+            })}
           </ScrollView>
         )}
 
@@ -451,7 +469,7 @@ export default function CaptionDetailScreen() {
               style={styles.shareGradient}
             >
               <Ionicons name="logo-instagram" size={18} color="#FFF" />
-              <Text style={styles.shareButtonText}> Instagram</Text>
+              <Text style={styles.shareButtonText}> {t("common.instagram")}</Text>
             </LinearGradient>
           </HapticButton>
 
@@ -467,7 +485,7 @@ export default function CaptionDetailScreen() {
               style={styles.shareGradient}
             >
               <Ionicons name="share-outline" size={18} color="#FFF" />
-              <Text style={styles.shareButtonText}> Paylaş</Text>
+              <Text style={styles.shareButtonText}> {t("common.share")}</Text>
             </LinearGradient>
           </HapticButton>
         </View>
@@ -489,11 +507,10 @@ export default function CaptionDetailScreen() {
               <Ionicons name="battery-dead" size={32} color="#8B5CF6" />
             </View>
             <Text style={styles.creditModalTitle}>
-              Kredi Bakiyeniz Tükendi ⚡
+              {t("outOfCredits.title")}
             </Text>
             <Text style={styles.creditModalDesc}>
-              Harika içerikler üretmeye devam etmek için kredini
-              yenileyebilirsin. Hemen paketini seç ve devam et.
+              {t("outOfCredits.descriptionCaption")}
             </Text>
 
             <TouchableOpacity
@@ -510,7 +527,7 @@ export default function CaptionDetailScreen() {
                 {isProcessingPayment ? (
                   <ActivityIndicator color="#FFF" />
                 ) : (
-                  <Text style={styles.purchaseButtonText}>Kredi Satın Al</Text>
+                  <Text style={styles.purchaseButtonText}>{t("outOfCredits.buyButton")}</Text>
                 )}
               </LinearGradient>
             </TouchableOpacity>
@@ -519,7 +536,7 @@ export default function CaptionDetailScreen() {
               style={styles.laterButton}
               onPress={() => setShowCreditModal(false)}
             >
-              <Text style={styles.laterButtonText}>Daha Sonra</Text>
+              <Text style={styles.laterButtonText}>{t("outOfCredits.later")}</Text>
             </TouchableOpacity>
           </View>
         </View>

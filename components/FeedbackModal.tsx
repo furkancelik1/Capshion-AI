@@ -1,5 +1,6 @@
 import { BlurView } from "expo-blur";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Modal,
@@ -23,6 +24,7 @@ export default function FeedbackModal({
   onClose,
   userId,
 }: FeedbackModalProps) {
+  const { t } = useTranslation();
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -60,14 +62,14 @@ export default function FeedbackModal({
             <Text style={styles.closeBtnText}>✕</Text>
           </TouchableOpacity>
 
-          <Text style={styles.title}>Deneyimini Geliştir</Text>
+          <Text style={styles.title}>{t("feedback.title")}</Text>
           <Text style={styles.subtitle}>
-            Görüşleriniz bizim için değerli. Deneyimi senin için nasıl iyileştirebiliriz?
+            {t("feedback.subtitle")}
           </Text>
 
           <TextInput
             style={styles.input}
-            placeholder="Mesajınız..."
+            placeholder={t("feedback.placeholder")}
             placeholderTextColor={GlassTheme.textPlaceholder}
             value={message}
             onChangeText={setMessage}
@@ -84,7 +86,7 @@ export default function FeedbackModal({
             {sending ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.sendText}>Gönder</Text>
+              <Text style={styles.sendText}>{t("feedback.send")}</Text>
             )}
           </TouchableOpacity>
         </View>
