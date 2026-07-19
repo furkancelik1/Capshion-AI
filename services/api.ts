@@ -4,6 +4,16 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:3000/api';
 
 let _token: string | null = null;
 
+const _imageCache = new Map<string, string[]>();
+
+export function setCachedImageUris(postId: string, uris: string[]) {
+  _imageCache.set(postId, uris);
+}
+
+export function getCachedImageUris(postId: string): string[] | undefined {
+  return _imageCache.get(postId);
+}
+
 export function setToken(token: string | null) {
   _token = token;
 }

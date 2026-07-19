@@ -60,7 +60,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "server": "node server.js"
+    "server": "node server.js",
+    "production": "node --env-file=.env server.js"
   },
   "private": true
 }

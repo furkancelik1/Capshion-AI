@@ -7,6 +7,7 @@ import * as Clipboard from "expo-clipboard";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { getCachedImageUris } from "../../services/api";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
@@ -177,10 +178,12 @@ export default function CaptionDetailScreen() {
     ),
   );
 
-  const [imageUrls, setImageUrls] = useState<string[]>(
-    inlineData?.image_urls ??
-      (inlineData?.image_url ? [inlineData.image_url] : []),
-  );
+  const [imageUrls, setImageUrls] = useState<string[]>(() => {
+    const cached = getCachedImageUris(id);
+    if (cached && cached.length > 0) return cached;
+    return inlineData?.image_urls ??
+      (inlineData?.image_url ? [inlineData.image_url] : []);
+  });
 
   const [creditsRemaining, setCreditsRemaining] = useState<number | null>(
     inlineData?.credits_remaining ?? null,
@@ -327,19 +330,20 @@ export default function CaptionDetailScreen() {
   // WebView içerisindeki URL değişimlerini yakalama
   const handleWebViewNavigation = (navState: any) => {
     const { url } = navState;
-    // Edge function tarafında iyzico callback URL olarak ne belirlediysen ona göre eşleşme yapmalıyız.
-    // Şimdilik standart "success" ve "failure" kelimelerini arıyoruz.
-    if (url.includes("success")) {
+    if (url.includes("payment-success")) {
       setShowWebView(false);
       Alert.alert(t("outOfCredits.paymentSuccessTitle"), t("outOfCredits.paymentSuccessDesc"));
       if (creditsRemaining !== null) {
         setCreditsRemaining(creditsRemaining + 10);
       }
-    } else if (url.includes("failure") || url.includes("error")) {
+    } else if (url.includes("payment-failure")) {
       setShowWebView(false);
       Alert.alert(t("outOfCredits.paymentFailureTitle"), t("outOfCredits.paymentFailureDesc"));
     }
   };
+
+  console.log("[Caption] imageUrls.length:", imageUrls.length);
+  console.log("[Caption] first imageUri (50 chars):", imageUrls[0]?.substring(0, 50));
 
   if (loading) {
     return (
@@ -399,7 +403,7 @@ export default function CaptionDetailScreen() {
                     tint="dark"
                     style={styles.imageBlurWrapper}
                   >
-                    <Image source={{ uri }} style={styles.previewImage} />
+                    <Image source={{ uri }} style={styles.previewImage} resizeMode="cover" />
                   </BlurView>
                 ))}
               </ScrollView>
@@ -562,6 +566,14 @@ export default function CaptionDetailScreen() {
           {paymentUrl && (
             <WebView
               source={{ uri: paymentUrl }}
+              originWhitelist={['*']}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              sharedCookiesEnabled={true}
+              thirdPartyCookiesEnabled={true}
+              mixedContentMode="always"
+              cacheEnabled={false}
+              setSupportMultipleWindows={false}
               onNavigationStateChange={handleWebViewNavigation}
               startInLoadingState={true}
               renderLoading={() => (
@@ -652,6 +664,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 18,
     margin: 2,
+    backgroundColor: GlassTheme.panelStrong,
   },
   creditBadge: {
     fontSize: 13,

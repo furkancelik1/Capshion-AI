@@ -8,7 +8,7 @@ const path = require("path");
 const crypto = require("crypto");
 const OpenAI = require("openai");
 const Iyzipay = require("iyzipay");
-const paymentStore = new Map(); // token -> { userId, credits }
+
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"),
@@ -273,7 +273,7 @@ app.post("/api/payment/create", authenticateToken, async (req, res) => {
       currency: currency === "TRY" ? Iyzipay.CURRENCY.TRY : Iyzipay.CURRENCY.USD,
       basketId,
       paymentGroup: Iyzipay.PAYMENT_GROUP.PRODUCT,
-      callbackUrl: "http://192.168.1.101:3000/api/payment/callback",
+      callbackUrl: process.env.IYZICO_CALLBACK_URL || "https://curling-trouble-goatskin.ngrok-free.dev/api/payment/callback",
       enabledInstallments: [1],
       buyer: {
         id: String(req.userId),
@@ -316,7 +316,7 @@ app.post("/api/payment/create", authenticateToken, async (req, res) => {
       ],
     };
 
-    iyzipay.checkoutFormInitialize.create(request, (err, result) => {
+    iyzipay.checkoutFormInitialize.create(request, async (err, result) => {
       if (err) {
         console.error("[Payment] Iyzico hatasi:", err);
         return res.status(500).json({ error: "Odeme baslatilamadi." });
@@ -326,7 +326,14 @@ app.post("/api/payment/create", authenticateToken, async (req, res) => {
         console.error("[Payment] Iyzico init hatasi - errorCode:", result.errorCode, "errorMessage:", result.errorMessage);
       }
       if (result?.token) {
-        paymentStore.set(result.token, { userId: req.userId, credits: Number(credits) });
+        try {
+          await pool.query(
+            "INSERT INTO payment_requests (token, user_id, credits) VALUES ($1, $2, $3) ON CONFLICT (token) DO NOTHING",
+            [result.token, req.userId, Number(credits)],
+          );
+        } catch (dbErr) {
+          console.error("[Payment] DB kayit hatasi:", dbErr.message);
+        }
       }
       res.json({ paymentUrl: result.paymentPageUrl });
     });
@@ -361,9 +368,12 @@ async function handlePaymentCallback(req, res) {
       console.log("[Payment] Iyzico dogrulama sonucu:", JSON.stringify(result, null, 2));
 
       if (result.paymentStatus === "SUCCESS") {
-        const meta = paymentStore.get(token);
-        const userId = meta?.userId;
-        const credits = meta?.credits;
+        const payRow = await pool.query(
+          "SELECT user_id, credits FROM payment_requests WHERE token = $1",
+          [token],
+        );
+        const userId = payRow.rows[0]?.user_id;
+        const credits = payRow.rows[0]?.credits;
 
         if (!userId || !credits) {
           console.error("[Payment] Metadata bulunamadi, token:", token);
@@ -374,7 +384,7 @@ async function handlePaymentCallback(req, res) {
           "UPDATE profiles SET credits = credits + $1 WHERE id = $2",
           [credits, userId],
         );
-        paymentStore.delete(token);
+        await pool.query("DELETE FROM payment_requests WHERE token = $1", [token]);
         console.log(`[Payment] Kredi eklendi: userId=${userId}, credits=${credits}`);
 
         res.redirect("http://192.168.1.101:3000/payment-success");
@@ -522,51 +532,106 @@ app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    const prompt = `Sen bir sosyal medya altyazısı yazarısın.
-Gönderilen görsel(ler) için ${language || "Türkçe"} dilinde yaratıcı, etkileyici ve platforma uygun altyazılar üret.
+    const langMap = { tr: "Türkçe", en: "English", de: "Deutsch", fr: "Français", es: "Español", ar: "العربية", ru: "Русский" };
+    const langName = langMap[language] || language || "Türkçe";
+    const instructionLang = langName === "Türkçe"
+      ? "Türkçe yaz. Günlük konuşma Türkçesi kullan, resmi olmasın."
+      : `Write in ${langName}. Use everyday ${langName}, don't be formal.`;
 
-Kullanıcı tercihleri:
-- Ton: ${tone || "neutral"}
-- Cinsiyet: ${gender || "neutral"}
-- Yaş aralığı: ${ageRange || "general"}
+    const prompt = `You are writing Instagram captions like a real user, not an AI or a poet.
+Look at the photo(s) and write what naturally comes to mind — like a friend sharing a moment.
 
-Her altyazı için uygun hashtag'ler de üret. Yanıtın kesinlikle aşağıdaki JSON formatında olmalı (başka metin ekleme):
+Rules:
+- NEVER write like AI, poet, motivational speaker, or advertiser
+- NO exaggerated adjectives, deep life quotes, or generic wisdom
+- NO question sentences — write statements, opinions, or observations
+- Short, natural, everyday language
+- Emojis OK but don't overdo it
 
-[
-  { "caption_text": "ilk altyazı metni", "hashtags": ["#etiket1", "#etiket2"] },
-  { "caption_text": "ikinci altyazı metni", "hashtags": ["#etiket3", "#etiket4"] }
-]
+${instructionLang}
+Tone: ${tone || "neutral"}
+Gender: ${gender || "neutral"}
+Age range: ${ageRange || "general"}
 
-En az 2, en fazla 4 altyazı üret.`;
+Add 2-4 hashtags per caption. Reply ONLY with this JSON format:
 
-    const contentParts = [
-      { type: "text", text: prompt },
-      ...images.map((img) => ({
-        type: "image_url",
-        image_url: { url: img },
-      })),
-    ];
+{
+  "captions": [
+    { "caption_text": "caption text", "hashtags": ["#tag1", "#tag2"] },
+    { "caption_text": "caption text", "hashtags": ["#tag3", "#tag4"] }
+  ]
+}
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [{ role: "user", content: contentParts }],
-      response_format: { type: "json_object" },
-      max_tokens: 2000,
-    });
+Generate at least 2, at most 4 captions.`;
 
-    const raw = completion.choices[0].message.content;
-    console.log("[Generate-JSON] AI yanıtı alındı");
+    const callOpenAI = async (retryPrompt) => {
+      const msg = retryPrompt || prompt;
+      return await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: [{ type: "text", text: msg }, ...images.map((img) => ({ type: "image_url", image_url: { url: img } }))] }],
+        response_format: { type: "json_object" },
+        max_tokens: 3000,
+      });
+    };
 
-    let aiCaptions;
-    try {
-      const parsed = JSON.parse(raw);
-      aiCaptions = Array.isArray(parsed) ? parsed : parsed.captions || [];
-    } catch {
-      throw new Error("AI gecersiz JSON dondurdu");
+    let completion = await callOpenAI();
+    let raw = completion.choices[0]?.message?.content || "";
+    console.log("[Generate-JSON] AI yanıtı alındı" + (raw ? "" : " (bos)"));
+
+    const retryMsg = langName === "Türkçe"
+      ? "Lütfen görsel(ler) için mutlaka altyazı üret. Boş yanıt verme. Soru cümlesi kullanma."
+      : "Please generate captions for the image(s). Do not return empty. Do NOT use question sentences.";
+    const fallbackPrompt = langName === "Türkçe"
+      ? `Görsel için kısa, doğal bir Instagram altyazısı yaz. ${retryMsg}`
+      : `Write a short, natural Instagram caption for the image. ${retryMsg}`;
+
+    let attempts = 0;
+    let aiCaptions = [];
+
+    while (attempts < 3 && aiCaptions.length === 0) {
+      attempts++;
+      if (attempts > 1) {
+        console.log(`[Generate-JSON] Deneme ${attempts}...`);
+        const p = attempts === 2 ? prompt + "\n\n" + retryMsg : fallbackPrompt;
+        completion = await callOpenAI(p);
+        raw = completion.choices[0]?.message?.content || "";
+      }
+
+      if (!raw) continue;
+
+      try {
+        const parsed = JSON.parse(raw);
+        aiCaptions = parsed.captions || parsed.data || parsed.results || parsed.output;
+        if (!aiCaptions && parsed.caption_text) aiCaptions = [parsed];
+        if (!aiCaptions) {
+          const firstArray = Object.values(parsed).find(v => Array.isArray(v));
+          aiCaptions = firstArray || [];
+        }
+        if (!Array.isArray(aiCaptions)) aiCaptions = [aiCaptions];
+        aiCaptions = aiCaptions.filter(c => c && (c.caption_text || c.text));
+        aiCaptions = aiCaptions.map(c => ({
+          caption_text: c.caption_text || c.text || "",
+          hashtags: Array.isArray(c.hashtags) ? c.hashtags : [],
+        }));
+      } catch {
+        const jsonMatch = (raw || "").match(/{[\s\S]*}/);
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0]);
+            aiCaptions = parsed.captions || parsed.data || parsed.results || parsed.output || [];
+            if (!Array.isArray(aiCaptions)) aiCaptions = [aiCaptions];
+            aiCaptions = aiCaptions.filter(c => c && (c.caption_text || c.text));
+            aiCaptions = aiCaptions.map(c => ({
+              caption_text: c.caption_text || c.text || "",
+              hashtags: Array.isArray(c.hashtags) ? c.hashtags : [],
+            }));
+          } catch { aiCaptions = []; }
+        } else { aiCaptions = []; }
+      }
     }
 
     if (!aiCaptions.length) {
-      throw new Error("AI hic altyazi dondurmedi");
+      throw new Error("Altyazı oluşturulamadı");
     }
 
     const postId = crypto.randomUUID();
