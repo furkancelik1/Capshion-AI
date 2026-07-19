@@ -55,7 +55,8 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "start": "concurrently \"npm:expo\" \"npm:server\"",
+    "start": "node server.js",
+    "dev": "concurrently \"npm:expo\" \"npm:server\"",
     "expo": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
