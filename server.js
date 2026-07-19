@@ -347,9 +347,10 @@ async function handlePaymentCallback(req, res) {
   console.log('[Callback] Gelen istek body:', JSON.stringify(req.body));
   console.log('[Callback] Gelen istek query:', JSON.stringify(req.query));
 
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
   const token = req.body?.token || req.query?.token;
   if (!token) {
-    return res.redirect("http://192.168.1.101:3000/payment-failure?reason=no_token");
+    return res.redirect(`${baseUrl}/payment-failure?reason=no_token`);
   }
 
   try {
@@ -362,7 +363,7 @@ async function handlePaymentCallback(req, res) {
     iyzipay.checkoutForm.retrieve({ token }, async (err, result) => {
       if (err) {
         console.error("[Payment] Callback dogrulama hatasi:", err);
-        return res.redirect("http://192.168.1.101:3000/payment-failure?reason=verify_error");
+        return res.redirect(`${baseUrl}/payment-failure?reason=verify_error`);
       }
 
       console.log("[Payment] Iyzico dogrulama sonucu:", JSON.stringify(result, null, 2));
@@ -377,7 +378,7 @@ async function handlePaymentCallback(req, res) {
 
         if (!userId || !credits) {
           console.error("[Payment] Metadata bulunamadi, token:", token);
-          return res.redirect("http://192.168.1.101:3000/payment-failure?reason=bad_meta");
+          return res.redirect(`${baseUrl}/payment-failure?reason=bad_meta`);
         }
 
         await pool.query(
@@ -387,15 +388,15 @@ async function handlePaymentCallback(req, res) {
         await pool.query("DELETE FROM payment_requests WHERE token = $1", [token]);
         console.log(`[Payment] Kredi eklendi: userId=${userId}, credits=${credits}`);
 
-        res.redirect("http://192.168.1.101:3000/payment-success");
+        res.redirect(`${baseUrl}/payment-success`);
       } else {
         console.log("[Payment] Odeme basarisiz - status:", result.paymentStatus, "| errorCode:", result.errorCode, "| errorMessage:", result.errorMessage, "| mdStatus:", result.mdStatus, "| fraudStatus:", result.fraudStatus, "| phase:", result.phase, "| itemTransactions:", JSON.stringify(result.itemTransactions));
-        res.redirect("http://192.168.1.101:3000/payment-failure");
+        res.redirect(`${baseUrl}/payment-failure`);
       }
     });
   } catch (err) {
     console.error("[Payment] Callback hatasi:", err.message);
-    res.redirect("http://192.168.1.101:3000/payment-failure?reason=exception");
+    res.redirect(`${baseUrl}/payment-failure?reason=exception`);
   }
 }
 
