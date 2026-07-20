@@ -1,11 +1,16 @@
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
+const morgan = require("morgan");
+const rateLimit = require("express-rate-limit");
+const compression = require("compression");
 const { Pool } = require("pg");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
 const path = require("path");
 const crypto = require("crypto");
+const fs = require("fs");
 const OpenAI = require("openai");
 const Iyzipay = require("iyzipay");
 
@@ -18,9 +23,14 @@ const storage = multer.diskStorage({
   },
 });
 
+const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN || "http://localhost:8081,http://localhost:19006").split(",");
+
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: "Çok fazla istek. Lütfen daha sonra tekrar deneyin." } });
+const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false });
+
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024, files: 5 },
+  limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE || "10485760"), files: parseInt(process.env.MAX_FILES || "5") },
   fileFilter: (req, file, cb) => {
     const allowed = /jpeg|jpg|png|webp|heic/;
     const extOk = allowed.test(path.extname(file.originalname).toLowerCase());
@@ -29,21 +39,32 @@ const upload = multer({
   },
 });
 
-const app = express();
-app.use(cors());
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ extended: true }));
-app.use("/uploads", express.static("uploads"));
+if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
 
+const app = express();
+app.use(helmet());
+app.use(compression());
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
+app.use(cors({ origin: ALLOWED_ORIGINS, methods: ["GET", "POST", "PUT", "DELETE"], credentials: true }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
+app.use("/uploads", authenticateToken, express.static("uploads"));
+
+if (!process.env.DATABASE_URL) {
+  console.error("[DB] DATABASE_URL ortam değişkeni gerekli!");
+  process.exit(1);
+}
 const pool = new Pool({
-  connectionString:
-    process.env.DATABASE_URL ||
-    "postgresql://postgres:password@localhost:5432/capshion",
+  connectionString: process.env.DATABASE_URL,
   connectionTimeoutMillis: 5000,
   query_timeout: 10000,
 });
 
-const JWT_SECRET = process.env.JWT_SECRET || "capshion-dev-secret-key";
+if (!process.env.JWT_SECRET) {
+  console.error("[Auth] JWT_SECRET ortam değişkeni gerekli!");
+  process.exit(1);
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 pool.on("error", (err) => {
   console.error("[DB] Pool hatası:", err.message);
@@ -63,6 +84,9 @@ async function dbHealthCheck() {
     return false;
   }
 }
+
+app.use("/api/auth", authLimiter);
+app.use("/api", apiLimiter);
 
 app.post("/api/auth/register", async (req, res) => {
   console.log("[Register] İstek alındı, body:", JSON.stringify(req.body));
@@ -196,6 +220,8 @@ function authenticateToken(req, res, next) {
 
 app.get("/api/auth/profile", authenticateToken, async (req, res) => {
   console.log("[Profile] İstek alındı, userId:", req.userId);
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+  res.set("Pragma", "no-cache");
   try {
     const result = await pool.query(
       "SELECT id, email, age_range, credits AS credits_remaining FROM profiles WHERE id = $1",
@@ -273,7 +299,7 @@ app.post("/api/payment/create", authenticateToken, async (req, res) => {
       currency: currency === "TRY" ? Iyzipay.CURRENCY.TRY : Iyzipay.CURRENCY.USD,
       basketId,
       paymentGroup: Iyzipay.PAYMENT_GROUP.PRODUCT,
-      callbackUrl: process.env.IYZICO_CALLBACK_URL || "https://curling-trouble-goatskin.ngrok-free.dev/api/payment/callback",
+      callbackUrl: process.env.IYZICO_CALLBACK_URL,
       enabledInstallments: [1],
       buyer: {
         id: String(req.userId),
@@ -281,7 +307,7 @@ app.post("/api/payment/create", authenticateToken, async (req, res) => {
         surname: "Capshion",
         gsmNumber: "+905555555555",
         email: userRow.email,
-        identityNumber: "74300864791",
+        identityNumber: process.env.IYZICO_IDENTITY_NUMBER || "11111111111",
         registrationAddress: "Capshion AI Platform",
         registrationDate: new Date().toISOString().replace("T", " ").split(".")[0],
         lastLoginDate: new Date().toISOString().replace("T", " ").split(".")[0],
@@ -443,19 +469,51 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
       return res.status(403).json({ error: "Yetersiz kredi. Lütfen kredi yükleyin." });
     }
 
-    const imageUrls = files.map(
-      (f) => `${req.protocol}://${req.hostname}:${process.env.PORT || 3000}/uploads/${f.filename}`,
-    );
+    console.log("[Generate] Dosyalar base64'e çevriliyor...");
+    const base64Images = await Promise.all(files.map((f) => fs.promises.readFile(f.path).then((buf) => `data:${f.mimetype};base64,${buf.toString("base64")}`)));
+    const imageUrls = files.map((f) => `${req.protocol}://${req.hostname}:${process.env.PORT || 3000}/uploads/${f.filename}`);
 
-    // AI servisi placeholder — 2 saniye bekle, sahte veri dön
-    console.log("[Generate] AI servisi çağrılıyor...");
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    const fakeCaptions = [
-      "Bu anı ölümsüzleştirmek için mükemmel bir kare!",
-      "Hayatın içinden bir an, doğanın büyüsüyle buluşuyor.",
-    ];
-    const fakeHashtags = ["#anı", "#doğa", "#hayat", "#güzellik"];
+    const langMap = { tr: "Türkçe", en: "English", de: "Deutsch", fr: "Français", es: "Español", ar: "العربية", ru: "Русский" };
+    const langName = langMap[language] || language || "Türkçe";
+    const instructionLang = langName === "Türkçe" ? "Türkçe yaz. Günlük konuşma Türkçesi kullan, resmi olmasın." : `Write in ${langName}. Use everyday ${langName}, don't be formal.`;
+
+    const prompt = `You are writing Instagram captions like a real user, not an AI or a poet.\nLook at the photo(s) and write what naturally comes to mind — like a friend sharing a moment.\n\nRules:\n- NEVER write like AI, poet, motivational speaker, or advertiser\n- NO exaggerated adjectives, deep life quotes, or generic wisdom\n- NO question sentences — write statements, opinions, or observations\n- Short, natural, everyday language\n- Emojis OK but don't overdo it\n\n${instructionLang}\nTone: ${tone || "neutral"}\nGender: ${gender || "neutral"}\nAge range: ${ageRange || "general"}\n\nAdd 2-4 hashtags per caption. Reply ONLY with this JSON format:\n\n{\n  "captions": [\n    { "caption_text": "caption text", "hashtags": ["#tag1", "#tag2"] },\n    { "caption_text": "caption text", "hashtags": ["#tag3", "#tag4"] }\n  ]\n}\n\nGenerate at least 2, at most 4 captions.`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: [{ type: "text", text: prompt }, ...base64Images.map((img) => ({ type: "image_url", image_url: { url: img } }))] }],
+      response_format: { type: "json_object" },
+      max_tokens: 3000,
+    });
+
+    const raw = completion.choices[0]?.message?.content || "";
+    let aiCaptions = [];
+
+    try {
+      const parsed = JSON.parse(raw);
+      aiCaptions = parsed.captions || parsed.data || parsed.results || parsed.output || [];
+      if (!Array.isArray(aiCaptions)) aiCaptions = [aiCaptions];
+      aiCaptions = aiCaptions.filter(c => c && (c.caption_text || c.text));
+      aiCaptions = aiCaptions.map(c => ({ caption_text: c.caption_text || c.text || "", hashtags: Array.isArray(c.hashtags) ? c.hashtags : [] }));
+    } catch {
+      const jsonMatch = (raw || "").match(/{[\s\S]*}/);
+      if (jsonMatch) {
+        try {
+          const parsed = JSON.parse(jsonMatch[0]);
+          aiCaptions = parsed.captions || parsed.data || parsed.results || parsed.output || [];
+          if (!Array.isArray(aiCaptions)) aiCaptions = [aiCaptions];
+          aiCaptions = aiCaptions.filter(c => c && (c.caption_text || c.text));
+          aiCaptions = aiCaptions.map(c => ({ caption_text: c.caption_text || c.text || "", hashtags: Array.isArray(c.hashtags) ? c.hashtags : [] }));
+        } catch { aiCaptions = []; }
+      } else { aiCaptions = []; }
+    }
+
+    if (!aiCaptions.length) {
+      throw new Error("Altyazı oluşturulamadı");
+    }
+
     const postId = crypto.randomUUID();
 
     const client = await pool.connect();
@@ -465,7 +523,7 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
       await client.query(
         `INSERT INTO generated_captions (id, user_id, caption_text, hashtags, image_url, post_id, created_at)
          VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-        [postId, req.userId, fakeCaptions[0], fakeHashtags, imageUrls[0], postId],
+        [postId, req.userId, aiCaptions[0].caption_text, aiCaptions[0].hashtags, imageUrls[0], postId],
       );
 
       await client.query(
@@ -475,18 +533,14 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
 
       await client.query("COMMIT");
 
-      const remainingResult = await pool.query(
-        "SELECT credits FROM profiles WHERE id = $1",
-        [req.userId],
-      );
+      const remainingResult = await pool.query("SELECT credits FROM profiles WHERE id = $1", [req.userId]);
       const remainingCredits = remainingResult.rows[0].credits;
 
-      console.log("[Generate] Başarılı, postId:", postId, "kalan kredi:", remainingCredits);
+      const captions = aiCaptions.map((c) => ({ text: c.caption_text, hashtags: c.hashtags }));
 
       res.status(201).json({
         success: true,
-        captions: fakeCaptions,
-        hashtags: fakeHashtags,
+        captions,
         post_id: postId,
         image_url: imageUrls[0],
         image_urls: imageUrls,
@@ -682,6 +736,27 @@ Generate at least 2, at most 4 captions.`;
     res.status(500).json({ success: false, error: "Altyazı oluşturulamadı." });
   }
 });
+
+app.get("/health", async (req, res) => {
+  const dbOk = await dbHealthCheck();
+  res.status(dbOk ? 200 : 503).json({ status: dbOk ? "ok" : "degraded", timestamp: new Date().toISOString() });
+});
+
+app.use((err, req, res, next) => {
+  console.error("[Unhandled Error]", err);
+  res.status(500).json({ error: "Sunucu hatası." });
+});
+
+function gracefulShutdown(signal) {
+  console.log(`[Server] ${signal} alındı, kapatılıyor...`);
+  pool.end(() => {
+    console.log("[DB] Bağlantı kapatıldı.");
+    process.exit(0);
+  });
+}
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
 async function start() {
   const dbOk = await dbHealthCheck();

@@ -1,22 +1,14 @@
-import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
   Alert,
   Animated,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { WebView } from "react-native-webview";
 import AmbientGlow from "../../components/AmbientGlow";
 import CameraWidget from "../../components/CameraWidget";
 import GeneratingModal from "../../components/GeneratingModal";
@@ -29,11 +21,14 @@ import {
 import GlassPanel from "../../components/GlassPanel";
 import HapticButton from "../../components/HapticButton";
 import HowItWorksModal from "../../components/HowItWorksModal";
+import OutOfCreditsModal from "../../components/OutOfCreditsModal";
+import PaymentWebViewModal from "../../components/PaymentWebViewModal";
 import ToneSelector from "../../components/ToneSelector";
 import { GlassTheme } from "../../constants/LiquidGlass";
 import { useAuth } from "../../hooks/useAuth";
 import { useGenerateCaption } from "../../hooks/useGenerateCaption";
-import { api, getToken } from "../../services/api";
+import { usePayment } from "../../hooks/usePayment";
+import { api } from "../../services/api";
 
 function renderFeatureIcon(icon: string) {
   switch (icon) {
@@ -51,20 +46,24 @@ function renderFeatureIcon(icon: string) {
 function PulseDot() {
   const opacity = useRef(new Animated.Value(1)).current;
 
-  Animated.loop(
-    Animated.sequence([
-      Animated.timing(opacity, {
-        toValue: 0.3,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-    ]),
-  ).start();
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 0.3,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [opacity]);
 
   return <Animated.View style={[styles.pulseDot, { opacity }]} />;
 }
@@ -104,23 +103,24 @@ export default function HomeScreen() {
   const [selectedGender, setSelectedGender] = useState<string>("erkek");
   const [isGenerating, setIsGenerating] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
-  const [showCreditModal, setShowCreditModal] = useState(false);
-  const [showWebView, setShowWebView] = useState(false);
-  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
   const [ageRange, setAgeRange] = useState<string | null>(null);
 
   const { user } = useAuth();
   const { generate } = useGenerateCaption();
 
-  useEffect(() => {
-    if (!user) return;
+  const refreshProfile = useCallback(() => {
     api.getProfile().then((data) => {
-      if (data?.age_range) setAgeRange(data.age_range);
       if (data?.credits_remaining !== undefined) setCredits(data.credits_remaining);
     });
-  }, [user]);
+  }, []);
+
+  const pay = usePayment(refreshProfile);
+
+  useEffect(() => {
+    if (!user) return;
+    refreshProfile();
+  }, [user, refreshProfile]);
 
   const handleGenerate = async () => {
     if (selectedImages.length === 0 || !selectedTone) {
@@ -129,7 +129,7 @@ export default function HomeScreen() {
     }
 
     if (credits !== null && credits <= 0) {
-      setShowCreditModal(true);
+      pay.setShowCreditModal(true);
       return;
     }
 
@@ -159,18 +159,17 @@ export default function HomeScreen() {
         setSelectedImages([]);
         setSelectedTone(null);
       }
-    } catch (err: any) {
-      console.log("[Generate] Kredi veya baglanti uyarisi:", err.message);
-      const msg = err.message || err.toString() || "";
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
       if (msg.toLowerCase().includes("kredi")) {
         Alert.alert(
-          t("outOfCredits.title") || "Yetersiz Kredi",
-          t("outOfCredits.descriptionCaption") || "Krediniz yetersiz.",
+          t("outOfCredits.title"),
+          t("outOfCredits.descriptionCaption"),
           [
-            { text: t("common.later") || "Iptal", style: "cancel" },
+            { text: t("common.later"), style: "cancel" },
             {
-              text: t("outOfCredits.buyButton") || "Kredi Yukle",
-              onPress: () => setShowCreditModal(true),
+              text: t("outOfCredits.buyButton"),
+              onPress: () => pay.setShowCreditModal(true),
             },
           ],
         );
@@ -186,62 +185,17 @@ export default function HomeScreen() {
     setShowHowItWorks(true);
   };
 
-  const initiateIyzicoPayment = async () => {
-    setIsProcessingPayment(true);
+  const handleBuyCredits = async () => {
+    const isTr = i18n.language?.startsWith("tr");
+    const price = isTr ? "50.0" : "2.99";
+    const currency = isTr ? "TRY" : "USD";
     try {
-      const isTr = i18n.language?.startsWith("tr");
-      const apiUrl = "http://192.168.1.101:3000/api/payment/create";
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${getToken()}`,
-        },
-        body: JSON.stringify({
-          userId: user?.id,
-          price: isTr ? "50.0" : "2.99",
-          credits: 10,
-          currency: isTr ? "TRY" : "USD",
-        }),
-      });
-      const result = await response.json();
-      console.log("[Iyzico] Backend yaniti:", result);
-      if (result?.paymentUrl) {
-        setPaymentUrl(result.paymentUrl);
-        setShowCreditModal(false);
-        setShowWebView(true);
-      } else {
-        Alert.alert("Hata", result?.error || "Odeme linki alinamadi.");
-      }
-    } catch (error) {
-      console.error("[Network Hatasi]:", error);
-      Alert.alert("Baglanti Hatasi", "Sunucuya ulasilamadi.");
-    } finally {
-      setIsProcessingPayment(false);
+      await pay.initiatePayment(price, 10, currency);
+    } catch {
+      Alert.alert(t("common.error"), t("outOfCredits.paymentFailureDesc"));
     }
   };
 
-  const handleWebViewNavigation = (navState: any) => {
-    const { url } = navState;
-    if (url.includes("payment-success")) {
-      setShowWebView(false);
-      api.getProfile().then((data) => {
-        if (data?.credits_remaining !== undefined) setCredits(data.credits_remaining);
-      });
-      Alert.alert(
-        t("outOfCredits.paymentSuccessTitle"),
-        t("outOfCredits.paymentSuccessDesc"),
-      );
-    } else if (url.includes("payment-failure")) {
-      setShowWebView(false);
-      Alert.alert(
-        t("outOfCredits.paymentFailureTitle"),
-        t("outOfCredits.paymentFailureDesc"),
-      );
-    }
-  };
-
-  // En az bir görsel ve bir ton seçildiyse ve işlem yapılmıyorsa buton aktif olur
   const canGenerate =
     selectedImages.length > 0 && !!selectedTone && !isGenerating;
 
@@ -386,111 +340,20 @@ export default function HomeScreen() {
         visible={showHowItWorks}
         onClose={() => setShowHowItWorks(false)}
       />
-      {/* ================= KREDI YUKLEME MODALI ================= */}
-      <Modal visible={showCreditModal} transparent={true} animationType="fade">
-        <View style={styles.modalOverlay}>
-          <BlurView
-            intensity={30}
-            tint="dark"
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={styles.creditModalCard}>
-            <View style={styles.creditIconWrapper}>
-              <Ionicons name="battery-dead" size={32} color="#8B5CF6" />
-            </View>
-            <Text style={styles.creditModalTitle}>
-              {t("outOfCredits.title")}
-            </Text>
-            <Text style={styles.creditModalDesc}>
-              {i18n.language?.startsWith("tr") ? "10 Kredi - ₺50" : "10 Credits - $2.99"}
-            </Text>
-
-            <TouchableOpacity
-              style={styles.purchaseButton}
-              onPress={initiateIyzicoPayment}
-              disabled={isProcessingPayment}
-            >
-              <LinearGradient
-                colors={[...GlassTheme.gradient]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.purchaseGradient}
-              >
-                {isProcessingPayment ? (
-                  <ActivityIndicator color="#FFF" />
-                ) : (
-                  <Text style={styles.purchaseButtonText}>
-                    {t("outOfCredits.buyButton")}
-                  </Text>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.laterButton}
-              onPress={() => setShowCreditModal(false)}
-            >
-              <Text style={styles.laterButtonText}>{t("common.later")}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ================= IYZICO WEBVIEW MODALI ================= */}
-      <Modal
-        visible={showWebView}
-        animationType="slide"
-      >
-        <SafeAreaView style={{ flex: 1, backgroundColor: GlassTheme.bg }}>
-          <View style={styles.webviewHeader}>
-            <TouchableOpacity onPress={() => setShowWebView(false)}>
-              <Text style={styles.webviewCancelText}>
-                {t("common.cancel") || "Iptal"}
-              </Text>
-            </TouchableOpacity>
-            <Text style={styles.webviewTitle}>
-              {t("outOfCredits.securePayment") || "Guvenli Odeme"}
-            </Text>
-            <View style={{ width: 40 }} />
-          </View>
-          <View style={{ flex: 1 }}>
-            {paymentUrl && (
-              <WebView
-                source={{ uri: paymentUrl }}
-                originWhitelist={['*']}
-                allowFileAccess={true}
-                allowUniversalAccessFromFileURLs={true}
-                javaScriptEnabled={true}
-                domStorageEnabled={true}
-                sharedCookiesEnabled={true}
-                thirdPartyCookiesEnabled={true}
-                mixedContentMode="always"
-                cacheEnabled={false}
-                setSupportMultipleWindows={false}
-                setBuiltInZoomControls={false}
-                setDisplayZoomControls={false}
-                overScrollMode="never"
-                onNavigationStateChange={handleWebViewNavigation}
-                startInLoadingState={true}
-                style={{ flex: 1, backgroundColor: "transparent" }}
-                renderLoading={() => (
-                  <ActivityIndicator
-                    size="large"
-                    color="#8B5CF6"
-                    style={{
-                      position: "absolute",
-                      top: "50%",
-                      left: "50%",
-                      marginLeft: -18,
-                      marginTop: -18,
-                    }}
-                  />
-                )}
-              />
-            )}
-          </View>
-        </SafeAreaView>
-      </Modal>
+      <OutOfCreditsModal
+        visible={pay.showCreditModal}
+        onClose={() => pay.setShowCreditModal(false)}
+        onBuy={handleBuyCredits}
+      />
+      {pay.paymentUrl && (
+        <PaymentWebViewModal
+          visible={pay.showWebView}
+          paymentUrl={pay.paymentUrl}
+          onSuccess={pay.handlePaymentSuccess}
+          onFailure={pay.handlePaymentFailure}
+          onClose={pay.closeWebView}
+        />
+      )}
     </View>
   );
 }
@@ -741,95 +604,4 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
 
-  /* ── Credit Modal ── */
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  creditModalCard: {
-    backgroundColor: "rgba(25, 25, 25, 0.95)",
-    borderRadius: 24,
-    padding: 28,
-    width: "100%",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(139, 92, 246, 0.2)",
-    shadowColor: "#8B5CF6",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 10,
-  },
-  creditIconWrapper: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "rgba(139, 92, 246, 0.1)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "rgba(139, 92, 246, 0.3)",
-  },
-  creditModalTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  creditModalDesc: {
-    fontSize: 14,
-    color: "#A1A1AA",
-    textAlign: "center",
-    marginBottom: 24,
-    lineHeight: 22,
-  },
-  purchaseButton: {
-    width: "100%",
-    borderRadius: 16,
-    overflow: "hidden",
-    marginBottom: 16,
-  },
-  purchaseGradient: {
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  purchaseButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  laterButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
-  laterButtonText: {
-    color: "#A1A1AA",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  webviewHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.1)",
-  },
-  webviewCancelText: {
-    color: "#8B5CF6",
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  webviewTitle: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
 });

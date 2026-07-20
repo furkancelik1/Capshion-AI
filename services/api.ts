@@ -1,12 +1,17 @@
-import axios from 'axios';
+import { Platform } from 'react-native';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:3000/api';
 
 let _token: string | null = null;
 
 const _imageCache = new Map<string, string[]>();
+const IMAGE_CACHE_MAX = 10;
 
 export function setCachedImageUris(postId: string, uris: string[]) {
+  if (_imageCache.size >= IMAGE_CACHE_MAX) {
+    const firstKey = _imageCache.keys().next().value;
+    if (firstKey) _imageCache.delete(firstKey);
+  }
   _imageCache.set(postId, uris);
 }
 
@@ -31,6 +36,21 @@ class ApiError extends Error {
   }
 }
 
+interface GenerateCaptionRequest {
+  images: string[];
+  tone: string;
+  gender: string;
+  ageRange: string;
+  language: string;
+}
+
+interface GenerateCaptionJsonResponse {
+  success: boolean;
+  captions: Array<{ text: string; hashtags: string[] }>;
+  post_id: string;
+  remainingCredits: number;
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -45,21 +65,45 @@ async function request<T>(
     headers['Authorization'] = `Bearer ${_token}`;
   }
 
-  const res = await fetch(url, {
-    headers: {
-      ...headers,
-      ...(options.headers as Record<string, string>),
-    },
-    ...options,
-  });
+  const userHeaders = options.headers as Record<string, string> | undefined;
 
-  const body = await res.json();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
 
-  if (!res.ok) {
-    throw new ApiError(body?.error || body?.message || 'Bir hata oluştu', res.status);
+  try {
+    const res = await fetch(url, {
+      ...options,
+      headers: { ...headers, ...userHeaders },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    if (res.status === 204 || res.status === 304) {
+      return {} as T;
+    }
+
+    const text = await res.text();
+    let body: any;
+    try {
+      body = text ? JSON.parse(text) : {};
+    } catch {
+      throw new ApiError(`Beklenmeyen yanıt: ${text.slice(0, 100)}`, res.status);
+    }
+
+    if (!res.ok) {
+      throw new ApiError(body?.error || body?.message || 'Bir hata oluştu', res.status);
+    }
+
+    return body as T;
+  } catch (err) {
+    clearTimeout(timeout);
+    if (err instanceof ApiError) throw err;
+    if ((err as Error)?.name === 'AbortError') {
+      throw new ApiError('İstek zaman aşımına uğradı.', 408);
+    }
+    throw new ApiError('Sunucuya bağlanılamadı.', 0);
   }
-
-  return body as T;
 }
 
 async function requestMultipart<T>(endpoint: string, formData: FormData): Promise<T> {
@@ -74,39 +118,39 @@ async function requestMultipart<T>(endpoint: string, formData: FormData): Promis
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  try {
-    console.log(`[Multipart] POST ${url} — gönderiliyor...`);
-    const res = await axios({
-      method: 'post',
-      url,
-      data: formData,
-      headers,
-      timeout: 30000,
-    });
-    console.log(`[Multipart] Başarılı — status: ${res.status}`);
-    return res.data as T;
-  } catch (err: any) {
-    console.error('═══════════ AXIOS HATA DETAYI ═══════════');
-    console.error('Hata adı    :', err.name);
-    console.error('Hata mesajı :', err.message);
-    console.error('Hata kodu   :', err.code || 'yok');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
 
-    if (err.response) {
-      console.error('Status      :', err.response.status);
-      console.error('Data        :', JSON.stringify(err.response.data, null, 2));
-      throw new ApiError(
-        err.response.data?.error || err.response.data?.message || `Sunucu hatası (${err.response.status})`,
-        err.response.status,
-      );
-    } else if (err.request) {
-      console.error('Sunucuya ulaşılamadı — muhtemel sebepler:');
-      console.error('  1. Backend çalışmıyor');
-      console.error('  2. Android emulatorde 10.0.2.2 kullanilmiyor');
-      console.error('  3. URI file:// ön eki eksik');
-      throw new ApiError('Sunucuya ulaşılamadı. Bağlantıyı kontrol edin.', 0);
-    } else {
-      throw new ApiError(err.message || 'İstek oluşturulamadı.', 0);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      body: formData,
+      headers,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    const text = await res.text();
+    let body: any;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      throw new ApiError(`Beklenmeyen yanıt: ${text.slice(0, 100)}`, res.status);
     }
+
+    if (!res.ok) {
+      throw new ApiError(body?.error || body?.message || 'Bir hata oluştu', res.status);
+    }
+
+    return body as T;
+  } catch (err) {
+    clearTimeout(timeout);
+    if (err instanceof ApiError) throw err;
+    if ((err as Error)?.name === 'AbortError') {
+      throw new ApiError('İstek zaman aşımına uğradı.', 408);
+    }
+    throw new ApiError('Sunucuya bağlanılamadı.', 0);
   }
 }
 
@@ -156,13 +200,8 @@ export const api = {
       remainingCredits: number;
     }>('/captions/generate', formData),
 
-  generateCaptionJson: (data: any) =>
-    request<{
-      success: boolean;
-      captions: Array<{ text: string; hashtags: string[] }>;
-      post_id: string;
-      remainingCredits: number;
-    }>('/captions/generate-json', {
+  generateCaptionJson: (data: GenerateCaptionRequest) =>
+    request<GenerateCaptionJsonResponse>('/captions/generate-json', {
       method: 'POST',
       body: JSON.stringify(data),
     }),

@@ -16,8 +16,6 @@ import { GlassTheme } from "../constants/LiquidGlass";
 interface PaymentWebViewModalProps {
   visible: boolean;
   paymentUrl: string;
-  successUrl: string;
-  failureUrl: string;
   onSuccess: () => void;
   onFailure: (error?: string) => void;
   onClose: () => void;
@@ -26,8 +24,6 @@ interface PaymentWebViewModalProps {
 export default function PaymentWebViewModal({
   visible,
   paymentUrl,
-  successUrl,
-  failureUrl,
   onSuccess,
   onFailure,
   onClose,
@@ -46,12 +42,12 @@ export default function PaymentWebViewModal({
 
       console.log("WebView Mevcut URL:", url);
 
-      if (url.includes("status=success") || url.includes("status=failure")) {
+      if (url.includes("payment-success") || url.includes("payment-failure")) {
         handledRef.current = true;
         setLoading(false);
         webViewRef.current?.stopLoading();
 
-        if (url.includes("status=success")) {
+        if (url.includes("payment-success")) {
           onSuccess();
         } else {
           onFailure("Ödeme başarısız oldu.");
@@ -65,8 +61,8 @@ export default function PaymentWebViewModal({
     (syntheticEvent: any) => {
       const { nativeEvent } = syntheticEvent;
       if (handledRef.current) return;
-      if (nativeEvent.url && nativeEvent.url.includes("status=success")) return;
-      if (nativeEvent.url && nativeEvent.url.includes("status=failure")) return;
+      if (nativeEvent.url && nativeEvent.url.includes("payment-success")) return;
+      if (nativeEvent.url && nativeEvent.url.includes("payment-failure")) return;
       handledRef.current = true;
       onFailure("Ödeme sayfası yüklenirken bir bağlantı hatası oluştu.");
     },

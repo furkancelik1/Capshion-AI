@@ -1,10 +1,23 @@
 import React, { createContext, useContext, useState } from 'react';
 import { api, setToken } from '../services/api';
 
-const AuthContext = createContext<any>(null);
+interface AuthUser {
+  id: string;
+  email: string;
+}
+
+interface AuthContextType {
+  user: AuthUser | null;
+  loading: boolean;
+  signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUpWithEmail: (email: string, password: string, ageRange?: string | null) => Promise<{ error: string | null }>;
+  signOut: () => void;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(false);
 
   const signInWithEmail = async (email: string, password: string) => {
@@ -18,8 +31,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: null };
       }
       return { error: 'Token veya kullanıcı bilgisi alınamadı.' };
-    } catch (err: any) {
-      return { error: err.message || 'Giriş işlemi başarısız.' };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Giriş işlemi başarısız.';
+      return { error: msg };
     } finally {
       setLoading(false);
     }
@@ -35,8 +49,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: null };
       }
       return { error: 'Kayıt sonrası kullanıcı oluşturulamadı.' };
-    } catch (err: any) {
-      return { error: err.message || 'Kayıt işlemi başarısız.' };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Kayıt işlemi başarısız.';
+      return { error: msg };
     } finally {
       setLoading(false);
     }
@@ -48,10 +63,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, signInWithEmail, signUpWithEmail, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signInWithEmail, signUpWithEmail, signOut }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = (): AuthContextType => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
+};
