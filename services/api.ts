@@ -42,6 +42,9 @@ interface GenerateCaptionRequest {
   gender: string;
   ageRange: string;
   language: string;
+  length: string;
+  useEmojis: boolean;
+  useHashtags: boolean;
 }
 
 interface GenerateCaptionJsonResponse {

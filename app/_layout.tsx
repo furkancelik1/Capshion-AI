@@ -23,6 +23,7 @@ import Animated, {
 import { GlassTheme } from "../constants/LiquidGlass";
 import AmbientGlow from "../components/AmbientGlow";
 import { useAuth, AuthProvider } from "../hooks/useAuth";
+import { ToastProvider } from "../context/ToastContext";
 import i18next, { initPromise } from "../i18n";
 
 function RootLayoutNav() {
@@ -167,9 +168,11 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheetModalProvider>
-        <AuthProvider>
-          <RootLayoutNav />
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <RootLayoutNav />
+          </AuthProvider>
+        </ToastProvider>
       </BottomSheetModalProvider>
     </GestureHandlerRootView>
   );

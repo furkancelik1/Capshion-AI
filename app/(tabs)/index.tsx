@@ -1,11 +1,16 @@
+import * as Haptics from "expo-haptics";
+import { BlurView } from "expo-blur";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
   Animated,
+  Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from "react-native";
@@ -102,7 +107,10 @@ export default function HomeScreen() {
 
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [selectedTone, setSelectedTone] = useState<string | null>(null);
-  const [selectedGender, setSelectedGender] = useState<string>("erkek");
+  const [selectedGender, setSelectedGender] = useState<string>("kadin");
+  const [length, setLength] = useState<"short" | "medium" | "long">("medium");
+  const [useEmojis, setUseEmojis] = useState(true);
+  const [useHashtags, setUseHashtags] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
@@ -145,6 +153,7 @@ export default function HomeScreen() {
         selectedTone,
         selectedGender,
         ageRange || undefined,
+        { length, useEmojis, useHashtags },
       );
 
       if (result) {
@@ -304,6 +313,97 @@ export default function HomeScreen() {
           selectedTone={selectedTone}
           onToneSelect={setSelectedTone}
         />
+
+      {/* ── Fine-Tuning Panel ── */}
+      {selectedImages.length > 0 && (
+        <BlurView intensity={50} tint="dark" style={styles.tuningCard}>
+          <Text style={styles.tuningTitle}>{t("settings.title")}</Text>
+
+          <View style={styles.lengthRow}>
+            {(["short", "medium", "long"] as const).map((opt) => (
+              <Pressable
+                key={opt}
+                onPress={() => setLength(opt)}
+                style={[
+                  styles.lengthChip,
+                  length === opt && styles.lengthChipActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.lengthChipText,
+                    length === opt && styles.lengthChipTextActive,
+                  ]}
+                >
+                  {t(`settings.${opt}`)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <View style={styles.lengthRow}>
+            {(["female", "male", "corporate"] as const).map((opt) => (
+              <Pressable
+                key={opt}
+                onPress={() => setSelectedGender(opt)}
+                style={[
+                  styles.lengthChip,
+                  selectedGender === opt && styles.lengthChipActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.lengthChipText,
+                    selectedGender === opt && styles.lengthChipTextActive,
+                  ]}
+                >
+                  {t(`settings.${opt}`)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <View style={styles.switchRow}>
+            <View style={styles.switchLabel}>
+              <Ionicons
+                name="happy-outline"
+                size={18}
+                color="rgba(255,255,255,0.6)"
+              />
+              <Text style={styles.switchText}>{t("settings.emojis")}</Text>
+            </View>
+            <Switch
+              value={useEmojis}
+              onValueChange={(v) => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setUseEmojis(v);
+              }}
+              trackColor={{ false: "rgba(255,255,255,0.1)", true: "#8B5CF6" }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+
+          <View style={styles.switchRow}>
+            <View style={styles.switchLabel}>
+              <Ionicons
+                name="pricetags-outline"
+                size={18}
+                color="rgba(255,255,255,0.6)"
+              />
+              <Text style={styles.switchText}>{t("settings.hashtags")}</Text>
+            </View>
+            <Switch
+              value={useHashtags}
+              onValueChange={(v) => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setUseHashtags(v);
+              }}
+              trackColor={{ false: "rgba(255,255,255,0.1)", true: "#8B5CF6" }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+        </BlurView>
+      )}
 
         {/* ── Features Carousel ── */}
         <ScrollView
@@ -542,6 +642,59 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: GlassTheme.textMuted,
     letterSpacing: 0.5,
+  },
+
+  /* ── Fine-Tuning Panel ── */
+  tuningCard: {
+    borderRadius: 24,
+    padding: 16,
+    borderWidth: 0.5,
+    borderColor: "rgba(255,255,255,0.1)",
+    overflow: "hidden",
+    gap: 16,
+  },
+  tuningTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.6)",
+  },
+  lengthRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  lengthChip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lengthChipActive: {
+    backgroundColor: "#8B5CF6",
+  },
+  lengthChipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.5)",
+  },
+  lengthChipTextActive: {
+    color: "#FFFFFF",
+  },
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  switchLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  switchText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "rgba(255,255,255,0.8)",
   },
 
   /* ── Features Carousel ── */

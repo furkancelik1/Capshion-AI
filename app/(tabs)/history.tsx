@@ -12,9 +12,11 @@ import {
 } from "react-native";
 import AmbientGlow from "../../components/AmbientGlow";
 import { ClockIcon } from "../../components/GlassIcons";
+import GlassEmptyState from "../../components/GlassEmptyState";
 import GlassPanel from "../../components/GlassPanel";
 import { GlassTheme } from "../../constants/LiquidGlass";
 import { api, getToken } from "../../services/api";
+import { router } from "expo-router";
 
 interface HistoryItem {
   id: string;
@@ -125,10 +127,13 @@ export default function HistoryScreen() {
       )}
 
       {!loading && !error && data.length === 0 && (
-        <GlassPanel style={styles.emptyCard}>
-          <ClockIcon size={40} />
-          <Text style={styles.emptyText}>{t("history.empty")}</Text>
-        </GlassPanel>
+        <GlassEmptyState
+          iconName="document-text-outline"
+          title={t("history.emptyTitle")}
+          description={t("history.emptyDescription")}
+          buttonText={t("history.emptyAction")}
+          onPress={() => router.push("/")}
+        />
       )}
 
       {!loading && data.length > 0 && (
@@ -184,18 +189,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     color: GlassTheme.dangerText,
-    textAlign: "center",
-  },
-  emptyCard: {
-    borderRadius: GlassTheme.radiusLg,
-    padding: 32,
-    alignItems: "center",
-    gap: 14,
-  },
-  emptyText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: GlassTheme.textMuted,
     textAlign: "center",
   },
   listContent: {

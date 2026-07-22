@@ -447,7 +447,7 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
   console.log("[Generate] İstek alındı, userId:", req.userId);
 
   try {
-    const { tone, gender, ageRange, language } = req.body;
+    const { tone, gender, ageRange, language, length, useEmojis, useHashtags } = req.body;
     const files = req.files || [];
 
     if (files.length === 0) {
@@ -479,13 +479,32 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
     const langName = langMap[language] || language || "Türkçe";
     const instructionLang = langName === "Türkçe" ? "Türkçe yaz. Günlük konuşma Türkçesi kullan, resmi olmasın." : `Write in ${langName}. Use everyday ${langName}, don't be formal.`;
 
-    const prompt = `You are writing Instagram captions like a real user, not an AI or a poet.\nLook at the photo(s) and write what naturally comes to mind — like a friend sharing a moment.\n\nRules:\n- NEVER write like AI, poet, motivational speaker, or advertiser\n- NO exaggerated adjectives, deep life quotes, or generic wisdom\n- NO question sentences — write statements, opinions, or observations\n- Short, natural, everyday language\n- Emojis OK but don't overdo it\n\n${instructionLang}\nTone: ${tone || "neutral"}\nGender: ${gender || "neutral"}\nAge range: ${ageRange || "general"}\n\nAdd 2-4 hashtags per caption. Reply ONLY with this JSON format:\n\n{\n  "captions": [\n    { "caption_text": "caption text", "hashtags": ["#tag1", "#tag2"] },\n    { "caption_text": "caption text", "hashtags": ["#tag3", "#tag4"] }\n  ]\n}\n\nGenerate at least 2, at most 4 captions.`;
+    const genderInstructions = {
+      female: "İçeriğin öznesi/kullanıcısı bir KADIN. Hitabeti, övgüleri, kelime seçimlerini ve emojileri bir kadına/kadın stiline uygun, zarif ve doğal bir şekilde ayarla.",
+      male: "İçeriğin öznesi/kullanıcısı bir ERKEK. Hitabeti, övgüleri, kelime seçimlerini ve emojileri bir erkeğe/erkek stiline uygun, karizmatik ve doğal bir şekilde ayarla.",
+      corporate: "İçeriğin öznesi bir MARKA, İŞLETME veya KURUMSAL bir hesap. Metni yazarken 'Ben' yerine 'Biz' dilini kullan (veya markanın kurumsal ağzından yaz). Kişisel fiziksel övgüler yerine; profesyonellik, kalite, vizyon ve sunulan hizmete/ürüne/mekana odaklan. Hitabeti daha prestijli, güven verici ve kurumsal bir tonda ayarla.",
+    };
+    const genderInstruction = genderInstructions[gender] || `Gender: ${gender || "neutral"}`;
+
+    const lengthMap = { short: "very short (1-2 sentences)", medium: "moderate length (2-3 sentences)", long: "detailed (3-5 sentences)" };
+    const lengthInstruction = `Caption length: ${lengthMap[length] || lengthMap.medium}.`;
+
+    const emojiInstruction = useEmojis !== false
+      ? "Emojis OK but don't overdo it."
+      : "KESİNLİKLE EMOJİ KULLANMA.";
+
+    const hashtagInstruction = useHashtags !== false
+      ? "Add 2-4 relevant hashtags per caption."
+      : "KESİNLİKLE HASHTAG KULLANMA.";
+
+    const prompt = `You are writing Instagram captions like a real user, not an AI or a poet.\nLook at the photo(s) and write what naturally comes to mind — like a friend sharing a moment.\n\nRules:\n- NEVER write like AI, poet, motivational speaker, or advertiser\n- NO exaggerated adjectives, deep life quotes, or generic wisdom\n- NO question sentences — write statements, opinions, or observations\n- Short, natural, everyday language\n\n${instructionLang}\n${genderInstruction}\n${lengthInstruction}\n${emojiInstruction}\n${hashtagInstruction}\nAge range: ${ageRange || "general"}\n\nReply ONLY with this JSON format:\n\n{\n  "captions": [\n    { "caption_text": "caption text", "hashtags": ["#tag1", "#tag2"] },\n    { "caption_text": "caption text", "hashtags": ["#tag3", "#tag4"] }\n  ]\n}\n\nGenerate at least 2, at most 4 captions.`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [{ role: "user", content: [{ type: "text", text: prompt }, ...base64Images.map((img) => ({ type: "image_url", image_url: { url: img } }))] }],
       response_format: { type: "json_object" },
       max_tokens: 3000,
+      timeout: 30000,
     });
 
     const raw = completion.choices[0]?.message?.content || "";
@@ -563,7 +582,7 @@ app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
   console.log("[Generate-JSON] İstek alındı, userId:", req.userId);
 
   try {
-    const { images, tone, gender, ageRange, language } = req.body;
+    const { images, tone, gender, ageRange, language, length, useEmojis, useHashtags } = req.body;
 
     if (!images || images.length === 0) {
       return res.status(400).json({ error: "En az bir görsel (base64) gereklidir." });
@@ -593,6 +612,24 @@ app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
       ? "Türkçe yaz. Günlük konuşma Türkçesi kullan, resmi olmasın."
       : `Write in ${langName}. Use everyday ${langName}, don't be formal.`;
 
+    const genderInstructions = {
+      female: "İçeriğin öznesi/kullanıcısı bir KADIN. Hitabeti, övgüleri, kelime seçimlerini ve emojileri bir kadına/kadın stiline uygun, zarif ve doğal bir şekilde ayarla.",
+      male: "İçeriğin öznesi/kullanıcısı bir ERKEK. Hitabeti, övgüleri, kelime seçimlerini ve emojileri bir erkeğe/erkek stiline uygun, karizmatik ve doğal bir şekilde ayarla.",
+      corporate: "İçeriğin öznesi bir MARKA, İŞLETME veya KURUMSAL bir hesap. Metni yazarken 'Ben' yerine 'Biz' dilini kullan (veya markanın kurumsal ağzından yaz). Kişisel fiziksel övgüler yerine; profesyonellik, kalite, vizyon ve sunulan hizmete/ürüne/mekana odaklan. Hitabeti daha prestijli, güven verici ve kurumsal bir tonda ayarla.",
+    };
+    const genderInstruction = genderInstructions[gender] || `Gender: ${gender || "neutral"}`;
+
+    const lengthMap = { short: "very short (1-2 sentences)", medium: "moderate length (2-3 sentences)", long: "detailed (3-5 sentences)" };
+    const lengthInstruction = `Caption length: ${lengthMap[length] || lengthMap.medium}.`;
+
+    const emojiInstruction = useEmojis !== false
+      ? "Emojis OK but don't overdo it."
+      : "KESİNLİKLE EMOJİ KULLANMA.";
+
+    const hashtagInstruction = useHashtags !== false
+      ? "Add 2-4 relevant hashtags per caption."
+      : "KESİNLİKLE HASHTAG KULLANMA.";
+
     const prompt = `You are writing Instagram captions like a real user, not an AI or a poet.
 Look at the photo(s) and write what naturally comes to mind — like a friend sharing a moment.
 
@@ -601,14 +638,15 @@ Rules:
 - NO exaggerated adjectives, deep life quotes, or generic wisdom
 - NO question sentences — write statements, opinions, or observations
 - Short, natural, everyday language
-- Emojis OK but don't overdo it
 
 ${instructionLang}
-Tone: ${tone || "neutral"}
-Gender: ${gender || "neutral"}
+${genderInstruction}
+${lengthInstruction}
+${emojiInstruction}
+${hashtagInstruction}
 Age range: ${ageRange || "general"}
 
-Add 2-4 hashtags per caption. Reply ONLY with this JSON format:
+Reply ONLY with this JSON format:
 
 {
   "captions": [
@@ -626,6 +664,7 @@ Generate at least 2, at most 4 captions.`;
         messages: [{ role: "user", content: [{ type: "text", text: msg }, ...images.map((img) => ({ type: "image_url", image_url: { url: img } }))] }],
         response_format: { type: "json_object" },
         max_tokens: 3000,
+        timeout: 30000,
       });
     };
 

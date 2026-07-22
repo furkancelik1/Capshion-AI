@@ -7,11 +7,6 @@
     "icon": "./assets/images/logo.png",
     "scheme": "capshion",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "image": "./assets/images/splash.png",
-      "backgroundColor": "#05050A",
-      "resizeMode": "contain"
-    },
     "ios": {
       "supportsTablet": true,
       "backgroundColor": "#05050A",

@@ -17,7 +17,7 @@ export function useGenerateCaption() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const generate = async (localUris: any[], tone: any, gender?: any, ageRange?: any) => {
+  const generate = async (localUris: any[], tone: any, gender?: any, ageRange?: any, settings?: { length: string; useEmojis: boolean; useHashtags: boolean }) => {
     setGenerating(true);
     setError(null);
 
@@ -31,9 +31,12 @@ export function useGenerateCaption() {
       const result = await api.generateCaptionJson({
         images: base64Images,
         tone: String(tone || 'neutral'),
-        gender: String(gender || 'neutral'),
+        gender: String(gender || 'kadin'),
         ageRange: String(ageRange || ''),
         language: i18next.language,
+        length: settings?.length ?? 'medium',
+        useEmojis: settings?.useEmojis ?? true,
+        useHashtags: settings?.useHashtags ?? true,
       });
 
       setCachedImageUris(result.post_id, base64Images);

@@ -9,6 +9,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCachedImageUris } from "../../services/api";
 import { useTranslation } from "react-i18next";
+import { useToast } from "../../context/ToastContext";
 import {
   ActivityIndicator,
   Alert,
@@ -43,45 +44,6 @@ interface DetailScreenData {
   image_url: string;
   image_urls?: string[];
   credits_remaining: number;
-}
-
-function CopyToast({
-  visible,
-  message,
-}: {
-  visible: boolean;
-  message: string;
-}) {
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (visible) {
-      Animated.sequence([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.delay(1800),
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: 350,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible, opacity]);
-
-  if (!visible) return null;
-
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={[styles.toastContainer, { opacity }]}
-    >
-      <Text style={styles.toastText}>{message}</Text>
-    </Animated.View>
-  );
 }
 
 function GlassCard({
@@ -191,8 +153,6 @@ export default function CaptionDetailScreen() {
 
   const [loading, setLoading] = useState(!inlineData);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastKey, setToastKey] = useState(0);
 
   // Modal ve WebView State'leri
   const [showCreditModal, setShowCreditModal] = useState(false);
@@ -200,10 +160,7 @@ export default function CaptionDetailScreen() {
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
-  const showToast = useCallback((msg: string) => {
-    setToastMsg(msg);
-    setToastKey((k) => k + 1);
-  }, []);
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (inlineData) return;
@@ -246,7 +203,7 @@ export default function CaptionDetailScreen() {
       try {
         await Clipboard.setStringAsync(text);
         setCopiedIndex(index);
-        showToast(t("common.copiedDesc"));
+        showToast(t("common.copiedDesc"), "success");
         setTimeout(() => setCopiedIndex(null), 2000);
       } catch {
         Alert.alert(t("home.alertError"), t("common.alertClipboardError"));
@@ -504,7 +461,7 @@ export default function CaptionDetailScreen() {
         </View>
       </ScrollView>
 
-      <CopyToast key={toastKey} visible={toastKey > 0} message={toastMsg} />
+
 
       {/* "YAPAY ZEKA YAKITIN TÜKENDİ" LÜKS MODALI */}
       <Modal visible={showCreditModal} transparent={true} animationType="fade">
@@ -790,27 +747,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: GlassTheme.textMain,
-  },
-  toastContainer: {
-    position: "absolute",
-    bottom: 48,
-    alignSelf: "center",
-    backgroundColor: "rgba(10, 10, 10, 0.92)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    shadowColor: "#7A53FF",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-  toastText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#FFFFFF",
   },
   modalOverlay: {
     flex: 1,

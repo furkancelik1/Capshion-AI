@@ -124,7 +124,9 @@
   "history": {
     "title": "Geçmiş",
     "subtitle": "Daha önce ürettiğin içerikleri görüntüle ve kopyala.",
-    "empty": "Henüz bir geçmiş kaydın yok.",
+    "emptyTitle": "Henüz Bir Şaheser Yok",
+    "emptyDescription": "Yapay zeka ile ilk metnini oluşturmak için hemen başla.",
+    "emptyAction": "Oluştur",
     "copied": "Kopyalandı!",
     "errorSession": "Oturum bulunamadı. Lütfen tekrar giriş yapın."
   },
@@ -134,6 +136,18 @@
     "minimal": { "name": "Minimalist", "prompt": "Minimal / Aesthetic" },
     "professional": { "name": "Profesyonel", "prompt": "Professional / Corporate" },
     "storyteller": { "name": "Hikaye Anlatıcı", "prompt": "Storyteller" }
+  },
+  "settings": {
+    "title": "İnce Ayarlar",
+    "short": "Kısa",
+    "medium": "Orta",
+    "long": "Uzun",
+    "gender": "Hitap Şekli",
+    "female": "Kadın",
+    "male": "Erkek",
+    "corporate": "Kurumsal",
+    "emojis": "Emojiler",
+    "hashtags": "Hashtagler"
   },
   "tabs": {
     "create": "Oluştur",
