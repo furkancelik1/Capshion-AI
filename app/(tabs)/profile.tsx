@@ -1,19 +1,6 @@
-import AgeRangeSelector from "@/components/AgeRangeSelector";
-import AmbientGlow from "@/components/AmbientGlow";
-import FeedbackModal from "@/components/FeedbackModal";
-import { LogOutIcon, PersonIcon } from "@/components/GlassIcons";
-import GlassPanel from "@/components/GlassPanel";
-import HapticButton from "@/components/HapticButton";
-import PaymentWebViewModal from "@/components/PaymentWebViewModal";
-import { GlassTheme } from "@/constants/LiquidGlass";
-import { useAuth } from "@/hooks/useAuth";
-import { usePayment } from "@/hooks/usePayment";
-import { api } from "@/services/api";
-import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
@@ -21,11 +8,73 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { BlurView } from "expo-blur";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "@/hooks/useAuth";
+import { usePayment } from "@/hooks/usePayment";
+import { api } from "@/services/api";
+import { GlassTheme } from "@/constants/LiquidGlass";
+import AmbientGlow from "@/components/AmbientGlow";
+import GlassPanel from "@/components/GlassPanel";
+import HapticButton from "@/components/HapticButton";
+import AgeRangeSelector from "@/components/AgeRangeSelector";
+import FeedbackModal from "@/components/FeedbackModal";
+import PaymentWebViewModal from "@/components/PaymentWebViewModal";
+import { LogOutIcon } from "@/components/GlassIcons";
 
 interface UserProfile {
   email: string;
   credits_remaining: number;
   age_range: string | null;
+}
+
+function SectionHeader({ title }: { title: string }) {
+  return (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionHeaderText}>{title}</Text>
+    </View>
+  );
+}
+
+function Separator() {
+  return <View style={styles.separator} />;
+}
+
+function RowItem({
+  icon,
+  label,
+  value,
+  onPress,
+  tint,
+  destructive,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value?: string;
+  onPress?: () => void;
+  tint?: string;
+  destructive?: boolean;
+}) {
+  const Container = onPress ? HapticButton : View;
+
+  return (
+    <Container
+      style={styles.row}
+      onPress={onPress}
+      activeOpacity={0.5}
+    >
+      <View style={[styles.iconWrap, { backgroundColor: tint || "rgba(139,92,246,0.2)" }]}>
+        <Ionicons name={icon} size={18} color={GlassTheme.primary} />
+      </View>
+      <Text style={[styles.rowLabel, destructive && { color: "#FF3B30" }]}>
+        {label}
+      </Text>
+      {value && <Text style={styles.rowValue}>{value}</Text>}
+      {onPress && !destructive && (
+        <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.2)" />
+      )}
+    </Container>
+  );
 }
 
 export default function ProfileScreen() {
@@ -98,192 +147,177 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* ── Header ── */}
         <View style={styles.header}>
-          <LinearGradient
-            colors={[...GlassTheme.gradient]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.avatarRing}
-          >
+          <View style={styles.avatarRing}>
             <View style={styles.avatarInner}>
               <Text style={styles.avatarText}>
-                {profile?.email ? (
-                  profile.email[0].toUpperCase()
-                ) : (
-                  <PersonIcon size={32} />
-                )}
+                {profile?.email
+                  ? profile.email[0].toUpperCase()
+                  : "C"}
               </Text>
             </View>
-          </LinearGradient>
-          <Text style={styles.emailText}>{profile?.email || user?.email}</Text>
+          </View>
+          <Text style={styles.emailText}>
+            {profile?.email || user?.email}
+          </Text>
         </View>
 
-        <View style={styles.content}>
-          {/* Kredi Bakiyesi Kartı */}
-          <GlassPanel style={styles.card}>
-            {loadingProfile ? (
-              <ActivityIndicator
-                size="small"
-                color={GlassTheme.textMain}
-                style={{ marginVertical: 8 }}
+        {/* ── Section: Hesap ── */}
+        <SectionHeader title={t("profile.balance")} />
+
+        <BlurView
+          intensity={50}
+          tint="systemThinMaterialDark"
+          style={styles.section}
+        >
+          {loadingProfile ? (
+            <RowItem icon="wallet-outline" label={t("profile.credits")} value="..." />
+          ) : (
+            <>
+              <RowItem
+                icon="wallet-outline"
+                label={t("profile.credits")}
+                value={`${profile?.credits_remaining ?? 0}`}
               />
-            ) : (
-              <>
-                <Text style={styles.balanceLabel}>{t("profile.balance")}</Text>
-                <Text style={styles.creditCount}>
-                  {profile?.credits_remaining !== undefined
-                    ? profile.credits_remaining
-                    : 0}
-                </Text>
-                <Text style={styles.creditLabel}>{t("profile.credits")}</Text>
-                <Text style={styles.cardSubText}>
-                  {t("profile.balanceNote")}
-                </Text>
-              </>
-            )}
-          </GlassPanel>
+              <Separator />
+              <RowItem
+                icon="person-outline"
+                label={t("profile.ageRange")}
+                value={profile?.age_range || t("profile.ageNotSet")}
+                onPress={() => setEditingAge(true)}
+              />
+            </>
+          )}
+        </BlurView>
 
-          {/* Kredi Paketleri — Bakiyeni Yükselt */}
-          <View style={styles.packagesSection}>
-            <Text style={styles.sectionTitle}>{t("profile.topUp")}</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.packagesRow}
-            >
-              <HapticButton
-                style={styles.packageCard}
-                  onPress={() => initiatePayment(10, i18n.language?.startsWith("tr") ? "50.0" : "2.99")}
-              >
-                <Text style={styles.packageCredits}>10</Text>
-                <Text style={styles.packageLabel}>{t("profile.credits")}</Text>
-                <View style={styles.packageDivider} />
-                <Text style={styles.packagePrice}>
-                  {i18n.language?.startsWith("tr") ? "₺50" : "$2.99"}
-                </Text>
+        {/* ── Yaş Düzenleme (editingAge açıkken) ── */}
+        {editingAge && (
+          <GlassPanel style={styles.agePanel}>
+            <AgeRangeSelector value={ageRange} onChange={setAgeRange} />
+            <View style={styles.ageActions}>
+              <HapticButton style={styles.ageSaveBtn} onPress={handleSaveAgeRange}>
+                <Text style={styles.ageSaveText}>{t("common.save")}</Text>
               </HapticButton>
               <HapticButton
-                style={[styles.packageCard, styles.packageCardPopular]}
-                  onPress={() => initiatePayment(30, i18n.language?.startsWith("tr") ? "120.0" : "6.99")}
+                style={styles.ageCancelBtn}
+                onPress={() => {
+                  setEditingAge(false);
+                  setAgeRange(profile?.age_range || null);
+                }}
               >
-                <Text style={styles.packageCredits}>30</Text>
-                <Text style={styles.packageLabel}>{t("profile.credits")}</Text>
-                <View style={styles.packageDivider} />
-                <Text style={styles.packagePrice}>
-                  {i18n.language?.startsWith("tr") ? "₺120" : "$6.99"}
-                </Text>
+                <Text style={styles.ageCancelText}>{t("common.cancel")}</Text>
               </HapticButton>
-              <HapticButton
-                style={styles.packageCard}
-                  onPress={() => initiatePayment(50, i18n.language?.startsWith("tr") ? "200.0" : "11.99")}
-              >
-                <Text style={styles.packageCredits}>50</Text>
-                <Text style={styles.packageLabel}>{t("profile.credits")}</Text>
-                <View style={styles.packageDivider} />
-                <Text style={styles.packagePrice}>
-                  {i18n.language?.startsWith("tr") ? "₺200" : "$11.99"}
-                </Text>
-              </HapticButton>
-            </ScrollView>
-          </View>
-
-          {/* Yaş Aralığı */}
-          <GlassPanel style={styles.card}>
-            <Text style={styles.cardTitle}>{t("profile.ageRange")}</Text>
-            {editingAge ? (
-              <View style={styles.ageEditWrap}>
-                <AgeRangeSelector value={ageRange} onChange={setAgeRange} />
-                <View style={styles.ageActions}>
-                  <HapticButton
-                    style={styles.ageSaveBtn}
-                    onPress={handleSaveAgeRange}
-                  >
-                    <Text style={styles.ageSaveText}>{t("common.save")}</Text>
-                  </HapticButton>
-                  <HapticButton
-                    style={styles.ageCancelBtn}
-                    onPress={() => {
-                      setEditingAge(false);
-                      setAgeRange(profile?.age_range || null);
-                    }}
-                  >
-                    <Text style={styles.ageCancelText}>{t("common.cancel")}</Text>
-                  </HapticButton>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.ageDisplay}>
-                <Text style={styles.ageValue}>
-                  {profile?.age_range || t("profile.ageNotSet")}
-                </Text>
-                <HapticButton
-                  style={styles.ageEditBtn}
-                  onPress={() => setEditingAge(true)}
-                >
-                  <Text style={styles.ageEditText}>{t("common.edit")}</Text>
-                </HapticButton>
-              </View>
-            )}
-          </GlassPanel>
-
-          {/* Dil Seçimi */}
-          <View style={styles.langSection}>
-            <Text style={styles.langLabel}>{t("profile.language")}</Text>
-            <View style={styles.langRow}>
-              <TouchableOpacity
-                style={[
-                  styles.langBtn,
-                  i18n.language?.startsWith("tr")
-                    ? styles.langBtnActive
-                    : styles.langBtnInactive,
-                ]}
-                onPress={() => i18n.changeLanguage("tr")}
-              >
-                <Text
-                  style={[
-                    styles.langBtnText,
-                    i18n.language?.startsWith("tr")
-                      ? styles.langBtnTextActive
-                      : styles.langBtnTextInactive,
-                  ]}
-                >
-                  TR
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.langBtn,
-                  i18n.language?.startsWith("en")
-                    ? styles.langBtnActive
-                    : styles.langBtnInactive,
-                ]}
-                onPress={() => i18n.changeLanguage("en")}
-              >
-                <Text
-                  style={[
-                    styles.langBtnText,
-                    i18n.language?.startsWith("en")
-                      ? styles.langBtnTextActive
-                      : styles.langBtnTextInactive,
-                  ]}
-                >
-                  EN
-                </Text>
-              </TouchableOpacity>
             </View>
+          </GlassPanel>
+        )}
+
+        {/* ── Kredi Paketleri ── */}
+        <SectionHeader title={t("profile.topUp")} />
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.packagesRow}
+        >
+          {[
+            { credits: 10, priceTr: "₺50", priceEn: "$2.99", amtTr: "50.0", amtEn: "2.99" },
+            { credits: 30, priceTr: "₺120", priceEn: "$6.99", amtTr: "120.0", amtEn: "6.99" },
+            { credits: 50, priceTr: "₺200", priceEn: "$11.99", amtTr: "200.0", amtEn: "11.99" },
+          ].map((pkg) => {
+            const isPopular = pkg.credits === 30;
+            return (
+              <HapticButton
+                key={pkg.credits}
+                style={[styles.packageCard, isPopular && styles.packageCardPopular]}
+                onPress={() =>
+                  initiatePayment(
+                    pkg.credits,
+                    i18n.language?.startsWith("tr") ? pkg.amtTr : pkg.amtEn,
+                  )
+                }
+              >
+                <Text style={styles.packageCredits}>{pkg.credits}</Text>
+                <Text style={styles.packageLabel}>{t("profile.credits")}</Text>
+                <View style={styles.packageDivider} />
+                <Text style={styles.packagePrice}>
+                  {i18n.language?.startsWith("tr") ? pkg.priceTr : pkg.priceEn}
+                </Text>
+              </HapticButton>
+            );
+          })}
+        </ScrollView>
+
+        {/* ── Section: Uygulama ── */}
+        <SectionHeader title={t("profile.language")} />
+
+        <BlurView
+          intensity={50}
+          tint="systemThinMaterialDark"
+          style={styles.section}
+        >
+          <View style={styles.langRow}>
+            <TouchableOpacity
+              style={[
+                styles.langBtn,
+                i18n.language?.startsWith("tr")
+                  ? styles.langBtnActive
+                  : styles.langBtnInactive,
+              ]}
+              onPress={() => i18n.changeLanguage("tr")}
+            >
+              <Text
+                style={[
+                  styles.langBtnText,
+                  i18n.language?.startsWith("tr")
+                    ? styles.langBtnTextActive
+                    : styles.langBtnTextInactive,
+                ]}
+              >
+                TR
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.langBtn,
+                i18n.language?.startsWith("en")
+                  ? styles.langBtnActive
+                  : styles.langBtnInactive,
+              ]}
+              onPress={() => i18n.changeLanguage("en")}
+            >
+              <Text
+                style={[
+                  styles.langBtnText,
+                  i18n.language?.startsWith("en")
+                    ? styles.langBtnTextActive
+                    : styles.langBtnTextInactive,
+                ]}
+              >
+                EN
+              </Text>
+            </TouchableOpacity>
           </View>
+        </BlurView>
 
-          {/* Deneyimini Geliştir */}
-          <HapticButton
-            style={styles.feedbackButton}
+        {/* ── Section: Destek ── */}
+        <SectionHeader title={t("profile.feedback")} />
+
+        <BlurView
+          intensity={50}
+          tint="systemThinMaterialDark"
+          style={styles.section}
+        >
+          <RowItem
+            icon="chatbubble-ellipses-outline"
+            label={t("profile.feedback")}
             onPress={() => setShowFeedback(true)}
-          >
-            <Text style={styles.feedbackText}>{t("profile.feedback")}</Text>
-          </HapticButton>
+          />
+        </BlurView>
 
-          {/* Çıkış Yap */}
-          <HapticButton style={styles.signOutButton} onPress={handleSignOut}>
-            <LogOutIcon size={20} />
+        {/* ── Section: Çıkış ── */}
+        <View style={styles.signOutSection}>
+          <HapticButton style={styles.signOutRow} onPress={handleSignOut}>
+            <LogOutIcon size={18} />
             <Text style={styles.signOutText}>{t("profile.signOut")}</Text>
           </HapticButton>
         </View>
@@ -310,156 +344,110 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: GlassTheme.bg,
-    paddingHorizontal: 24,
+    backgroundColor: GlassTheme.background,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingTop: 100,
+    paddingBottom: 120,
+    paddingHorizontal: 16,
   },
+
+  /* ── Header ── */
   header: {
     alignItems: "center",
-    marginTop: 40,
-    marginBottom: 32,
+    paddingTop: 40,
+    paddingBottom: 28,
   },
   avatarRing: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: GlassTheme.border,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: 14,
+    backgroundColor: "rgba(139,92,246,0.15)",
   },
   avatarInner: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: GlassTheme.panel,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: "rgba(255,255,255,0.06)",
     alignItems: "center",
     justifyContent: "center",
   },
   avatarText: {
     color: GlassTheme.textMain,
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "700",
   },
   emailText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: GlassTheme.textMain,
-  },
-  content: {
-    gap: 20,
-  },
-  card: {
-    padding: 20,
-    borderRadius: GlassTheme.radiusLg,
-    gap: 12,
-    alignItems: "center",
-  },
-  cardTitle: {
     fontSize: 16,
-    fontWeight: "600",
-    color: GlassTheme.textMain,
+    fontWeight: "700",
+    color: GlassTheme.neonPlatinum,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
   },
-  balanceLabel: {
-    fontSize: 14,
-    fontWeight: "500",
+
+  /* ── Inset Grouped Section ── */
+  sectionHeader: {
+    paddingHorizontal: 4,
+    paddingTop: 24,
+    paddingBottom: 8,
+  },
+  sectionHeaderText: {
+    fontSize: 13,
+    fontWeight: "600",
     color: GlassTheme.textMuted,
     letterSpacing: 0.5,
+    textTransform: "uppercase",
   },
-  creditCount: {
-    fontSize: 52,
-    fontWeight: "800",
-    color: GlassTheme.textMain,
-    lineHeight: 60,
+  section: {
+    borderRadius: 20,
+    overflow: "hidden",
+    borderWidth: 0.5,
+    borderColor: "rgba(255,255,255,0.1)",
   },
-  creditLabel: {
-    fontSize: 18,
-    fontWeight: "500",
-    color: GlassTheme.textMuted,
-    marginTop: -4,
+  separator: {
+    height: 0.5,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    marginLeft: 52,
   },
-  cardSubText: {
-    fontSize: 12,
-    color: GlassTheme.textMuted,
-    marginTop: 4,
-  },
-  packagesSection: {
+
+  /* ── Row Items ── */
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 13,
+    paddingHorizontal: 16,
     gap: 14,
   },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: GlassTheme.textMain,
-    paddingHorizontal: 2,
-  },
-  packagesRow: {
-    flexDirection: "row",
-    gap: 12,
-    paddingRight: 24,
-  },
-  packageCard: {
-    width: 130,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: GlassTheme.border,
-    backgroundColor: GlassTheme.panel,
-    paddingVertical: 20,
-    paddingHorizontal: 16,
+  iconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
     alignItems: "center",
-    gap: 4,
+    justifyContent: "center",
   },
-  packageCardPopular: {
-    borderColor: GlassTheme.primary,
-    borderWidth: 1.5,
-  },
-  packageCredits: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: GlassTheme.textMain,
-  },
-  packageLabel: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: GlassTheme.textMuted,
-  },
-  packageDivider: {
-    width: 32,
-    height: 1,
-    backgroundColor: GlassTheme.border,
-    marginVertical: 6,
-  },
-  packagePrice: {
+  rowLabel: {
+    flex: 1,
     fontSize: 15,
-    fontWeight: "700",
-    color: GlassTheme.primary,
-  },
-  ageDisplay: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-  },
-  ageValue: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "500",
     color: GlassTheme.textMain,
   },
-  ageEditBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: GlassTheme.radiusSm,
-    borderWidth: 1,
-    borderColor: GlassTheme.border,
+  rowValue: {
+    fontSize: 14,
+    fontWeight: "400",
+    color: "rgba(255,255,255,0.4)",
   },
-  ageEditText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: GlassTheme.textMuted,
-  },
-  ageEditWrap: {
+
+  /* ── Age Edit Panel ── */
+  agePanel: {
+    padding: 16,
     gap: 12,
-    width: "100%",
+    borderRadius: 20,
+    marginTop: 12,
   },
   ageActions: {
     flexDirection: "row",
@@ -468,22 +456,22 @@ const styles = StyleSheet.create({
   ageSaveBtn: {
     flex: 1,
     height: 44,
+    borderRadius: 999,
     backgroundColor: GlassTheme.primary,
-    borderRadius: GlassTheme.radiusSm,
     alignItems: "center",
     justifyContent: "center",
   },
   ageSaveText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#fff",
   },
   ageCancelBtn: {
     flex: 1,
     height: 44,
-    borderRadius: GlassTheme.radiusSm,
-    borderWidth: 1,
-    borderColor: GlassTheme.border,
+    borderRadius: 999,
+    borderWidth: 0.5,
+    borderColor: "rgba(255,255,255,0.15)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -492,69 +480,78 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: GlassTheme.textMuted,
   },
-  feedbackButton: {
-    height: 48,
-    borderRadius: GlassTheme.radiusSm,
-    borderWidth: 1,
-    borderColor: GlassTheme.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  feedbackText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: GlassTheme.textMuted,
-  },
-  signOutButton: {
+
+  /* ── Packages ── */
+  packagesRow: {
     flexDirection: "row",
+    gap: 12,
+    paddingVertical: 4,
+  },
+  packageCard: {
+    width: 120,
+    borderRadius: 20,
+    borderWidth: 0.5,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    paddingVertical: 18,
+    paddingHorizontal: 14,
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    height: 52,
-    borderRadius: GlassTheme.radiusMd,
-    borderWidth: 1.5,
-    borderColor: GlassTheme.dangerBorder,
-    backgroundColor: GlassTheme.dangerBg,
-    marginTop: 8,
-    marginBottom: 12,
+    gap: 4,
   },
-  signOutText: {
-    color: GlassTheme.dangerText,
-    fontSize: 16,
-    fontWeight: "600",
+  packageCardPopular: {
+    borderColor: GlassTheme.primary,
+    borderWidth: 1,
   },
-  langSection: {
-    gap: 10,
+  packageCredits: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: GlassTheme.textMain,
+    letterSpacing: 1,
   },
-  langLabel: {
-    fontSize: 14,
+  packageLabel: {
+    fontSize: 12,
     fontWeight: "500",
     color: GlassTheme.textMuted,
+  },
+  packageDivider: {
+    width: 28,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    marginVertical: 4,
+  },
+  packagePrice: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: GlassTheme.primary,
     letterSpacing: 0.5,
   },
+
+  /* ── Language ── */
   langRow: {
     flexDirection: "row",
     gap: 10,
+    padding: 14,
+    paddingBottom: 16,
   },
   langBtn: {
     flex: 1,
-    height: 48,
-    borderRadius: GlassTheme.radiusSm,
+    height: 44,
+    borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
   },
   langBtnActive: {
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: GlassTheme.primary,
-    backgroundColor: GlassTheme.panel,
+    backgroundColor: "rgba(139,92,246,0.15)",
   },
   langBtnInactive: {
-    borderWidth: 1,
-    borderColor: GlassTheme.border,
-    backgroundColor: GlassTheme.panel,
+    borderWidth: 0.5,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
   langBtnText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
     letterSpacing: 1,
   },
@@ -563,5 +560,27 @@ const styles = StyleSheet.create({
   },
   langBtnTextInactive: {
     color: GlassTheme.textMuted,
+  },
+
+  /* ── Sign Out ── */
+  signOutSection: {
+    marginTop: 28,
+    borderRadius: 20,
+    overflow: "hidden",
+    borderWidth: 0.5,
+    borderColor: "rgba(255,59,48,0.3)",
+    backgroundColor: "rgba(255,59,48,0.08)",
+  },
+  signOutRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingVertical: 15,
+  },
+  signOutText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#FF3B30",
   },
 });

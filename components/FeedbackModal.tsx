@@ -10,7 +10,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { GlassTheme } from "../constants/LiquidGlass";
+import { Ionicons } from "@expo/vector-icons";
+import HapticButton from "./HapticButton";
 import { supabase } from "../services/supabase";
 
 interface FeedbackModalProps {
@@ -52,43 +53,45 @@ export default function FeedbackModal({
       statusBarTranslucent
     >
       <View style={styles.container}>
-        <BlurView
-          intensity={GlassTheme.blurIntensity}
-          tint="dark"
-          style={StyleSheet.absoluteFill}
-        />
         <View style={styles.card}>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Text style={styles.closeBtnText}>✕</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.title}>{t("feedback.title")}</Text>
-          <Text style={styles.subtitle}>
-            {t("feedback.subtitle")}
-          </Text>
-
-          <TextInput
-            style={styles.input}
-            placeholder={t("feedback.placeholder")}
-            placeholderTextColor={GlassTheme.textPlaceholder}
-            value={message}
-            onChangeText={setMessage}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
+          <BlurView
+            intensity={90}
+            tint="dark"
+            style={StyleSheet.absoluteFill}
           />
+          <View style={styles.cardInner}>
+            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+              <Ionicons name="close" size={16} color="#FFFFFF" />
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.sendBtn, !message.trim() && styles.sendBtnDisabled]}
-            onPress={handleSend}
-            disabled={!message.trim() || sending}
-          >
-            {sending ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.sendText}>{t("feedback.send")}</Text>
-            )}
-          </TouchableOpacity>
+            <Text style={styles.title}>{t("feedback.title")}</Text>
+            <Text style={styles.subtitle}>
+              {t("feedback.subtitle")}
+            </Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder={t("feedback.placeholder")}
+              placeholderTextColor="rgba(255,255,255,0.4)"
+              value={message}
+              onChangeText={setMessage}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+
+            <HapticButton
+              style={[styles.sendBtn, !message.trim() && styles.sendBtnDisabled]}
+              onPress={handleSend}
+              disabled={!message.trim() || sending}
+            >
+              {sending ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.sendText}>{t("feedback.send")}</Text>
+              )}
+            </HapticButton>
+          </View>
         </View>
       </View>
     </Modal>
@@ -101,19 +104,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
-    backgroundColor: GlassTheme.overlayBg,
+    backgroundColor: "rgba(0, 0, 0, 0.65)",
   },
   card: {
     width: "85%",
     maxWidth: 360,
-    backgroundColor: GlassTheme.cardBackground,
-    borderRadius: GlassTheme.radiusLg,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: GlassTheme.border,
+    borderColor: "rgba(255, 255, 255, 0.15)",
+    overflow: "hidden",
+    backgroundColor: "rgba(15, 15, 20, 0.75)",
+  },
+  cardInner: {
     paddingVertical: 32,
     paddingHorizontal: 24,
     gap: 16,
-    ...GlassTheme.cardShadow,
   },
   closeBtn: {
     position: "absolute",
@@ -122,46 +127,44 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: GlassTheme.panelStrong,
+    backgroundColor: "rgba(255,255,255,0.1)",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: GlassTheme.border,
     zIndex: 10,
   },
   closeBtnText: {
     fontSize: 14,
-    color: GlassTheme.textMain,
+    color: "#FFFFFF",
     fontWeight: "700",
   },
   title: {
     fontSize: 20,
-    fontWeight: "700",
-    color: GlassTheme.textMain,
+    fontWeight: "bold",
+    color: "#FFFFFF",
     textAlign: "center",
   },
   subtitle: {
     fontSize: 13,
     fontWeight: "500",
-    color: GlassTheme.textMuted,
+    color: "rgba(255,255,255,0.7)",
     textAlign: "center",
     lineHeight: 19,
   },
   input: {
-    height: 100,
-    borderRadius: GlassTheme.radiusSm,
+    minHeight: 100,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: GlassTheme.border,
-    backgroundColor: GlassTheme.panel,
-    color: GlassTheme.textMain,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    color: "#FFFFFF",
     fontSize: 14,
-    padding: 14,
+    padding: 16,
     lineHeight: 20,
   },
   sendBtn: {
     height: 48,
-    borderRadius: GlassTheme.radiusSm,
-    backgroundColor: GlassTheme.primary,
+    borderRadius: 100,
+    backgroundColor: "#8B5CF6",
     alignItems: "center",
     justifyContent: "center",
   },

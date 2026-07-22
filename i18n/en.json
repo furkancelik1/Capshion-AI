@@ -25,7 +25,12 @@
     "freeTrial": "Try for free",
     "generate": "Generate Text",
     "copy": "Copy",
-    "closed": "Not specified"
+    "closed": "Not specified",
+    "error": "Error",
+    "copiedTitle": "Copied! 📋",
+    "copiedInstagramDesc": "Caption copied to clipboard. You can paste it when Instagram opens.",
+    "openInstagram": "Open Instagram",
+    "seeAll": "See All"
   },
   "home": {
     "heroBadge": "Premium Content Studio",
@@ -100,6 +105,7 @@
     "subtitle": "Analyzing your photos, generating the ideal text..."
   },
   "howItWorks": {
+    "title": "How It Works?",
     "step1Title": "Select Photos",
     "step1Desc": "Pick one or more photos from your gallery. Capshion starts analyzing your content immediately.",
     "step2Title": "Smart Analysis",
@@ -121,6 +127,18 @@
     "empty": "No history records yet.",
     "copied": "Copied!",
     "errorSession": "Session not found. Please sign in again."
+  },
+  "tones": {
+    "cool": { "name": "Cool", "prompt": "Trendy / Cool" },
+    "humorous": { "name": "Humorous", "prompt": "Witty / Humorous" },
+    "minimal": { "name": "Minimalist", "prompt": "Minimal / Aesthetic" },
+    "professional": { "name": "Professional", "prompt": "Professional / Corporate" },
+    "storyteller": { "name": "Storyteller", "prompt": "Storyteller" }
+  },
+  "tabs": {
+    "create": "Create",
+    "history": "History",
+    "profile": "Profile"
   },
   "auth": {
     "welcomeBack": "Welcome back",

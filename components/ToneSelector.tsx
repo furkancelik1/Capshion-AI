@@ -1,22 +1,18 @@
 import { useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { GlassTheme } from '@/constants/LiquidGlass';
 import HapticButton from '@/components/HapticButton';
 
-interface ToneOption {
-  id: string;
-  name: string;
-  prompt: string;
-  emoji: string;
-}
+const TONE_IDS = ['cool', 'humorous', 'minimal', 'professional', 'storyteller'] as const;
 
-const TONES: ToneOption[] = [
-  { id: 'cool', name: 'Havalı', prompt: 'Trendy / Cool', emoji: '🌟' },
-  { id: 'humorous', name: 'Eğlenceli', prompt: 'Witty / Humorous', emoji: '🎭' },
-  { id: 'minimal', name: 'Minimalist', prompt: 'Minimal / Aesthetic', emoji: '📐' },
-  { id: 'professional', name: 'Profesyonel', prompt: 'Professional / Corporate', emoji: '💼' },
-  { id: 'storyteller', name: 'Hikaye Anlatıcı', prompt: 'Storyteller', emoji: '📖' },
-];
+const TONE_EMOJIS: Record<string, string> = {
+  cool: '🌟',
+  humorous: '🎭',
+  minimal: '📐',
+  professional: '💼',
+  storyteller: '📖',
+};
 
 interface ToneSelectorProps {
   selectedTone: string | null;
@@ -24,41 +20,47 @@ interface ToneSelectorProps {
 }
 
 export default function ToneSelector({ selectedTone, onToneSelect }: ToneSelectorProps) {
+  const { t } = useTranslation();
+
   const renderTone = useCallback(
-    (tone: ToneOption) => {
-      const isSelected = selectedTone === tone.id;
+    (toneId: string) => {
+      const isSelected = selectedTone === toneId;
 
       return (
         <HapticButton
-          key={tone.id}
+          key={toneId}
           style={[
             styles.card,
             {
-              backgroundColor: isSelected ? GlassTheme.panelStrong : GlassTheme.panel,
-              borderColor: isSelected ? GlassTheme.border : GlassTheme.border,
+              backgroundColor: isSelected
+                ? GlassTheme.panelStrong
+                : 'rgba(255,255,255,0.04)',
+              borderColor: isSelected ? GlassTheme.border : 'rgba(255,255,255,0.08)',
             },
-            isSelected && { borderWidth: 2 },
+            isSelected && { borderWidth: 1.5 },
           ]}
-          onPress={() => onToneSelect(tone.id)}
+          onPress={() => onToneSelect(toneId)}
           activeOpacity={0.7}
         >
-          <Text style={styles.emoji}>{tone.emoji}</Text>
+          <View style={styles.iconWrap}>
+            <Text style={styles.emoji}>{TONE_EMOJIS[toneId]}</Text>
+          </View>
           <Text
             style={[styles.name, { color: GlassTheme.textMain }]}
             numberOfLines={1}
           >
-            {tone.name}
+            {t(`tones.${toneId}.name`)}
           </Text>
           <Text
             style={[styles.prompt, { color: GlassTheme.textMuted }]}
-            numberOfLines={1}
+            numberOfLines={2}
           >
-            {tone.prompt}
+            {t(`tones.${toneId}.prompt`)}
           </Text>
         </HapticButton>
       );
     },
-    [selectedTone, onToneSelect]
+    [selectedTone, onToneSelect, t]
   );
 
   return (
@@ -68,7 +70,7 @@ export default function ToneSelector({ selectedTone, onToneSelect }: ToneSelecto
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {TONES.map(renderTone)}
+        {TONE_IDS.map(renderTone)}
       </ScrollView>
     </View>
   );
@@ -76,33 +78,44 @@ export default function ToneSelector({ selectedTone, onToneSelect }: ToneSelecto
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 12,
+    marginVertical: 10,
   },
   scrollContent: {
     paddingHorizontal: 0,
     gap: 10,
   },
   card: {
-    width: 120,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
+    width: 110,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
     borderRadius: GlassTheme.radiusMd,
     borderWidth: 1,
     alignItems: 'center',
+    gap: 8,
+  },
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    alignItems: 'center',
     justifyContent: 'center',
-    ...GlassTheme.cardShadow,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   emoji: {
-    fontSize: 28,
-    marginBottom: 8,
+    fontSize: 20,
   },
   name: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 2,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   prompt: {
-    fontSize: 11,
-    fontWeight: '400',
+    fontSize: 10,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 13,
   },
 });

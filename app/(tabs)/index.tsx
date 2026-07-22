@@ -9,9 +9,11 @@ import {
   Text,
   View,
 } from "react-native";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import AmbientGlow from "../../components/AmbientGlow";
 import CameraWidget from "../../components/CameraWidget";
-import GeneratingModal from "../../components/GeneratingModal";
+import AILoadingOverlay from "../../components/AILoadingOverlay";
+import GlassBottomSheet from "../../components/GlassBottomSheet";
 import {
   FeedIcon,
   HashtagIcon,
@@ -105,6 +107,8 @@ export default function HomeScreen() {
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
   const [ageRange, setAgeRange] = useState<string | null>(null);
+
+  const bottomSheetRef = useRef<BottomSheetModal | null>(null);
 
   const { user } = useAuth();
   const { generate } = useGenerateCaption();
@@ -209,17 +213,6 @@ export default function HomeScreen() {
         decelerationRate={0.99}
         bounces={true}
       >
-        {/* ── Top Nav ── */}
-        <GlassPanel style={styles.topNav}>
-          <View style={styles.brandRow}>
-            <SparkleIcon size={20} />
-            <Text style={styles.brandText}>Capshion</Text>
-          </View>
-          <GlassPanel style={styles.betaPill}>
-            <Text style={styles.betaText}>{t("common.beta")}</Text>
-          </GlassPanel>
-        </GlassPanel>
-
         {/* ── Hero ── */}
         <View style={styles.section}>
           <GlassPanel style={styles.heroBadge}>
@@ -290,13 +283,27 @@ export default function HomeScreen() {
         {/* ── ToneSelector (En az 1 görsel seçildiğinde açılır) ── */}
         {selectedImages.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t("home.selectTone")}</Text>
+            <View style={styles.toneHeader}>
+              <Text style={styles.sectionTitle}>{t("home.selectTone")}</Text>
+              <HapticButton
+                style={styles.toneSheetButton}
+                onPress={() => bottomSheetRef.current?.present()}
+              >
+                <Text style={styles.toneSheetButtonText}>{t("common.seeAll")}</Text>
+              </HapticButton>
+            </View>
             <ToneSelector
               selectedTone={selectedTone}
               onToneSelect={setSelectedTone}
             />
           </View>
         )}
+
+        <GlassBottomSheet
+          bottomSheetRef={bottomSheetRef}
+          selectedTone={selectedTone}
+          onToneSelect={setSelectedTone}
+        />
 
         {/* ── Features Carousel ── */}
         <ScrollView
@@ -335,7 +342,7 @@ export default function HomeScreen() {
         </GlassPanel>
       </ScrollView>
 
-      <GeneratingModal visible={isGenerating} />
+      <AILoadingOverlay visible={isGenerating} />
       <HowItWorksModal
         visible={showHowItWorks}
         onClose={() => setShowHowItWorks(false)}
@@ -361,50 +368,16 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: GlassTheme.bg,
+    backgroundColor: GlassTheme.background,
   },
   scroll: {
     flex: 1,
   },
   container: {
     padding: 14,
-    paddingTop: 18,
-    paddingBottom: 60,
+    paddingTop: 100,
+    paddingBottom: 140,
     gap: 24,
-  },
-
-  /* ── Top Nav ── */
-  topNav: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderRadius: GlassTheme.radiusPill,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-  },
-  brandRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  brandText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: GlassTheme.textMain,
-    letterSpacing: -0.3,
-  },
-  betaPill: {
-    borderRadius: GlassTheme.radiusPill,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: GlassTheme.border,
-    backgroundColor: GlassTheme.panelStrong,
-  },
-  betaText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: GlassTheme.textMain,
   },
 
   /* ── Sections ── */
@@ -422,7 +395,7 @@ const styles = StyleSheet.create({
   heroBadgeText: {
     fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 0.4,
+    letterSpacing: 2,
     textTransform: "uppercase",
     color: GlassTheme.textMain,
   },
@@ -431,13 +404,14 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: GlassTheme.textMain,
     lineHeight: 36,
-    letterSpacing: -0.8,
+    letterSpacing: 0.5,
   },
   heroSubtitle: {
     fontSize: 14,
     fontWeight: "400",
     color: GlassTheme.textMuted,
     lineHeight: 21,
+    letterSpacing: 0.3,
   },
   heroActions: {
     flexDirection: "row",
@@ -491,7 +465,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: GlassTheme.textMain,
-    letterSpacing: -0.4,
+    letterSpacing: 1,
   },
   statLabel: {
     fontSize: 11,
@@ -543,10 +517,31 @@ const styles = StyleSheet.create({
   },
 
   /* ── Tone Section ── */
+  toneHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
     color: GlassTheme.textMain,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+  },
+  toneSheetButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    borderWidth: 0.5,
+    borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  toneSheetButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: GlassTheme.textMuted,
+    letterSpacing: 0.5,
   },
 
   /* ── Features Carousel ── */
@@ -575,7 +570,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: GlassTheme.textMain,
-    letterSpacing: -0.4,
+    letterSpacing: 0.5,
   },
   featureText: {
     fontSize: 13,
@@ -595,7 +590,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: GlassTheme.textMain,
     lineHeight: 26,
-    letterSpacing: -0.5,
+    letterSpacing: 1,
+    textTransform: "uppercase",
   },
   closingText: {
     fontSize: 13,

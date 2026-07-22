@@ -4,11 +4,17 @@
     "slug": "capshion",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/logo.png",
     "scheme": "capshion",
     "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "backgroundColor": "#05050A",
+      "resizeMode": "contain"
+    },
     "ios": {
       "supportsTablet": true,
+      "backgroundColor": "#05050A",
       "bundleIdentifier": "com.furkan.capshion",
       "buildNumber": "1",
       "infoPlist": {
@@ -18,11 +24,12 @@
       }
     },
     "android": {
+      "backgroundColor": "#05050A",
       "package": "com.furkan.capshion",
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#000000",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundColor": "#05050A",
+        "foregroundImage": "./assets/images/logo.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
@@ -36,20 +43,22 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/logo.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/logo.png",
           "resizeMode": "contain",
-          "backgroundColor": "#000000"
+          "backgroundColor": "#05050A"
         }
       ],
       "expo-secure-store",
-      "expo-localization"
+      "expo-localization",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

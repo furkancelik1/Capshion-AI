@@ -255,38 +255,47 @@ export default function CaptionDetailScreen() {
     [showToast],
   );
 
-  const handleShare = useCallback(async () => {
-    if (captions.length > 0) {
-      try {
-        await Share.share({ message: captions[0]?.text ?? '' });
-      } catch {
-        Alert.alert(t("home.alertError"), t("common.alertShareError"));
-      }
+  const handleShare = useCallback(async (textToShare: string) => {
+    if (!textToShare) {
+      Alert.alert(t("common.error"), t("common.alertShareError"));
+      return;
     }
-  }, [captions]);
-
-  const handleInstagramShare = useCallback(async () => {
-    if (captions.length > 0) {
-      await Clipboard.setStringAsync(captions[0]?.text ?? '');
-      setCopiedIndex(0);
-      showToast(t("common.copiedDesc"));
-      setTimeout(() => setCopiedIndex(null), 2000);
-    }
-
     try {
-      const canOpen = await Linking.canOpenURL("instagram://sharesheet");
-      if (canOpen) {
-        await Linking.openURL("instagram://sharesheet");
-      } else {
-        Alert.alert(
-          t("common.alertInstagramNotFound"),
-          t("common.alertInstagramNotInstalled"),
-        );
-      }
+      await Share.share({ message: textToShare });
     } catch {
-      Alert.alert(t("home.alertError"), t("common.alertInstagramOpenError"));
+      Alert.alert(t("home.alertError"), t("common.alertShareError"));
     }
-  }, [captions, showToast]);
+  }, [t]);
+
+  const handleInstagram = useCallback(async (textToShare: string) => {
+    if (!textToShare) return;
+    await Clipboard.setStringAsync(textToShare);
+    Alert.alert(
+      t("common.copiedTitle"),
+      t("common.copiedInstagramDesc"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.openInstagram"),
+          onPress: async () => {
+            try {
+              const canOpen = await Linking.canOpenURL("instagram://app");
+              if (canOpen) {
+                await Linking.openURL("instagram://app");
+              } else {
+                Alert.alert(
+                  t("common.alertInstagramNotFound"),
+                  t("common.alertInstagramNotInstalled"),
+                );
+              }
+            } catch {
+              Alert.alert(t("home.alertError"), t("common.alertInstagramOpenError"));
+            }
+          },
+        },
+      ],
+    );
+  }, [t]);
 
   // Canlı URL'ye İstek Atarak iyzico'yu Başlatma
   const initiateIyzicoPayment = async () => {
@@ -463,7 +472,7 @@ export default function CaptionDetailScreen() {
         <View style={styles.shareRow}>
           <HapticButton
             style={[styles.shareButton, styles.shareButtonHalf]}
-            onPress={handleInstagramShare}
+            onPress={() => handleInstagram(captions[0]?.text ?? '')}
             activeOpacity={0.85}
           >
             <LinearGradient
@@ -479,7 +488,7 @@ export default function CaptionDetailScreen() {
 
           <HapticButton
             style={[styles.shareButton, styles.shareButtonHalf]}
-            onPress={handleShare}
+            onPress={() => handleShare(captions[0]?.text ?? '')}
             activeOpacity={0.85}
           >
             <LinearGradient
@@ -629,10 +638,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "700",
     color: GlassTheme.textMain,
     textAlign: "center",
-    letterSpacing: -0.3,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
   },
   scroll: {
     flex: 1,

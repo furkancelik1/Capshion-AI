@@ -140,7 +140,7 @@ function ActionButton({
 }) {
   return (
     <HapticButton
-      style={[styles.actionButton, { borderColor: GlassTheme.border }]}
+      style={styles.actionButton}
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -159,9 +159,9 @@ const styles = StyleSheet.create({
   },
   imageBlur: {
     width: "100%",
-    borderRadius: GlassTheme.radiusLg,
-    borderWidth: 1,
-    borderColor: GlassTheme.border,
+    borderRadius: 32,
+    borderWidth: 0.5,
+    borderColor: "rgba(255,255,255,0.15)",
     overflow: "hidden",
     alignItems: "center",
     paddingTop: 16,
@@ -172,16 +172,16 @@ const styles = StyleSheet.create({
   },
   carouselContainer: {
     gap: 12,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
     paddingBottom: 8,
   },
   imageWrapper: {
     position: "relative",
   },
   image: {
-    width: 200,
-    height: 200,
-    borderRadius: GlassTheme.radiusMd,
+    width: 220,
+    height: 220,
+    borderRadius: GlassTheme.radiusLg,
     backgroundColor: GlassTheme.panelStrong,
   },
   removeButton: {
@@ -199,7 +199,8 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     width: "100%",
-    height: 200,
+    aspectRatio: 1.2,
+    maxHeight: 220,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
@@ -227,13 +228,15 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 13,
     paddingHorizontal: 22,
-    borderRadius: 14,
-    borderWidth: 1,
-    backgroundColor: GlassTheme.panel,
+    borderRadius: 999,
+    borderWidth: 0.5,
+    borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.04)",
     ...GlassTheme.cardShadow,
   },
   actionLabel: {
     fontSize: 14,
     fontWeight: "600",
+    letterSpacing: 0.5,
   },
 });

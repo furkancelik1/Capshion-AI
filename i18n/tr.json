@@ -25,7 +25,12 @@
     "freeTrial": "Ücretsiz dene",
     "generate": "Metin Üret",
     "copy": "Kopyala",
-    "closed": "Belirtilmedi"
+    "closed": "Belirtilmedi",
+    "error": "Hata",
+    "copiedTitle": "Kopyalandı! 📋",
+    "copiedInstagramDesc": "Caption panoya kopyalandı. Instagram açıldığında yapıştırabilirsiniz.",
+    "openInstagram": "Instagram'ı Aç",
+    "seeAll": "Tümünü Gör"
   },
   "home": {
     "heroBadge": "Premium İçerik Stüdyosu",
@@ -100,6 +105,7 @@
     "subtitle": "Fotoğrafların analiz ediliyor, en uygun metin oluşturuluyor..."
   },
   "howItWorks": {
+    "title": "Nasıl Çalışır?",
     "step1Title": "Fotoğrafını Seç",
     "step1Desc": "Galerinden bir veya birden fazla fotoğraf yükle. Capshion içeriğini analiz etmeye hemen başlasın.",
     "step2Title": "Akıllı Analiz",
@@ -121,6 +127,18 @@
     "empty": "Henüz bir geçmiş kaydın yok.",
     "copied": "Kopyalandı!",
     "errorSession": "Oturum bulunamadı. Lütfen tekrar giriş yapın."
+  },
+  "tones": {
+    "cool": { "name": "Havalı", "prompt": "Trendy / Cool" },
+    "humorous": { "name": "Eğlenceli", "prompt": "Witty / Humorous" },
+    "minimal": { "name": "Minimalist", "prompt": "Minimal / Aesthetic" },
+    "professional": { "name": "Profesyonel", "prompt": "Professional / Corporate" },
+    "storyteller": { "name": "Hikaye Anlatıcı", "prompt": "Storyteller" }
+  },
+  "tabs": {
+    "create": "Oluştur",
+    "history": "Geçmiş",
+    "profile": "Profil"
   },
   "auth": {
     "welcomeBack": "Tekrar hoş geldin",

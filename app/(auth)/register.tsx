@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,11 +15,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import AgeRangeSelector from '@/components/AgeRangeSelector';
+import AmbientGlow from '@/components/AmbientGlow';
+import GlassPanel from '@/components/GlassPanel';
 import HapticButton from '@/components/HapticButton';
 import { GlassTheme } from '@/constants/LiquidGlass';
 import { api } from '@/services/api';
-
-const GOLD = '#D4AF37';
 
 export default function RegisterScreen() {
   const { signUpWithEmail } = useAuth();
@@ -65,6 +66,7 @@ export default function RegisterScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <AmbientGlow />
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
         contentContainerStyle={styles.content}
@@ -72,111 +74,118 @@ export default function RegisterScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
+          <Image
+            source={require('@/assets/images/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.brand}>CAPSHION</Text>
           <Text style={styles.title}>Hesap Oluştur</Text>
           <Text style={styles.subtitle}>Yaratıcı platformumuza katıl</Text>
         </View>
 
-        <View style={styles.form}>
-          <View
-            style={[
-              styles.inputOuter,
-              focusedField === 'email' && styles.inputFocused,
-            ]}
-          >
-            <TextInput
-              style={styles.input}
-              placeholder="E-posta"
-              placeholderTextColor="#888"
-              value={email}
-              onChangeText={setEmail}
-              onFocus={() => setFocusedField('email')}
-              onBlur={() => setFocusedField(null)}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-            />
-          </View>
-
-          <View
-            style={[
-              styles.inputOuter,
-              focusedField === 'password' && styles.inputFocused,
-            ]}
-          >
-            <View style={styles.passwordRow}>
+        <GlassPanel style={styles.formWrap}>
+          <View style={styles.form}>
+            <View
+              style={[
+                styles.inputOuter,
+                focusedField === 'email' && styles.inputFocused,
+              ]}
+            >
               <TextInput
-                style={[styles.input, styles.passwordInput]}
-                placeholder="Şifre"
-                placeholderTextColor="#888"
-                value={password}
-                onChangeText={setPassword}
-                onFocus={() => setFocusedField('password')}
+                style={styles.input}
+                placeholder="E-posta"
+                placeholderTextColor={GlassTheme.textPlaceholder}
+                value={email}
+                onChangeText={setEmail}
+                onFocus={() => setFocusedField('email')}
                 onBlur={() => setFocusedField(null)}
-                secureTextEntry={!showPassword}
                 autoCapitalize="none"
-                autoComplete="new-password"
+                keyboardType="email-address"
+                autoComplete="email"
               />
-              <HapticButton
-                style={styles.eyeButton}
-                onPress={() => setShowPassword((prev) => !prev)}
-              >
-                <Ionicons
-                  name={showPassword ? 'eye-off' : 'eye'}
-                  size={22}
-                  color={GlassTheme.textMuted}
-                />
-              </HapticButton>
             </View>
-          </View>
 
-          <View
-            style={[
-              styles.inputOuter,
-              focusedField === 'confirmPassword' && styles.inputFocused,
-            ]}
-          >
-            <View style={styles.passwordRow}>
-              <TextInput
-                style={[styles.input, styles.passwordInput]}
-                placeholder="Şifre Tekrar"
-                placeholderTextColor="#888"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                onFocus={() => setFocusedField('confirmPassword')}
-                onBlur={() => setFocusedField(null)}
-                secureTextEntry={!showConfirmPassword}
-                autoCapitalize="none"
-                autoComplete="new-password"
-              />
-              <HapticButton
-                style={styles.eyeButton}
-                onPress={() => setShowConfirmPassword((prev) => !prev)}
-              >
-                <Ionicons
-                  name={showConfirmPassword ? 'eye-off' : 'eye'}
-                  size={22}
-                  color={GlassTheme.textMuted}
+            <View
+              style={[
+                styles.inputOuter,
+                focusedField === 'password' && styles.inputFocused,
+              ]}
+            >
+              <View style={styles.passwordRow}>
+                <TextInput
+                  style={[styles.input, styles.passwordInput]}
+                  placeholder="Şifre"
+                  placeholderTextColor={GlassTheme.textPlaceholder}
+                  value={password}
+                  onChangeText={setPassword}
+                  onFocus={() => setFocusedField('password')}
+                  onBlur={() => setFocusedField(null)}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoComplete="new-password"
                 />
-              </HapticButton>
+                <HapticButton
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword((prev) => !prev)}
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-off' : 'eye'}
+                    size={22}
+                    color={GlassTheme.textMuted}
+                  />
+                </HapticButton>
+              </View>
             </View>
+
+            <View
+              style={[
+                styles.inputOuter,
+                focusedField === 'confirmPassword' && styles.inputFocused,
+              ]}
+            >
+              <View style={styles.passwordRow}>
+                <TextInput
+                  style={[styles.input, styles.passwordInput]}
+                  placeholder="Şifre Tekrar"
+                  placeholderTextColor={GlassTheme.textPlaceholder}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  onFocus={() => setFocusedField('confirmPassword')}
+                  onBlur={() => setFocusedField(null)}
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  autoComplete="new-password"
+                />
+                <HapticButton
+                  style={styles.eyeButton}
+                  onPress={() => setShowConfirmPassword((prev) => !prev)}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? 'eye-off' : 'eye'}
+                    size={22}
+                    color={GlassTheme.textMuted}
+                  />
+                </HapticButton>
+              </View>
+            </View>
+
+            <AgeRangeSelector value={ageRange} onChange={setAgeRange} />
+
+            <HapticButton
+              style={styles.submitButton}
+              onPress={handleRegister}
+              activeOpacity={0.85}
+              disabled={submitting}
+            >
+              {submitting ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.submitText}>Kaydol</Text>
+              )}
+            </HapticButton>
           </View>
-
-          <AgeRangeSelector value={ageRange} onChange={setAgeRange} />
-
-          <HapticButton
-            style={styles.submitButton}
-            onPress={handleRegister}
-            activeOpacity={0.85}
-            disabled={submitting}
-          >
-            {submitting ? (
-              <ActivityIndicator color="#000" size="small" />
-            ) : (
-              <Text style={styles.submitText}>Kaydol</Text>
-            )}
-          </HapticButton>
-        </View>
+        </GlassPanel>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Zaten hesabın var mı?</Text>
@@ -202,14 +211,20 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 36,
+  },
+  logo: {
+    width: 72,
+    height: 72,
+    marginBottom: 8,
   },
   brand: {
     fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 4,
-    color: GOLD,
-    marginBottom: 16,
+    fontWeight: '800',
+    letterSpacing: 3,
+    textTransform: 'uppercase',
+    color: GlassTheme.neonPlatinum,
+    marginBottom: 20,
   },
   title: {
     fontSize: 28,
@@ -222,18 +237,23 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: GlassTheme.textMuted,
   },
+  formWrap: {
+    padding: 4,
+  },
   form: {
-    gap: 16,
+    gap: 14,
+    padding: 16,
   },
   inputOuter: {
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: '#1E1E1E',
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'transparent',
     overflow: 'hidden',
   },
   inputFocused: {
-    borderColor: GOLD,
+    borderColor: GlassTheme.primary,
+    borderWidth: 1.5,
   },
   input: {
     height: 52,
@@ -259,16 +279,18 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     height: 52,
-    borderRadius: 14,
-    backgroundColor: GOLD,
+    borderRadius: 999,
+    backgroundColor: GlassTheme.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
+    marginTop: 4,
   },
   submitText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#000',
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
   },
   footer: {
     flexDirection: 'row',
@@ -285,6 +307,6 @@ const styles = StyleSheet.create({
   footerLink: {
     fontSize: 14,
     fontWeight: '600',
-    color: GOLD,
+    color: GlassTheme.primary,
   },
 });

@@ -38,29 +38,31 @@ export default function HowItWorksModal({
       animationType="fade"
       statusBarTranslucent
     >
-      <View style={styles.container}>
+      <View style={styles.backdrop}>
         <BlurView
-          intensity={GlassTheme.blurIntensity}
+          intensity={GlassTheme.blurIntensity + 10}
           tint="dark"
           style={StyleSheet.absoluteFill}
         />
-        <View style={styles.card}>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Text style={styles.closeBtnText}>✕</Text>
-          </TouchableOpacity>
+        <View style={styles.container}>
+          <View style={styles.card}>
+            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+              <Text style={styles.closeBtnText}>✕</Text>
+            </TouchableOpacity>
 
-          <Text style={styles.title}>Nasıl Çalışır?</Text>
+            <Text style={styles.title}>{t("howItWorks.title")}</Text>
 
-          <View style={styles.stepsWrap}>
-            {STEPS.map((item, i) => (
-              <View key={i} style={styles.stepRow}>
-                <Text style={styles.stepEmoji}>{item.emoji}</Text>
-                <View style={styles.stepContent}>
-                  <Text style={styles.stepTitle}>{item.title}</Text>
-                  <Text style={styles.stepDesc}>{item.desc}</Text>
+            <View style={styles.stepsWrap}>
+              {STEPS.map((item, i) => (
+                <View key={i} style={styles.stepRow}>
+                  <Text style={styles.stepEmoji}>{item.emoji}</Text>
+                  <View style={styles.stepContent}>
+                    <Text style={styles.stepTitle}>{item.title}</Text>
+                    <Text style={styles.stepDesc}>{item.desc}</Text>
+                  </View>
                 </View>
-              </View>
-            ))}
+              ))}
+            </View>
           </View>
         </View>
       </View>
@@ -69,9 +71,12 @@ export default function HowItWorksModal({
 }
 
 const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.75)",
+  },
   container: {
     flex: 1,
-    backgroundColor: GlassTheme.overlayBg,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
@@ -82,16 +87,17 @@ const styles = StyleSheet.create({
     backgroundColor: GlassTheme.cardBackground,
     borderRadius: GlassTheme.radiusLg,
     borderWidth: 1,
-    borderColor: GlassTheme.border,
-    paddingVertical: 36,
-    paddingHorizontal: 28,
-    gap: 24,
+    borderColor: GlassTheme.glassBorder,
+    paddingTop: 32,
+    paddingBottom: 32,
+    paddingHorizontal: 24,
+    gap: 20,
     ...GlassTheme.cardShadow,
   },
   closeBtn: {
     position: "absolute",
-    top: 14,
-    right: 14,
+    top: 12,
+    right: 12,
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -99,7 +105,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: GlassTheme.border,
+    borderColor: GlassTheme.glassBorder,
     zIndex: 10,
   },
   closeBtnText: {
@@ -113,10 +119,13 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: GlassTheme.textMain,
     textAlign: "center",
-    letterSpacing: -0.5,
+    marginTop: 4,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
   },
   stepsWrap: {
-    gap: 20,
+    gap: 18,
+    paddingTop: 4,
   },
   stepRow: {
     flexDirection: "row",
@@ -135,13 +144,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
     color: GlassTheme.textMain,
-    letterSpacing: -0.3,
+    letterSpacing: 0.5,
   },
   stepDesc: {
     fontSize: 13,
     fontWeight: "600",
-    color: GlassTheme.textMain,
+    color: GlassTheme.textSub,
     lineHeight: 19,
-    opacity: 0.85,
+    opacity: 0.9,
   },
 });
