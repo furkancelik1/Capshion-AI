@@ -9,15 +9,14 @@ const resources = {
   tr: { translation: tr },
 } as const;
 
-const systemLanguage = expoLocalization.getLocales()?.[0]?.languageCode ?? "en";
-const supportedLanguages = Object.keys(resources);
-const fallbackLng = supportedLanguages.includes(systemLanguage)
-  ? systemLanguage
-  : "en";
+const locales = expoLocalization.getLocales();
+const systemLang = locales?.[0]?.languageCode ?? "";
+const detected = ["en", "tr"].includes(systemLang) ? systemLang : "en";
 
 const initPromise = i18next.use(initReactI18next).init({
   resources,
-  fallbackLng,
+  lng: detected,
+  fallbackLng: "en",
   interpolation: {
     escapeValue: false,
   },

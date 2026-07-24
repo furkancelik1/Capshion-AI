@@ -13,7 +13,7 @@ export default function GlassHeader() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <BlurView
         intensity={70}
-        tint="dark"
+        tint="systemThinMaterialDark"
         style={StyleSheet.absoluteFill}
       />
       <View style={styles.inner}>

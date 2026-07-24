@@ -27,12 +27,17 @@ export default function OutOfCreditsModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <BlurView
-          intensity={GlassTheme.blurIntensity}
-          tint="dark"
-          style={StyleSheet.absoluteFill}
-        />
         <View style={styles.card}>
+          <BlurView
+            intensity={90}
+            tint="systemThinMaterialDark"
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.cardInner}>
+          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+            <Ionicons name="close" size={16} color="#FFFFFF" />
+          </TouchableOpacity>
+
           <View style={styles.iconWrap}>
             <Ionicons name="flash" size={36} color="#A78BFA" />
           </View>
@@ -71,6 +76,7 @@ export default function OutOfCreditsModal({
           >
             <Text style={styles.laterText}>{t("outOfCredits.later")}</Text>
           </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
@@ -83,7 +89,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
-    backgroundColor: "rgba(10, 10, 10, 0.8)",
+    backgroundColor: "rgba(0, 0, 0, 0.65)",
   },
   card: {
     width: "100%",
@@ -91,12 +97,26 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: "rgba(139, 92, 246, 0.2)",
-    backgroundColor: GlassTheme.cardBackground,
+    overflow: "hidden",
+    backgroundColor: "rgba(15, 15, 20, 0.75)",
+  },
+  cardInner: {
     paddingVertical: 36,
     paddingHorizontal: 28,
     alignItems: "center",
     gap: 16,
-    ...GlassTheme.cardShadow,
+  },
+  closeBtn: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
   },
   iconWrap: {
     width: 72,
@@ -131,7 +151,7 @@ const styles = StyleSheet.create({
   buyButton: {
     width: "100%",
     height: 52,
-    borderRadius: 14,
+    borderRadius: 100,
     overflow: "hidden",
     marginTop: 4,
     ...GlassTheme.cardShadow,

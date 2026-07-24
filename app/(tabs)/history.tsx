@@ -1,19 +1,24 @@
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
-import { useCallback, useEffect, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
+  Alert,
   FlatList,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { Swipeable } from "react-native-gesture-handler";
 import AmbientGlow from "../../components/AmbientGlow";
 import { ClockIcon } from "../../components/GlassIcons";
 import GlassEmptyState from "../../components/GlassEmptyState";
 import GlassPanel from "../../components/GlassPanel";
+import { HistoryCardSkeleton } from "../../components/GlassSkeleton";
+import { useToast } from "../../context/ToastContext";
 import { GlassTheme } from "../../constants/LiquidGlass";
 import { api, getToken } from "../../services/api";
 import { router } from "expo-router";
@@ -28,10 +33,12 @@ interface HistoryItem {
 
 export default function HistoryScreen() {
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const [data, setData] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const swipeRefs = useRef<Record<string, Swipeable | null>>({});
 
   useEffect(() => {
     fetchHistory();
@@ -57,6 +64,25 @@ export default function HistoryScreen() {
     }
   };
 
+  const handleDelete = useCallback(async (item: HistoryItem) => {
+    Alert.alert(t("history.deleteTitle"), t("history.deleteMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("common.delete"),
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await api.deleteCaption(item.id);
+            setData((prev) => prev.filter((c) => c.id !== item.id));
+            showToast(t("history.deleted"), "success");
+          } catch {
+            showToast(t("common.error"), "error");
+          }
+        },
+      },
+    ]);
+  }, [t, showToast]);
+
   const handleCopy = useCallback(async (item: HistoryItem) => {
     await Clipboard.setStringAsync(item.caption_text);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -75,28 +101,66 @@ export default function HistoryScreen() {
     return `${day}.${month}.${year} ${hours}:${minutes}`;
   };
 
+  const renderRightActions = useCallback(
+    (item: HistoryItem) => {
+      const close = () => swipeRefs.current[item.id]?.close();
+
+      return (
+        <View style={styles.swipeActions}>
+          <TouchableOpacity
+            style={styles.swipeBtn}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              handleCopy(item);
+              close();
+            }}
+          >
+            <Ionicons name="copy-outline" size={22} color="#8B5CF6" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.swipeBtn, styles.swipeBtnDanger]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+              close();
+              handleDelete(item);
+            }}
+          >
+            <Ionicons name="trash-outline" size={22} color="#EF4444" />
+          </TouchableOpacity>
+        </View>
+      );
+    },
+    [handleCopy, handleDelete],
+  );
+
   const renderItem = ({ item }: { item: HistoryItem }) => {
     const showCopied = copiedId === item.id;
 
     return (
-      <TouchableOpacity activeOpacity={0.7} onPress={() => handleCopy(item)}>
-        <GlassPanel style={styles.card}>
-          <Text style={styles.captionText}>{item.caption_text}</Text>
+      <Swipeable
+        ref={(ref) => { swipeRefs.current[item.id] = ref; }}
+        renderRightActions={() => renderRightActions(item)}
+        overshootRight={false}
+      >
+        <TouchableOpacity activeOpacity={0.7} onPress={() => handleCopy(item)}>
+          <GlassPanel style={styles.card}>
+            <Text style={styles.captionText}>{item.caption_text}</Text>
 
-          <View style={styles.chipsRow}>
-            {(item.hashtags || []).map((tag, i) => (
-              <View key={`${item.id}-tag-${i}`} style={styles.chip}>
-                <Text style={styles.chipText}>{tag}</Text>
-              </View>
-            ))}
-          </View>
+            <View style={styles.chipsRow}>
+              {(item.hashtags || []).map((tag, i) => (
+                <View key={`${item.id}-tag-${i}`} style={styles.chip}>
+                  <Text style={styles.chipText}>{tag}</Text>
+                </View>
+              ))}
+            </View>
 
-          <View style={styles.cardFooter}>
-            <Text style={styles.dateText}>{formatDate(item.created_at)}</Text>
-            {showCopied && <Text style={styles.copiedText}>{t("history.copied")}</Text>}
-          </View>
-        </GlassPanel>
-      </TouchableOpacity>
+            <View style={styles.cardFooter}>
+              <Text style={styles.dateText}>{formatDate(item.created_at)}</Text>
+              {showCopied && <Text style={styles.copiedText}>{t("history.copied")}</Text>}
+            </View>
+          </GlassPanel>
+        </TouchableOpacity>
+      </Swipeable>
     );
   };
 
@@ -115,9 +179,14 @@ export default function HistoryScreen() {
       </View>
 
       {loading && (
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={GlassTheme.primary} />
-        </View>
+        <ScrollView
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {Array.from({ length: 5 }).map((_, i) => (
+            <HistoryCardSkeleton key={i} />
+          ))}
+        </ScrollView>
       )}
 
       {error && (
@@ -174,11 +243,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: GlassTheme.textMuted,
-  },
-  loadingWrap: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
   errorCard: {
     borderRadius: GlassTheme.radiusLg,
@@ -238,5 +302,25 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     color: GlassTheme.primary,
+  },
+  swipeActions: {
+    flexDirection: "row",
+    alignItems: "stretch",
+  },
+  swipeBtn: {
+    width: 72,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(139, 92, 246, 0.2)",
+    borderWidth: 0.5,
+    borderColor: "#8B5CF6",
+    borderTopLeftRadius: GlassTheme.radiusMd,
+    borderBottomLeftRadius: GlassTheme.radiusMd,
+  },
+  swipeBtnDanger: {
+    backgroundColor: "rgba(239, 68, 68, 0.2)",
+    borderColor: "#EF4444",
+    borderTopRightRadius: GlassTheme.radiusMd,
+    borderBottomRightRadius: GlassTheme.radiusMd,
   },
 });

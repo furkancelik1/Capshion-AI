@@ -7,6 +7,7 @@
     "edit": "Düzenle",
     "yes": "Evet",
     "alternative": "Alternatif",
+    "delete": "Sil",
     "copied": "Kopyalandı ✅",
     "copyLabel": "Kopyala 📋",
     "copiedDesc": "Açıklama kopyalandı! 📋",
@@ -30,7 +31,8 @@
     "copiedTitle": "Kopyalandı! 📋",
     "copiedInstagramDesc": "Caption panoya kopyalandı. Instagram açıldığında yapıştırabilirsiniz.",
     "openInstagram": "Instagram'ı Aç",
-    "seeAll": "Tümünü Gör"
+    "seeAll": "Tümünü Gör",
+    "image": "Görsel"
   },
   "home": {
     "heroBadge": "Premium İçerik Stüdyosu",
@@ -113,6 +115,12 @@
     "step3Title": "Metni Kopyala",
     "step3Desc": "Beğendiğin metni tek dokunuşla panoya kopyala ve Instagram'da yayınlamaya hazır."
   },
+  "premium": {
+    "title": "Kurumsal Modu Kilidini Aç",
+    "description": "Markanız için özel olarak eğitilmiş, profesyonel 'Biz' dilini kullanan yapay zeka tonuyla rakiplerinizin önüne geçin. Sadece Premium üyeler için.",
+    "cta": "Premium'a Yükselt",
+    "skip": "Vazgeç"
+  },
   "payment": {
     "success": "Başarılı!",
     "successMessage": "Kredileriniz hesabınıza tanımlandı.",
@@ -128,6 +136,9 @@
     "emptyDescription": "Yapay zeka ile ilk metnini oluşturmak için hemen başla.",
     "emptyAction": "Oluştur",
     "copied": "Kopyalandı!",
+    "deleteTitle": "Kaydı Sil",
+    "deleteMessage": "Bu kaydı silmek istediğinize emin misiniz?",
+    "deleted": "Kayıt silindi",
     "errorSession": "Oturum bulunamadı. Lütfen tekrar giriş yapın."
   },
   "tones": {
@@ -147,7 +158,10 @@
     "male": "Erkek",
     "corporate": "Kurumsal",
     "emojis": "Emojiler",
-    "hashtags": "Hashtagler"
+    "hashtags": "Hashtagler",
+    "captionMode": "Caption Modu",
+    "modeAlternatives": "Tüm Post",
+    "modePerImage": "Görsel Başına"
   },
   "tabs": {
     "create": "Oluştur",

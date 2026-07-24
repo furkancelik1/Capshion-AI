@@ -56,7 +56,7 @@ export default function FeedbackModal({
         <View style={styles.card}>
           <BlurView
             intensity={90}
-            tint="dark"
+            tint="systemThinMaterialDark"
             style={StyleSheet.absoluteFill}
           />
           <View style={styles.cardInner}>

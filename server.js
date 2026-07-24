@@ -46,7 +46,7 @@ app.use(helmet());
 app.use(compression());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(cors({ origin: ALLOWED_ORIGINS, methods: ["GET", "POST", "PUT", "DELETE"], credentials: true }));
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", authenticateToken, express.static("uploads"));
 
@@ -260,6 +260,23 @@ app.get("/api/captions", authenticateToken, async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error("[Captions] Hata:", err.message);
+    res.status(500).json({ error: "Sunucu hatası." });
+  }
+});
+
+app.delete("/api/captions/:id", authenticateToken, async (req, res) => {
+  console.log("[Captions] Silme isteği, userId:", req.userId, "captionId:", req.params.id);
+  try {
+    const result = await pool.query(
+      "DELETE FROM generated_captions WHERE id = $1 AND user_id = $2 RETURNING id",
+      [req.params.id, req.userId],
+    );
+    if (!result.rows.length) {
+      return res.status(404).json({ error: "Caption not found" });
+    }
+    res.json({ message: "Silindi" });
+  } catch (err) {
+    console.error("[Captions] Silme hatası:", err.message);
     res.status(500).json({ error: "Sunucu hatası." });
   }
 });
@@ -504,7 +521,6 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
       messages: [{ role: "user", content: [{ type: "text", text: prompt }, ...base64Images.map((img) => ({ type: "image_url", image_url: { url: img } }))] }],
       response_format: { type: "json_object" },
       max_tokens: 3000,
-      timeout: 30000,
     });
 
     const raw = completion.choices[0]?.message?.content || "";
@@ -582,7 +598,8 @@ app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
   console.log("[Generate-JSON] İstek alındı, userId:", req.userId);
 
   try {
-    const { images, tone, gender, ageRange, language, length, useEmojis, useHashtags } = req.body;
+    const { images, tone, gender, ageRange, language, length, useEmojis, useHashtags, mode } = req.body;
+    const isPerImage = mode === "per_image";
 
     if (!images || images.length === 0) {
       return res.status(400).json({ error: "En az bir görsel (base64) gereklidir." });
@@ -598,11 +615,13 @@ app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
       return res.status(404).json({ error: "Kullanıcı bulunamadı." });
     }
 
-    if (userRow.credits < 1) {
-      return res.status(403).json({ error: "Yetersiz kredi. Lütfen kredi yükleyin." });
+    const requiredCredits = isPerImage ? images.length : 1;
+
+    if (userRow.credits < requiredCredits) {
+      return res.status(403).json({ error: `Yetersiz kredi. Gerekli: ${requiredCredits}, Mevcut: ${userRow.credits}` });
     }
 
-    console.log(`[Generate-JSON] ${images.length} görsel, AI çağrılıyor...`);
+    console.log(`[Generate-JSON] ${images.length} görsel, mode=${mode || "alternatives"}, AI çağrılıyor...`);
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -630,21 +649,46 @@ app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
       ? "Add 2-4 relevant hashtags per caption."
       : "KESİNLİKLE HASHTAG KULLANMA.";
 
-    const prompt = `You are writing Instagram captions like a real user, not an AI or a poet.
-Look at the photo(s) and write what naturally comes to mind — like a friend sharing a moment.
-
-Rules:
-- NEVER write like AI, poet, motivational speaker, or advertiser
+    const baseRules = `- NEVER write like AI, poet, motivational speaker, or advertiser
 - NO exaggerated adjectives, deep life quotes, or generic wisdom
 - NO question sentences — write statements, opinions, or observations
-- Short, natural, everyday language
+- Short, natural, everyday language`;
 
-${instructionLang}
+    const commonFields = `${instructionLang}
 ${genderInstruction}
 ${lengthInstruction}
 ${emojiInstruction}
 ${hashtagInstruction}
-Age range: ${ageRange || "general"}
+Age range: ${ageRange || "general"}`;
+
+    let prompt;
+    if (isPerImage) {
+      prompt = `You are writing Instagram captions like a real user, not an AI or a poet.
+Look at each numbered photo below and write a UNIQUE, specific caption for that individual image.
+
+${baseRules}
+
+IMPORTANT: There are ${images.length} image(s). For EACH image, write ONE unique caption that specifically describes that image. Each caption must be different and tailored to its image.
+
+${commonFields}
+
+Reply ONLY with this JSON format:
+
+{
+  "captions": [
+    { "image_index": 0, "caption_text": "caption for image 1", "hashtags": ["#tag1", "#tag2"] },
+    { "image_index": 1, "caption_text": "caption for image 2", "hashtags": ["#tag3", "#tag4"] }
+  ]
+}
+
+You MUST generate exactly ${images.length} caption(s) — one per image. The image_index must match the order of the photos above.`;
+    } else {
+      prompt = `You are writing Instagram captions like a real user, not an AI or a poet.
+Look at the photo(s) and write what naturally comes to mind — like a friend sharing a moment.
+
+${baseRules}
+
+${commonFields}
 
 Reply ONLY with this JSON format:
 
@@ -656,6 +700,7 @@ Reply ONLY with this JSON format:
 }
 
 Generate at least 2, at most 4 captions.`;
+    }
 
     const callOpenAI = async (retryPrompt) => {
       const msg = retryPrompt || prompt;
@@ -664,7 +709,6 @@ Generate at least 2, at most 4 captions.`;
         messages: [{ role: "user", content: [{ type: "text", text: msg }, ...images.map((img) => ({ type: "image_url", image_url: { url: img } }))] }],
         response_format: { type: "json_object" },
         max_tokens: 3000,
-        timeout: 30000,
       });
     };
 
@@ -706,6 +750,7 @@ Generate at least 2, at most 4 captions.`;
         aiCaptions = aiCaptions.map(c => ({
           caption_text: c.caption_text || c.text || "",
           hashtags: Array.isArray(c.hashtags) ? c.hashtags : [],
+          image_index: c.image_index,
         }));
       } catch {
         const jsonMatch = (raw || "").match(/{[\s\S]*}/);
@@ -718,6 +763,7 @@ Generate at least 2, at most 4 captions.`;
             aiCaptions = aiCaptions.map(c => ({
               caption_text: c.caption_text || c.text || "",
               hashtags: Array.isArray(c.hashtags) ? c.hashtags : [],
+              image_index: c.image_index,
             }));
           } catch { aiCaptions = []; }
         } else { aiCaptions = []; }
@@ -741,8 +787,8 @@ Generate at least 2, at most 4 captions.`;
       );
 
       await client.query(
-        "UPDATE profiles SET credits = credits - 1 WHERE id = $1",
-        [req.userId],
+        "UPDATE profiles SET credits = credits - $1 WHERE id = $2",
+        [requiredCredits, req.userId],
       );
 
       await client.query("COMMIT");
@@ -756,6 +802,7 @@ Generate at least 2, at most 4 captions.`;
       const captions = aiCaptions.map((c) => ({
         text: c.caption_text,
         hashtags: c.hashtags,
+        image_index: c.image_index,
       }));
 
       res.status(201).json({

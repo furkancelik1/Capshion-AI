@@ -1,3 +1,4 @@
+import TypeWriterText from "@/components/TypeWriterText";
 import HapticButton from "@/components/HapticButton";
 import { GlassTheme } from "@/constants/LiquidGlass";
 import { supabase } from "@/services/supabase";
@@ -37,6 +38,7 @@ import { WebView } from "react-native-webview";
 interface CaptionItem {
   text?: string;
   hashtags?: string[];
+  image_index?: number;
 }
 
 interface DetailScreenData {
@@ -44,6 +46,74 @@ interface DetailScreenData {
   image_url: string;
   image_urls?: string[];
   credits_remaining: number;
+}
+
+function PerImageCard({
+  caption,
+  imageUri,
+  index,
+  onCopy,
+  copiedIndex,
+  t,
+}: {
+  caption: CaptionItem;
+  imageUri: string;
+  index: number;
+  onCopy: (text: string, index: number) => void;
+  copiedIndex: number | null;
+  t: (key: string) => string;
+}) {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  const handlePressIn = useCallback(() => {
+    scale.value = withSpring(0.96, { damping: 15, stiffness: 200 });
+  }, [scale]);
+  const handlePressOut = useCallback(() => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 200 });
+  }, [scale]);
+
+  return (
+    <Reanimated.View
+      entering={FadeInUp.delay(index * 120).springify().damping(14)}
+      style={styles.perImageCard}
+    >
+      <Reanimated.View style={[animatedStyle, styles.cardShadow]}>
+        <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut}>
+          <BlurView
+            intensity={GlassTheme.blurIntensity}
+            tint="systemThinMaterialDark"
+            style={styles.cardBlur}
+          >
+            <View style={styles.cardInner}>
+              <Image source={{ uri: imageUri }} style={styles.perImagePreview} resizeMode="cover" />
+              <Text style={styles.perImageLabel}>{t("common.image")} {index + 1}</Text>
+              <TypeWriterText text={caption.text ?? ''} />
+              {(caption.hashtags ?? []).length > 0 && (
+                <View style={styles.hashtagRow}>
+                  {(caption.hashtags ?? []).map((tag, tagIndex) => (
+                    <View key={tagIndex} style={styles.hashtag}>
+                      <Text style={styles.hashtagText}>{tag}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+              <HapticButton
+                style={styles.copyButton}
+                onPress={() => onCopy(caption.text ?? '', index)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.copyButtonText}>
+                  {copiedIndex === index ? t("common.copied") : t("common.copyLabel")}
+                </Text>
+              </HapticButton>
+            </View>
+          </BlurView>
+        </Pressable>
+      </Reanimated.View>
+    </Reanimated.View>
+  );
 }
 
 function GlassCard({
@@ -83,13 +153,13 @@ function GlassCard({
         <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut}>
           <BlurView
             intensity={GlassTheme.blurIntensity}
-            tint="dark"
+            tint="systemThinMaterialDark"
             style={styles.cardBlur}
           >
             <View style={styles.cardInner}>
               <Text style={styles.cardLabel}>{t("common.alternative")} {index + 1}</Text>
 
-              <Text style={styles.cardText}>{caption.text ?? ''}</Text>
+              <TypeWriterText text={caption.text ?? ''} />
 
               {(caption.hashtags ?? []).length > 0 && (
                 <View style={styles.hashtagRow}>
@@ -139,6 +209,8 @@ export default function CaptionDetailScreen() {
       typeof item === "string" ? { text: item, hashtags: [] } : item,
     ),
   );
+
+  const isPerImage = captions.length > 0 && captions.some((c) => c.image_index !== undefined && c.image_index !== null);
 
   const [imageUrls, setImageUrls] = useState<string[]>(() => {
     const cached = getCachedImageUris(id);
@@ -366,7 +438,7 @@ export default function CaptionDetailScreen() {
                   <BlurView
                     key={idx}
                     intensity={GlassTheme.blurIntensity}
-                    tint="dark"
+                    tint="systemThinMaterialDark"
                     style={styles.imageBlurWrapper}
                   >
                     <Image source={{ uri }} style={styles.previewImage} resizeMode="cover" />
@@ -399,11 +471,23 @@ export default function CaptionDetailScreen() {
         {captions.length === 0 ? (
           <BlurView
             intensity={GlassTheme.blurIntensity}
-            tint="dark"
+            tint="systemThinMaterialDark"
             style={styles.emptyCard}
           >
             <Text style={styles.emptyText}>{t("common.emptyTexts")}</Text>
           </BlurView>
+        ) : isPerImage ? (
+          captions.map((caption, index) => (
+            <PerImageCard
+              key={index}
+              caption={caption}
+              imageUri={imageUrls[caption.image_index ?? index] ?? imageUrls[0]}
+              index={index}
+              onCopy={handleCopy}
+              copiedIndex={copiedIndex}
+              t={t}
+            />
+          ))
         ) : (
           <ScrollView
             horizontal
@@ -468,7 +552,7 @@ export default function CaptionDetailScreen() {
         <View style={styles.modalOverlay}>
           <BlurView
             intensity={30}
-            tint="dark"
+            tint="systemThinMaterialDark"
             style={StyleSheet.absoluteFill}
           />
 
@@ -837,5 +921,23 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  perImageCard: {
+    marginBottom: 24,
+  },
+  perImagePreview: {
+    width: "100%",
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 12,
+    backgroundColor: GlassTheme.panelStrong,
+  },
+  perImageLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    color: GlassTheme.textSub,
+    marginBottom: 12,
   },
 });

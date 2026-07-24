@@ -44,7 +44,7 @@ export default function LiquidToast({
     <Animated.View style={[styles.container, animatedStyle]}>
       <BlurView
         intensity={GlassTheme.blurIntensity}
-        tint="dark"
+        tint="systemThinMaterialDark"
         style={styles.blur}
       >
         <Text style={styles.text}>Kopyalandı! 📋</Text>

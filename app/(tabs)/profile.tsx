@@ -255,58 +255,33 @@ export default function ProfileScreen() {
           tint="systemThinMaterialDark"
           style={styles.section}
         >
-          <View style={styles.langRow}>
-            <TouchableOpacity
-              style={[
-                styles.langBtn,
-                i18n.language?.startsWith("tr")
-                  ? styles.langBtnActive
-                  : styles.langBtnInactive,
-              ]}
-              onPress={() => i18n.changeLanguage("tr")}
-            >
-              <Text
+          <View style={styles.langRowItem}>
+            <View style={[styles.iconWrap, { backgroundColor: "rgba(139,92,246,0.2)" }]}>
+              <Ionicons name="language-outline" size={18} color={GlassTheme.primary} />
+            </View>
+            <Text style={styles.rowLabel}>{t("profile.language")}</Text>
+            <View style={styles.langInlineToggle}>
+              <TouchableOpacity
                 style={[
-                  styles.langBtnText,
-                  i18n.language?.startsWith("tr")
-                    ? styles.langBtnTextActive
-                    : styles.langBtnTextInactive,
+                  styles.langChip,
+                  i18n.language?.startsWith("tr") && styles.langChipActive,
                 ]}
+                onPress={() => i18n.changeLanguage("tr")}
               >
-                TR
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.langBtn,
-                i18n.language?.startsWith("en")
-                  ? styles.langBtnActive
-                  : styles.langBtnInactive,
-              ]}
-              onPress={() => i18n.changeLanguage("en")}
-            >
-              <Text
+                <Text style={[styles.langChipText, i18n.language?.startsWith("tr") && styles.langChipTextActive]}>TR</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
                 style={[
-                  styles.langBtnText,
-                  i18n.language?.startsWith("en")
-                    ? styles.langBtnTextActive
-                    : styles.langBtnTextInactive,
+                  styles.langChip,
+                  i18n.language?.startsWith("en") && styles.langChipActive,
                 ]}
+                onPress={() => i18n.changeLanguage("en")}
               >
-                EN
-              </Text>
-            </TouchableOpacity>
+                <Text style={[styles.langChipText, i18n.language?.startsWith("en") && styles.langChipTextActive]}>EN</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </BlurView>
-
-        {/* ── Section: Destek ── */}
-        <SectionHeader title={t("profile.feedback")} />
-
-        <BlurView
-          intensity={50}
-          tint="systemThinMaterialDark"
-          style={styles.section}
-        >
+          <Separator />
           <RowItem
             icon="chatbubble-ellipses-outline"
             label={t("profile.feedback")}
@@ -316,10 +291,16 @@ export default function ProfileScreen() {
 
         {/* ── Section: Çıkış ── */}
         <View style={styles.signOutSection}>
-          <HapticButton style={styles.signOutRow} onPress={handleSignOut}>
-            <LogOutIcon size={18} />
-            <Text style={styles.signOutText}>{t("profile.signOut")}</Text>
-          </HapticButton>
+          <BlurView
+            intensity={50}
+            tint="systemThinMaterialDark"
+            style={styles.section}
+          >
+            <HapticButton style={styles.signOutRow} onPress={handleSignOut}>
+              <LogOutIcon size={18} />
+              <Text style={styles.signOutText}>{t("profile.signOut")}</Text>
+            </HapticButton>
+          </BlurView>
         </View>
       </ScrollView>
 
@@ -527,39 +508,37 @@ const styles = StyleSheet.create({
   },
 
   /* ── Language ── */
-  langRow: {
+  langRowItem: {
     flexDirection: "row",
-    gap: 10,
-    padding: 14,
-    paddingBottom: 16,
-  },
-  langBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: 999,
     alignItems: "center",
-    justifyContent: "center",
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    gap: 14,
   },
-  langBtnActive: {
-    borderWidth: 1,
-    borderColor: GlassTheme.primary,
-    backgroundColor: "rgba(139,92,246,0.15)",
+  langInlineToggle: {
+    flexDirection: "row",
+    gap: 6,
   },
-  langBtnInactive: {
+  langChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
     borderWidth: 0.5,
     borderColor: "rgba(255,255,255,0.1)",
     backgroundColor: "rgba(255,255,255,0.04)",
   },
-  langBtnText: {
-    fontSize: 14,
+  langChipActive: {
+    borderColor: GlassTheme.primary,
+    backgroundColor: "rgba(139,92,246,0.15)",
+  },
+  langChipText: {
+    fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 1,
-  },
-  langBtnTextActive: {
-    color: GlassTheme.primary,
-  },
-  langBtnTextInactive: {
+    letterSpacing: 0.5,
     color: GlassTheme.textMuted,
+  },
+  langChipTextActive: {
+    color: GlassTheme.primary,
   },
 
   /* ── Sign Out ── */
@@ -569,7 +548,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 0.5,
     borderColor: "rgba(255,59,48,0.3)",
-    backgroundColor: "rgba(255,59,48,0.08)",
   },
   signOutRow: {
     flexDirection: "row",

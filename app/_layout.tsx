@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useColorScheme, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import * as SplashScreen from "expo-splash-screen";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   DarkTheme,
@@ -26,6 +27,8 @@ import { useAuth, AuthProvider } from "../hooks/useAuth";
 import { ToastProvider } from "../context/ToastContext";
 import i18next, { initPromise } from "../i18n";
 
+SplashScreen.preventAutoHideAsync();
+
 function RootLayoutNav() {
   const [i18nReady, setI18nReady] = useState(false);
   const rawScheme = useColorScheme();
@@ -41,6 +44,8 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (loading || !i18nReady) return;
+
+    SplashScreen.hideAsync();
 
     const inAuthGroup = segments[0] === "(auth)" || (segments[0] as string) === "(public)";
 

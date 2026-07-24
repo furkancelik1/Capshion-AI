@@ -44,13 +44,50 @@ export function useGenerateCaption() {
       return result;
 
     } catch (err: any) {
-      console.log('[Generate] Istek durduruldu:', err.message);
-      setError('Sunucuya bağlanılamadı.');
+      const msg = err?.message || 'Sunucuya bağlanılamadı.';
+      console.log('[Generate] Istek durduruldu:', msg);
+      setError(msg);
       throw err;
     } finally {
       setGenerating(false);
     }
   };
 
-  return { generate, loading: generating, error };
+  const generatePerImage = async (localUris: any[], tone: any, gender?: any, ageRange?: any, settings?: { length: string; useEmojis: boolean; useHashtags: boolean }) => {
+    setGenerating(true);
+    setError(null);
+
+    try {
+      const base64Images = await Promise.all(localUris.map(async (item) => {
+        const uri = typeof item === 'string' ? item : item.uri;
+        const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
+        return `data:${mimeFromUri(uri)};base64,${base64}`;
+      }));
+
+      const result = await api.generatePerImage({
+        images: base64Images,
+        tone: String(tone || 'neutral'),
+        gender: String(gender || 'kadin'),
+        ageRange: String(ageRange || ''),
+        language: i18next.language,
+        length: settings?.length ?? 'medium',
+        useEmojis: settings?.useEmojis ?? true,
+        useHashtags: settings?.useHashtags ?? true,
+      });
+
+      setCachedImageUris(result.post_id, base64Images);
+
+      return result;
+
+    } catch (err: any) {
+      const msg = err?.message || 'Sunucuya bağlanılamadı.';
+      console.log('[Generate-PerImage] Istek durduruldu:', msg);
+      setError(msg);
+      throw err;
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return { generate, generatePerImage, loading: generating, error };
 }

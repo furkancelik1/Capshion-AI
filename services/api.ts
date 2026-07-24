@@ -45,18 +45,26 @@ interface GenerateCaptionRequest {
   length: string;
   useEmojis: boolean;
   useHashtags: boolean;
+  mode?: "alternatives" | "per_image";
+}
+
+interface CaptionItem {
+  text: string;
+  hashtags: string[];
+  image_index?: number;
 }
 
 interface GenerateCaptionJsonResponse {
   success: boolean;
-  captions: Array<{ text: string; hashtags: string[] }>;
+  captions: CaptionItem[];
   post_id: string;
   remainingCredits: number;
 }
 
 async function request<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  timeoutMs: number = 15000
 ): Promise<T> {
   const url = `${API_URL}${endpoint}`;
 
@@ -71,7 +79,7 @@ async function request<T>(
   const userHeaders = options.headers as Record<string, string> | undefined;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const res = await fetch(url, {
@@ -207,6 +215,17 @@ export const api = {
     request<GenerateCaptionJsonResponse>('/captions/generate-json', {
       method: 'POST',
       body: JSON.stringify(data),
+    }, 120000),
+
+  generatePerImage: (data: GenerateCaptionRequest) =>
+    request<GenerateCaptionJsonResponse>('/captions/generate-json', {
+      method: 'POST',
+      body: JSON.stringify({ ...data, mode: 'per_image' }),
+    }, 120000),
+
+  deleteCaption: (captionId: string) =>
+    request<{ message: string }>(`/captions/${captionId}`, {
+      method: 'DELETE',
     }),
 };
 

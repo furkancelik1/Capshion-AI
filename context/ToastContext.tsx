@@ -77,7 +77,7 @@ function GlassToast({ message, type, onHide }: { message: string; type: ToastTyp
         animatedStyle,
       ]}
     >
-      <BlurView intensity={80} tint="dark" style={styles.blur}>
+      <BlurView intensity={80} tint="systemThinMaterialDark" style={styles.blur}>
         <Ionicons name={config.icon} size={20} color={config.color} />
         <Text style={styles.message}>{message}</Text>
       </BlurView>

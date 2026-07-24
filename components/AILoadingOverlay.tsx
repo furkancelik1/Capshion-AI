@@ -96,7 +96,7 @@ export default function AILoadingOverlay({ visible }: AILoadingOverlayProps) {
       <View style={styles.container}>
         <BlurView
           intensity={60}
-          tint="dark"
+          tint="systemThinMaterialDark"
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.content}>

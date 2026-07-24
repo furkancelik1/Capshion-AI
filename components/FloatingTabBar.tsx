@@ -36,7 +36,7 @@ export default function FloatingTabBar({ state, navigation }: FloatingTabBarProp
     <View style={styles.container}>
       <BlurView
         intensity={80}
-        tint="dark"
+        tint="systemThinMaterialDark"
         style={StyleSheet.absoluteFill}
       />
       <View style={styles.inner}>

@@ -14,7 +14,7 @@ export default function LiquidLoading({
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <BlurView
         intensity={GlassTheme.blurIntensity}
-        tint="dark"
+        tint="systemThinMaterialDark"
         style={StyleSheet.absoluteFill}
       />
       <View style={styles.content}>

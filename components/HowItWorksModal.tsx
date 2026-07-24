@@ -1,4 +1,5 @@
 import { BlurView } from "expo-blur";
+import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GlassTheme } from "../constants/LiquidGlass";
@@ -39,15 +40,16 @@ export default function HowItWorksModal({
       statusBarTranslucent
     >
       <View style={styles.backdrop}>
-        <BlurView
-          intensity={GlassTheme.blurIntensity + 10}
-          tint="dark"
-          style={StyleSheet.absoluteFill}
-        />
         <View style={styles.container}>
           <View style={styles.card}>
+            <BlurView
+              intensity={90}
+              tint="systemThinMaterialDark"
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={styles.cardInner}>
             <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-              <Text style={styles.closeBtnText}>✕</Text>
+              <Ionicons name="close" size={16} color="#FFFFFF" />
             </TouchableOpacity>
 
             <Text style={styles.title}>{t("howItWorks.title")}</Text>
@@ -63,6 +65,7 @@ export default function HowItWorksModal({
                 </View>
               ))}
             </View>
+            </View>
           </View>
         </View>
       </View>
@@ -73,7 +76,7 @@ export default function HowItWorksModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.75)",
+    backgroundColor: "rgba(0, 0, 0, 0.65)",
   },
   container: {
     flex: 1,
@@ -84,15 +87,16 @@ const styles = StyleSheet.create({
   card: {
     width: "85%",
     maxWidth: 360,
-    backgroundColor: GlassTheme.cardBackground,
-    borderRadius: GlassTheme.radiusLg,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: GlassTheme.glassBorder,
-    paddingTop: 32,
-    paddingBottom: 32,
+    borderColor: "rgba(255, 255, 255, 0.15)",
+    overflow: "hidden",
+    backgroundColor: "rgba(15, 15, 20, 0.75)",
+  },
+  cardInner: {
+    paddingVertical: 32,
     paddingHorizontal: 24,
     gap: 20,
-    ...GlassTheme.cardShadow,
   },
   closeBtn: {
     position: "absolute",
@@ -101,23 +105,15 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: GlassTheme.panelStrong,
+    backgroundColor: "rgba(255,255,255,0.1)",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: GlassTheme.glassBorder,
     zIndex: 10,
-  },
-  closeBtnText: {
-    fontSize: 14,
-    color: GlassTheme.textMain,
-    fontWeight: "700",
-    lineHeight: 16,
   },
   title: {
     fontSize: 22,
     fontWeight: "800",
-    color: GlassTheme.textMain,
+    color: "#FFFFFF",
     textAlign: "center",
     marginTop: 4,
     letterSpacing: 1.5,

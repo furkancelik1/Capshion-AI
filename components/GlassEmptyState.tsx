@@ -45,7 +45,7 @@ export default function GlassEmptyState({
 
   return (
     <View style={styles.container}>
-      <BlurView intensity={50} tint="dark" style={styles.card}>
+      <BlurView intensity={50} tint="systemThinMaterialDark" style={styles.card}>
         <Ionicons name={iconName} size={64} color="rgba(255,255,255,0.2)" />
 
         <Text style={styles.title}>{title}</Text>

@@ -7,11 +7,13 @@ import { useTranslation } from "react-i18next";
 import {
   Alert,
   Animated,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
@@ -111,6 +113,9 @@ export default function HomeScreen() {
   const [length, setLength] = useState<"short" | "medium" | "long">("medium");
   const [useEmojis, setUseEmojis] = useState(true);
   const [useHashtags, setUseHashtags] = useState(true);
+  const [captionMode, setCaptionMode] = useState<"alternatives" | "per_image">("alternatives");
+  const [isPro, setIsPro] = useState(false);
+  const [showProModal, setShowProModal] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
@@ -119,7 +124,7 @@ export default function HomeScreen() {
   const bottomSheetRef = useRef<BottomSheetModal | null>(null);
 
   const { user } = useAuth();
-  const { generate } = useGenerateCaption();
+  const { generate, generatePerImage } = useGenerateCaption();
 
   const refreshProfile = useCallback(() => {
     api.getProfile().then((data) => {
@@ -148,7 +153,8 @@ export default function HomeScreen() {
     setIsGenerating(true);
 
     try {
-      const result = await generate(
+      const genFn = captionMode === "per_image" ? generatePerImage : generate;
+      const result = await genFn(
         selectedImages,
         selectedTone,
         selectedGender,
@@ -316,7 +322,7 @@ export default function HomeScreen() {
 
       {/* ── Fine-Tuning Panel ── */}
       {selectedImages.length > 0 && (
-        <BlurView intensity={50} tint="dark" style={styles.tuningCard}>
+        <BlurView intensity={50} tint="systemThinMaterialDark" style={styles.tuningCard}>
           <Text style={styles.tuningTitle}>{t("settings.title")}</Text>
 
           <View style={styles.lengthRow}>
@@ -345,7 +351,14 @@ export default function HomeScreen() {
             {(["female", "male", "corporate"] as const).map((opt) => (
               <Pressable
                 key={opt}
-                onPress={() => setSelectedGender(opt)}
+                onPress={() => {
+                  if (opt === "corporate" && !isPro) {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                    setShowProModal(true);
+                    return;
+                  }
+                  setSelectedGender(opt);
+                }}
                 style={[
                   styles.lengthChip,
                   selectedGender === opt && styles.lengthChipActive,
@@ -357,7 +370,30 @@ export default function HomeScreen() {
                     selectedGender === opt && styles.lengthChipTextActive,
                   ]}
                 >
-                  {t(`settings.${opt}`)}
+                  {opt === "corporate" && !isPro ? "👑 " : ""}{t(`settings.${opt}`)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <Text style={[styles.tuningSubtitle, { marginTop: 16 }]}>{t("settings.captionMode")}</Text>
+          <View style={styles.lengthRow}>
+            {(["alternatives", "per_image"] as const).map((opt) => (
+              <Pressable
+                key={opt}
+                onPress={() => setCaptionMode(opt)}
+                style={[
+                  styles.lengthChip,
+                  captionMode === opt && styles.lengthChipActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.lengthChipText,
+                    captionMode === opt && styles.lengthChipTextActive,
+                  ]}
+                >
+                  {t(`settings.${opt === "alternatives" ? "modeAlternatives" : "modePerImage"}`)}
                 </Text>
               </Pressable>
             ))}
@@ -441,6 +477,46 @@ export default function HomeScreen() {
           </HapticButton>
         </GlassPanel>
       </ScrollView>
+
+      <Modal
+        transparent
+        visible={showProModal}
+        animationType="slide"
+        onRequestClose={() => setShowProModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <BlurView intensity={90} tint="systemThinMaterialDark" style={styles.modalCard}>
+            <TouchableOpacity
+              style={styles.modalCloseBtn}
+              onPress={() => setShowProModal(false)}
+            >
+              <Ionicons name="close" size={22} color="rgba(255,255,255,0.5)" />
+            </TouchableOpacity>
+
+            <Ionicons
+              name="diamond"
+              size={64}
+              color="#8B5CF6"
+              style={styles.modalIcon}
+            />
+
+            <Text style={styles.modalTitle}>{t("premium.title")}</Text>
+            <Text style={styles.modalDesc}>{t("premium.description")}</Text>
+
+            <Pressable
+              style={styles.modalCta}
+              onPress={() => setShowProModal(false)}
+            >
+              <Ionicons name="star" size={18} color="#FFFFFF" />
+              <Text style={styles.modalCtaText}>{t("premium.cta")}</Text>
+            </Pressable>
+
+            <Pressable onPress={() => setShowProModal(false)}>
+              <Text style={styles.modalSkip}>{t("premium.skip")}</Text>
+            </Pressable>
+          </BlurView>
+        </View>
+      </Modal>
 
       <AILoadingOverlay visible={isGenerating} />
       <HowItWorksModal
@@ -658,6 +734,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "rgba(255,255,255,0.6)",
   },
+  tuningSubtitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.5)",
+    marginBottom: 8,
+  },
   lengthRow: {
     flexDirection: "row",
     gap: 8,
@@ -730,6 +812,71 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: GlassTheme.textMuted,
     lineHeight: 19,
+  },
+
+  /* ── Premium Modal ── */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 360,
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: "rgba(139, 92, 246, 0.5)",
+    padding: 32,
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  modalCloseBtn: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    zIndex: 1,
+    padding: 4,
+  },
+  modalIcon: {
+    marginBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  modalDesc: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "rgba(255,255,255,0.6)",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 28,
+  },
+  modalCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#8B5CF6",
+    borderRadius: 999,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    marginBottom: 16,
+  },
+  modalCtaText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  modalSkip: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "rgba(255,255,255,0.4)",
+    textDecorationLine: "underline",
   },
 
   /* ── Closing CTA ── */
