@@ -7,12 +7,14 @@ import { useTranslation } from "react-i18next";
 import {
   Alert,
   Animated,
+  Keyboard,
   Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -37,6 +39,7 @@ import { GlassTheme } from "../../constants/LiquidGlass";
 import { useAuth } from "../../hooks/useAuth";
 import { useGenerateCaption } from "../../hooks/useGenerateCaption";
 import { usePayment } from "../../hooks/usePayment";
+import { useStripePayment } from "../../hooks/useStripePayment";
 import { api } from "../../services/api";
 
 function renderFeatureIcon(icon: string) {
@@ -113,22 +116,27 @@ export default function HomeScreen() {
   const [length, setLength] = useState<"short" | "medium" | "long">("medium");
   const [useEmojis, setUseEmojis] = useState(true);
   const [useHashtags, setUseHashtags] = useState(true);
+  const [carouselMode, setCarouselMode] = useState(false);
   const [captionMode, setCaptionMode] = useState<"alternatives" | "per_image">("alternatives");
-  const [isPro, setIsPro] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
   const [showProModal, setShowProModal] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
   const [ageRange, setAgeRange] = useState<string | null>(null);
+  const [customPrompt, setCustomPrompt] = useState("");
+  const customPromptRef = useRef<TextInput>(null);
 
   const bottomSheetRef = useRef<BottomSheetModal | null>(null);
 
   const { user } = useAuth();
   const { generate, generatePerImage } = useGenerateCaption();
+  const { checkout, loading: stripeLoading } = useStripePayment();
 
   const refreshProfile = useCallback(() => {
     api.getProfile().then((data) => {
       if (data?.credits_remaining !== undefined) setCredits(data.credits_remaining);
+      if (data?.is_premium !== undefined) setIsPremium(data.is_premium);
     });
   }, []);
 
@@ -145,8 +153,15 @@ export default function HomeScreen() {
       return;
     }
 
-    if (credits !== null && credits <= 0) {
+    if (!isPremium && credits !== null && credits <= 0) {
       pay.setShowCreditModal(true);
+      return;
+    }
+
+    const vipTones = ["viral", "luxury", "storyteller"];
+    if (!isPremium && selectedTone && vipTones.includes(selectedTone)) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setShowProModal(true);
       return;
     }
 
@@ -159,11 +174,11 @@ export default function HomeScreen() {
         selectedTone,
         selectedGender,
         ageRange || undefined,
-        { length, useEmojis, useHashtags },
+        { length, useEmojis, useHashtags, customPrompt: isPremium ? customPrompt : undefined, carouselMode: isPremium ? carouselMode : false },
       );
 
       if (result) {
-        setCredits(result.remainingCredits);
+        setCredits(result.remainingCredits === -1 ? (isPremium ? -1 : 0) : result.remainingCredits);
         router.push({
           pathname: "/caption/[id]",
           params: {
@@ -310,6 +325,11 @@ export default function HomeScreen() {
             <ToneSelector
               selectedTone={selectedTone}
               onToneSelect={setSelectedTone}
+              isPremium={isPremium}
+              onPremiumRequired={() => {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                setShowProModal(true);
+              }}
             />
           </View>
         )}
@@ -318,6 +338,11 @@ export default function HomeScreen() {
           bottomSheetRef={bottomSheetRef}
           selectedTone={selectedTone}
           onToneSelect={setSelectedTone}
+          isPremium={isPremium}
+          onPremiumRequired={() => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            setShowProModal(true);
+          }}
         />
 
       {/* ── Fine-Tuning Panel ── */}
@@ -352,7 +377,7 @@ export default function HomeScreen() {
               <Pressable
                 key={opt}
                 onPress={() => {
-                  if (opt === "corporate" && !isPro) {
+                  if (opt === "corporate" && !isPremium) {
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
                     setShowProModal(true);
                     return;
@@ -370,7 +395,7 @@ export default function HomeScreen() {
                     selectedGender === opt && styles.lengthChipTextActive,
                   ]}
                 >
-                  {opt === "corporate" && !isPro ? "👑 " : ""}{t(`settings.${opt}`)}
+                  {opt === "corporate" && !isPremium ? "👑 " : ""}{t(`settings.${opt}`)}
                 </Text>
               </Pressable>
             ))}
@@ -438,6 +463,56 @@ export default function HomeScreen() {
               thumbColor="#FFFFFF"
             />
           </View>
+
+          <View style={styles.switchRow}>
+            <View style={styles.switchLabel}>
+              <Ionicons
+                name="images-outline"
+                size={18}
+                color="rgba(255,255,255,0.6)"
+              />
+              <Text style={styles.switchText}>{t("settings.carouselMode")}</Text>
+            </View>
+            <Switch
+              value={isPremium ? carouselMode : false}
+              onValueChange={(v) => {
+                if (!isPremium) {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                  setShowProModal(true);
+                  return;
+                }
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setCarouselMode(v);
+              }}
+              trackColor={{ false: "rgba(255,255,255,0.1)", true: "#8B5CF6" }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+
+          <Text style={[styles.tuningSubtitle, { marginTop: 16 }]}>{t("settings.customPrompt")}</Text>
+          <TextInput
+            ref={customPromptRef}
+            style={[
+              styles.customPromptInput,
+              !isPremium && styles.customPromptInputLocked,
+            ]}
+            value={isPremium ? customPrompt : ""}
+            onChangeText={isPremium ? setCustomPrompt : undefined}
+            placeholder={isPremium ? t("settings.customPromptPlaceholder") : "👑  " + t("settings.customPromptPremiumOnly")}
+            placeholderTextColor="rgba(255,255,255,0.3)"
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+            editable={isPremium}
+            onFocus={() => {
+              if (!isPremium) {
+                Keyboard.dismiss();
+                customPromptRef.current?.blur();
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                setShowProModal(true);
+              }
+            }}
+          />
         </BlurView>
       )}
 
@@ -504,11 +579,20 @@ export default function HomeScreen() {
             <Text style={styles.modalDesc}>{t("premium.description")}</Text>
 
             <Pressable
-              style={styles.modalCta}
-              onPress={() => setShowProModal(false)}
+              style={[styles.modalCta, stripeLoading && styles.modalCtaMuted]}
+              onPress={async () => {
+                const result = await checkout(999, "usd", user?.id);
+                if (result.success) {
+                  refreshProfile();
+                  setShowProModal(false);
+                }
+              }}
+              disabled={stripeLoading}
             >
               <Ionicons name="star" size={18} color="#FFFFFF" />
-              <Text style={styles.modalCtaText}>{t("premium.cta")}</Text>
+              <Text style={styles.modalCtaText}>
+                {stripeLoading ? t("common.loading") : t("premium.cta")}
+              </Text>
             </Pressable>
 
             <Pressable onPress={() => setShowProModal(false)}>
@@ -544,7 +628,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: GlassTheme.background,
+    backgroundColor: 'transparent',
   },
   scroll: {
     flex: 1,
@@ -867,6 +951,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     marginBottom: 16,
   },
+  modalCtaMuted: {
+    opacity: 0.5,
+  },
   modalCtaText: {
     fontSize: 15,
     fontWeight: "700",
@@ -898,6 +985,23 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: GlassTheme.textMuted,
     lineHeight: 19,
+  },
+
+  customPromptInput: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 0.5,
+    borderColor: "rgba(255,255,255,0.15)",
+    borderRadius: 14,
+    padding: 14,
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "500",
+    lineHeight: 20,
+    minHeight: 80,
+  },
+  customPromptInputLocked: {
+    opacity: 0.5,
+    borderColor: "rgba(251,191,36,0.25)",
   },
 
 });

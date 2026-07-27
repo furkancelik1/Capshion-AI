@@ -32,7 +32,8 @@
     "copiedInstagramDesc": "Caption panoya kopyalandı. Instagram açıldığında yapıştırabilirsiniz.",
     "openInstagram": "Instagram'ı Aç",
     "seeAll": "Tümünü Gör",
-    "image": "Görsel"
+    "image": "Görsel",
+    "unlimited": "Sınırsız"
   },
   "home": {
     "heroBadge": "Premium İçerik Stüdyosu",
@@ -146,7 +147,9 @@
     "humorous": { "name": "Eğlenceli", "prompt": "Witty / Humorous" },
     "minimal": { "name": "Minimalist", "prompt": "Minimal / Aesthetic" },
     "professional": { "name": "Profesyonel", "prompt": "Professional / Corporate" },
-    "storyteller": { "name": "Hikaye Anlatıcı", "prompt": "Storyteller" }
+    "storyteller": { "name": "Hikaye Anlatıcı", "prompt": "Storyteller" },
+    "viral": { "name": "Viral Kanca", "prompt": "Viral / Yüksek Etkileşim" },
+    "luxury": { "name": "Ultra Lüks", "prompt": "Lüks / Premium" }
   },
   "settings": {
     "title": "İnce Ayarlar",
@@ -159,9 +162,13 @@
     "corporate": "Kurumsal",
     "emojis": "Emojiler",
     "hashtags": "Hashtagler",
+    "carouselMode": "Carousel Modu",
     "captionMode": "Caption Modu",
     "modeAlternatives": "Tüm Post",
-    "modePerImage": "Görsel Başına"
+    "modePerImage": "Görsel Başına",
+    "customPrompt": "Özel Marka Sesi (İsteğe Bağlı)",
+    "customPromptPlaceholder": "Markanızın sesini, stilini veya özel talimatlarınızı yazın...",
+    "customPromptPremiumOnly": "Özel Marka Sesi (Sadece Premium)"
   },
   "tabs": {
     "create": "Oluştur",

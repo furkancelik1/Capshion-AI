@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -9,11 +9,15 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/context/ToastContext';
+import { supabase } from '@/services/supabase';
 import AgeRangeSelector from '@/components/AgeRangeSelector';
 import AmbientGlow from '@/components/AmbientGlow';
 import GlassPanel from '@/components/GlassPanel';
@@ -22,7 +26,8 @@ import { GlassTheme } from '@/constants/LiquidGlass';
 import { api } from '@/services/api';
 
 export default function RegisterScreen() {
-  const { signUpWithEmail } = useAuth();
+  const { signInWithEmail, signUpWithEmail } = useAuth();
+  const { showToast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -31,6 +36,56 @@ export default function RegisterScreen() {
   const [ageRange, setAgeRange] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<'email' | 'password' | 'confirmPassword' | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const handleSocialAuth = useCallback(async (provider: 'apple' | 'google', idToken: string) => {
+    const { data, error } = await supabase.auth.signInWithIdToken({ provider, token: idToken });
+    if (error) throw error;
+    const email = data.user?.email;
+    if (!email) throw new Error('E-posta alınamadı.');
+    const { error: loginError } = await signInWithEmail(email, 'social_capshion_2024');
+    if (loginError) {
+      const { error: regError } = await signUpWithEmail(email, 'social_capshion_2024');
+      if (regError) throw regError;
+    }
+    showToast('Giriş başarılı!', 'success');
+    router.replace('/(tabs)');
+  }, [signInWithEmail, signUpWithEmail, showToast]);
+
+  const handleAppleLogin = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const AppleAuthentication = require('expo-apple-authentication');
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      if (!credential.identityToken) throw new Error('Apple identity token alınamadı.');
+      await handleSocialAuth('apple', credential.identityToken);
+    } catch (err: any) {
+      if (err.code !== 'ERR_CANCELED') {
+        showToast(err.message || 'Apple ile giriş yapılamadı.', 'error');
+      }
+    }
+  }, [showToast, handleSocialAuth]);
+
+  const handleGoogleLogin = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+      GoogleSignin.configure({
+        webClientId: 'BURAYA_GOOGLE_WEB_CLIENT_ID_GELECEK',
+        iosClientId: 'BURAYA_IOS_CLIENT_ID_GELECEK',
+      });
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      if (!userInfo.idToken) throw new Error('Google ID token alınamadı.');
+      await handleSocialAuth('google', userInfo.idToken);
+    } catch (err: any) {
+      showToast(err.message || 'Google ile giriş yapılamadı.', 'error');
+    }
+  }, [showToast, handleSocialAuth]);
 
   const handleRegister = async () => {
     if (password.length < 6) {
@@ -187,6 +242,35 @@ export default function RegisterScreen() {
           </View>
         </GlassPanel>
 
+        {/* ── Social Login Divider ── */}
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>Veya şununla devam et</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        {/* ── Social Buttons ── */}
+        <View style={styles.socialRow}>
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity
+              style={styles.socialBtn}
+              onPress={handleAppleLogin}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="logo-apple" size={20} color="#FFFFFF" />
+              <Text style={styles.socialBtnText}>Apple ile Giriş Yap</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.socialBtn}
+            onPress={handleGoogleLogin}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="logo-google" size={20} color="#FFFFFF" />
+            <Text style={styles.socialBtnText}>Google ile Giriş Yap</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.footer}>
           <Text style={styles.footerText}>Zaten hesabın var mı?</Text>
           <HapticButton onPress={() => router.push('/(auth)/login')}>
@@ -201,7 +285,7 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: GlassTheme.background,
+    backgroundColor: 'transparent',
   },
   content: {
     flexGrow: 1,
@@ -291,6 +375,44 @@ const styles = StyleSheet.create({
     color: '#fff',
     letterSpacing: 1.5,
     textTransform: 'uppercase',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 28,
+    marginBottom: 20,
+    gap: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 0.5,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  dividerText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.4)',
+  },
+  socialRow: {
+    gap: 12,
+    marginBottom: 8,
+  },
+  socialBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    height: 50,
+    borderRadius: 999,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  socialBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
   footer: {
     flexDirection: 'row',

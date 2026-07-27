@@ -26,6 +26,7 @@ interface UserProfile {
   email: string;
   credits_remaining: number;
   age_range: string | null;
+  is_premium: boolean;
 }
 
 function SectionHeader({ title }: { title: string }) {
@@ -178,7 +179,7 @@ export default function ProfileScreen() {
               <RowItem
                 icon="wallet-outline"
                 label={t("profile.credits")}
-                value={`${profile?.credits_remaining ?? 0}`}
+                value={profile?.is_premium ? "♾️" : `${profile?.credits_remaining ?? 0}`}
               />
               <Separator />
               <RowItem
@@ -325,7 +326,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: GlassTheme.background,
+    backgroundColor: 'transparent',
   },
   scrollContent: {
     paddingTop: 100,

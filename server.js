@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -13,6 +15,7 @@ const crypto = require("crypto");
 const fs = require("fs");
 const OpenAI = require("openai");
 const Iyzipay = require("iyzipay");
+const Stripe = require("stripe");
 
 
 const storage = multer.diskStorage({
@@ -25,7 +28,13 @@ const storage = multer.diskStorage({
 
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN || "http://localhost:8081,http://localhost:19006").split(",");
 
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: "Çok fazla istek. Lütfen daha sonra tekrar deneyin." } });
+const authLimiter = rateLimit({ 
+  windowMs: 15 * 60 * 1000, 
+  max: 100, // TODO: Üretim (Production) öncesi tekrar 20 yapmayı unutma!
+  standardHeaders: true, 
+  legacyHeaders: false, 
+  message: { error: "Çok fazla istek. Lütfen daha sonra tekrar deneyin." } 
+});
 const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false });
 
 const upload = multer({
@@ -46,7 +55,12 @@ app.use(helmet());
 app.use(compression());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(cors({ origin: ALLOWED_ORIGINS, methods: ["GET", "POST", "PUT", "DELETE"], credentials: true }));
-app.use(express.json({ limit: "50mb" }));
+app.use(express.json({
+  limit: "50mb",
+  verify: (req, _res, buf) => {
+    req.rawBody = buf;
+  },
+}));
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", authenticateToken, express.static("uploads"));
 
@@ -64,6 +78,14 @@ if (!process.env.JWT_SECRET) {
   console.error("[Auth] JWT_SECRET ortam değişkeni gerekli!");
   process.exit(1);
 }
+
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? Stripe(process.env.STRIPE_SECRET_KEY)
+  : null;
+if (!stripe) {
+  console.warn("[Stripe] STRIPE_SECRET_KEY eksik — ödeme altyapısı devre dışı.");
+}
+
 const JWT_SECRET = process.env.JWT_SECRET;
 
 pool.on("error", (err) => {
@@ -190,7 +212,7 @@ app.post("/api/auth/login", async (req, res) => {
     });
 
     console.log("[Login] Başarılı, kullanıcı id:", user.id);
-    return res.json({ user: { id: user.id }, token });
+    return res.json({ user: { id: user.id, email: user.email }, token });
   } catch (err) {
     console.error("[Login] Hata:", err.message);
     console.error("[Login] Stack:", err.stack);
@@ -224,7 +246,7 @@ app.get("/api/auth/profile", authenticateToken, async (req, res) => {
   res.set("Pragma", "no-cache");
   try {
     const result = await pool.query(
-      "SELECT id, email, age_range, credits AS credits_remaining FROM profiles WHERE id = $1",
+      "SELECT id, email, age_range, credits AS credits_remaining, is_premium FROM profiles WHERE id = $1",
       [req.userId],
     );
     if (!result.rows[0]) {
@@ -246,6 +268,22 @@ app.put("/api/auth/profile/age", authenticateToken, async (req, res) => {
     res.json({ message: "Güncellendi" });
   } catch (err) {
     console.error("[Profile Age] Hata:", err.message);
+    res.status(500).json({ error: "Sunucu hatası." });
+  }
+});
+
+app.post("/api/auth/push-token", authenticateToken, async (req, res) => {
+  console.log("[Push Token] Kayıt, userId:", req.userId);
+  try {
+    const { pushToken } = req.body;
+    if (!pushToken) {
+      return res.status(400).json({ error: "pushToken gerekli." });
+    }
+    await pool.query("UPDATE profiles SET push_token = $1 WHERE id = $2", [pushToken, req.userId]);
+    console.log("[Push Token] Başarıyla kaydedildi, userId:", req.userId);
+    res.json({ message: "Push token kaydedildi." });
+  } catch (err) {
+    console.error("[Push Token] Hata:", err.message);
     res.status(500).json({ error: "Sunucu hatası." });
   }
 });
@@ -460,11 +498,87 @@ app.get("/payment-failure", (req, res) => {
   res.send("<html><body><h1>Odeme Basarisiz</h1></body></html>");
 });
 
+app.post("/api/payments/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  const sig = req.headers["stripe-signature"];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!webhookSecret) {
+    console.error("[Stripe Webhook] STRIPE_WEBHOOK_SECRET eksik.");
+    return res.status(500).json({ error: "Webhook yapılandırılmamış." });
+  }
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.rawBody, sig, webhookSecret);
+  } catch (err) {
+    console.error("[Stripe Webhook] İmza doğrulama hatası:", err.message);
+    return res.status(400).json({ error: `Webhook imzası geçersiz: ${err.message}` });
+  }
+
+  console.log("[Stripe Webhook] Event alındı:", event.type);
+
+  if (event.type === "payment_intent.succeeded") {
+    const paymentIntent = event.data.object;
+    const userId = paymentIntent.metadata?.userId;
+
+    if (!userId) {
+      console.warn("[Stripe Webhook] userId metadata'da bulunamadı.");
+      return res.json({ received: true });
+    }
+
+    try {
+      const updateResult = await pool.query(
+        "UPDATE profiles SET is_premium = true WHERE id = $1 RETURNING id",
+        [userId],
+      );
+
+      if (updateResult.rows.length === 0) {
+        console.warn(`[Stripe Webhook] Kullanıcı bulunamadı veya güncellenemedi: ${userId}`);
+      } else {
+        console.log(`[Stripe Webhook] Kullanıcı ${userId} başarıyla Premium yapıldı!`);
+      }
+    } catch (dbErr) {
+      console.error("[Stripe Webhook] Veritabanı güncelleme hatası:", dbErr.message);
+      return res.status(500).json({ error: "Veritabanı güncellenemedi." });
+    }
+  }
+
+  res.json({ received: true });
+});
+
+app.post("/api/payments/create-payment-intent", authenticateToken, async (req, res) => {
+  try {
+    if (!stripe) {
+      return res.status(503).json({ error: "Stripe ödeme sistemi yapılandırılmamış." });
+    }
+
+    const { amount, currency, userId } = req.body;
+    const targetUserId = userId || req.userId;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: "Geçersiz tutar." });
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount),
+      currency: currency || "usd",
+      automatic_payment_methods: { enabled: true },
+      metadata: { userId: String(targetUserId) },
+    });
+
+    console.log("[Stripe] PaymentIntent oluşturuldu:", paymentIntent.id);
+    res.json({ clientSecret: paymentIntent.client_secret });
+  } catch (err) {
+    console.error("[Stripe] PaymentIntent hatası:", err.message);
+    res.status(500).json({ error: "Ödeme başlatılamadı." });
+  }
+});
+
 app.post("/api/captions/generate", authenticateToken, upload.array("images", 5), async (req, res) => {
   console.log("[Generate] İstek alındı, userId:", req.userId);
 
   try {
-    const { tone, gender, ageRange, language, length, useEmojis, useHashtags } = req.body;
+    const { tone, gender, ageRange, language, length, useEmojis, useHashtags, customPrompt, carouselMode } = req.body;
     const files = req.files || [];
 
     if (files.length === 0) {
@@ -472,7 +586,7 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
     }
 
     const userResult = await pool.query(
-      "SELECT id, credits FROM profiles WHERE id = $1",
+      "SELECT id, credits, is_premium FROM profiles WHERE id = $1",
       [req.userId],
     );
     const userRow = userResult.rows[0];
@@ -481,7 +595,7 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
       return res.status(404).json({ error: "Kullanıcı bulunamadı." });
     }
 
-    if (userRow.credits < 1) {
+    if (!userRow.is_premium && userRow.credits < 1) {
       console.log("[Generate] Yetersiz kredi, userId:", req.userId);
       return res.status(403).json({ error: "Yetersiz kredi. Lütfen kredi yükleyin." });
     }
@@ -503,6 +617,18 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
     };
     const genderInstruction = genderInstructions[gender] || `Gender: ${gender || "neutral"}`;
 
+    const toneInstructions = {
+      cool: "Write in a trendy, cool, and fashionable tone. Use modern slang and keep it effortlessly stylish.",
+      humorous: "Write in a witty and humorous tone. Use clever wordplay, light jokes, and a playful attitude.",
+      minimal: "Write in a minimal and aesthetic tone. Keep it clean, simple, and visually poetic. Few words, high impact.",
+      professional: "Write in a professional and corporate tone. Be polished, confident, and business-appropriate.",
+      viral: "Write an extremely engaging, viral-style caption. Start with a strong 'hook' (a controversial statement, a bold question, or a cliffhanger) that forces people to read the rest. Optimize for high engagement, comments, and saves. Use modern social media pacing.",
+      luxury: "Write an ultra-luxury, 'old money', and highly prestigious caption. Use very few words. Minimalist, mysterious, and highly confident. Do not over-explain. Act like a top-tier designer brand.",
+      storyteller: "Write an emotional and captivating storytelling caption. Describe the feeling, the behind-the-scenes, or the memory associated with this moment. Create a deep connection with the reader.",
+    };
+    const toneInstruction = toneInstructions[tone] || "";
+    const safeCustomPrompt = customPrompt && userRow.is_premium ? customPrompt.trim() : "";
+
     const lengthMap = { short: "very short (1-2 sentences)", medium: "moderate length (2-3 sentences)", long: "detailed (3-5 sentences)" };
     const lengthInstruction = `Caption length: ${lengthMap[length] || lengthMap.medium}.`;
 
@@ -514,7 +640,12 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
       ? "Add 2-4 relevant hashtags per caption."
       : "KESİNLİKLE HASHTAG KULLANMA.";
 
-    const prompt = `You are writing Instagram captions like a real user, not an AI or a poet.\nLook at the photo(s) and write what naturally comes to mind — like a friend sharing a moment.\n\nRules:\n- NEVER write like AI, poet, motivational speaker, or advertiser\n- NO exaggerated adjectives, deep life quotes, or generic wisdom\n- NO question sentences — write statements, opinions, or observations\n- Short, natural, everyday language\n\n${instructionLang}\n${genderInstruction}\n${lengthInstruction}\n${emojiInstruction}\n${hashtagInstruction}\nAge range: ${ageRange || "general"}\n\nReply ONLY with this JSON format:\n\n{\n  "captions": [\n    { "caption_text": "caption text", "hashtags": ["#tag1", "#tag2"] },\n    { "caption_text": "caption text", "hashtags": ["#tag3", "#tag4"] }\n  ]\n}\n\nGenerate at least 2, at most 4 captions.`;
+    const carouselInstruction = carouselMode ? `Sen bir Carousel (Kaydırmalı) Post uzmanısın. Yüklenen görselleri sırasıyla analiz et. Her görsel için o ana özel, birbiriyle bağlantılı ve merak uyandıran metinler yaz. Her görsel için ayrı bir caption üret. Hikayenin akışkan ve sürükleyici olduğundan emin ol.\n\n` : "";
+
+    const customPromptBlock = safeCustomPrompt ? `\nKULLANICININ ÖZEL İSTEĞİ (Buna KESİNLİKLE uy): ${safeCustomPrompt}` : "";
+
+    const bannedWords = "ASLA KULLANMA: unleash, journey, transformative, embrace, unlock the potential, world of, Dive into, Elevate your, Discover the magic, Let\'s delve.";
+    const prompt = `${carouselInstruction}Bir arkadaşının fotoğraflarına bakıyorsun. Gördüğünü doğal, samimi ve cool bir şekilde anlat. Instagram'da kaydırırken durduracak türden bir metin yaz.\n\nKurallar:\n- İLK CÜMLE merak uyandırsın, iddialı ya da sohbet havasında olsun. Okuyucu "devamını oku"ya tıklamak istesin.\n- Satır aralarına boşluk koy. Metin tek blok olmasın, nefes alsın.\n- ${bannedWords}\n- Kısa ve öz yaz. Görselin önüne geçme.\n- Sanki bir arkadaşına anlatıyormuş gibi yaz, çok süslü veya resmi olma.\n\n${instructionLang}\n${genderInstruction}\n${toneInstruction}\n${lengthInstruction}\n${emojiInstruction}\n${hashtagInstruction}\nAge range: ${ageRange || "general"}${customPromptBlock}\n\nSadece JSON formatında yanıt ver:\n\n{\n  "captions": [\n    { "caption_text": "caption text (\\n ile satır arası boşluk ekle)", "hashtags": ["#tag1", "#tag2"] },\n    { "caption_text": "caption text (\\n ile satır arası boşluk ekle)", "hashtags": ["#tag3", "#tag4"] }\n  ]\n}\n\nEn az 2, en fazla 4 caption üret.`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -561,17 +692,26 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
         [postId, req.userId, aiCaptions[0].caption_text, aiCaptions[0].hashtags, imageUrls[0], postId],
       );
 
-      await client.query(
-        "UPDATE profiles SET credits = credits - 1 WHERE id = $1",
-        [req.userId],
-      );
+      if (!userRow.is_premium) {
+        await client.query(
+          "UPDATE profiles SET credits = credits - 1 WHERE id = $1",
+          [req.userId],
+        );
+      }
 
       await client.query("COMMIT");
 
-      const remainingResult = await pool.query("SELECT credits FROM profiles WHERE id = $1", [req.userId]);
-      const remainingCredits = remainingResult.rows[0].credits;
+      const remainingResult = await pool.query("SELECT credits, is_premium FROM profiles WHERE id = $1", [req.userId]);
+      const remainingCredits = remainingResult.rows[0].is_premium ? -1 : remainingResult.rows[0].credits;
 
       const captions = aiCaptions.map((c) => ({ text: c.caption_text, hashtags: c.hashtags }));
+
+      sendPushNotification(
+        req.userId,
+        "Başlıkların Hazır! ✨",
+        "Yapay zeka harika caption'lar üretti. İncelemek için dokun!",
+        { screen: "details", post_id: postId }
+      );
 
       res.status(201).json({
         success: true,
@@ -598,7 +738,7 @@ app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
   console.log("[Generate-JSON] İstek alındı, userId:", req.userId);
 
   try {
-    const { images, tone, gender, ageRange, language, length, useEmojis, useHashtags, mode } = req.body;
+    const { images, tone, gender, ageRange, language, length, useEmojis, useHashtags, mode, customPrompt, carouselMode } = req.body;
     const isPerImage = mode === "per_image";
 
     if (!images || images.length === 0) {
@@ -606,7 +746,7 @@ app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
     }
 
     const userResult = await pool.query(
-      "SELECT id, credits FROM profiles WHERE id = $1",
+      "SELECT id, credits, is_premium FROM profiles WHERE id = $1",
       [req.userId],
     );
     const userRow = userResult.rows[0];
@@ -617,7 +757,7 @@ app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
 
     const requiredCredits = isPerImage ? images.length : 1;
 
-    if (userRow.credits < requiredCredits) {
+    if (!userRow.is_premium && userRow.credits < requiredCredits) {
       return res.status(403).json({ error: `Yetersiz kredi. Gerekli: ${requiredCredits}, Mevcut: ${userRow.credits}` });
     }
 
@@ -638,6 +778,18 @@ app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
     };
     const genderInstruction = genderInstructions[gender] || `Gender: ${gender || "neutral"}`;
 
+    const toneInstructions = {
+      cool: "Write in a trendy, cool, and fashionable tone. Use modern slang and keep it effortlessly stylish.",
+      humorous: "Write in a witty and humorous tone. Use clever wordplay, light jokes, and a playful attitude.",
+      minimal: "Write in a minimal and aesthetic tone. Keep it clean, simple, and visually poetic. Few words, high impact.",
+      professional: "Write in a professional and corporate tone. Be polished, confident, and business-appropriate.",
+      viral: "Write an extremely engaging, viral-style caption. Start with a strong 'hook' (a controversial statement, a bold question, or a cliffhanger) that forces people to read the rest. Optimize for high engagement, comments, and saves. Use modern social media pacing.",
+      luxury: "Write an ultra-luxury, 'old money', and highly prestigious caption. Use very few words. Minimalist, mysterious, and highly confident. Do not over-explain. Act like a top-tier designer brand.",
+      storyteller: "Write an emotional and captivating storytelling caption. Describe the feeling, the behind-the-scenes, or the memory associated with this moment. Create a deep connection with the reader.",
+    };
+    const toneInstruction = toneInstructions[tone] || "";
+    const safeCustomPrompt = customPrompt && userRow.is_premium ? customPrompt.trim() : "";
+
     const lengthMap = { short: "very short (1-2 sentences)", medium: "moderate length (2-3 sentences)", long: "detailed (3-5 sentences)" };
     const lengthInstruction = `Caption length: ${lengthMap[length] || lengthMap.medium}.`;
 
@@ -649,57 +801,62 @@ app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
       ? "Add 2-4 relevant hashtags per caption."
       : "KESİNLİKLE HASHTAG KULLANMA.";
 
-    const baseRules = `- NEVER write like AI, poet, motivational speaker, or advertiser
-- NO exaggerated adjectives, deep life quotes, or generic wisdom
-- NO question sentences — write statements, opinions, or observations
-- Short, natural, everyday language`;
+    const customPromptBlock = safeCustomPrompt ? `\nKULLANICININ ÖZEL İSTEĞİ (Buna KESİNLİKLE uy): ${safeCustomPrompt}` : "";
+
+    const carouselInstruction = carouselMode ? `Sen bir Carousel (Kaydırmalı) Post uzmanısın. Yüklenen görselleri sırasıyla analiz et. Her görsel için o ana özel, birbiriyle bağlantılı ve merak uyandıran metinler yaz. Her görsel için ayrı bir caption üret. Hikayenin akışkan ve sürükleyici olduğundan emin ol.\n\n` : "";
+
+    const bannedWords = "ASLA KULLANMA: unleash, journey, transformative, embrace, unlock the potential, world of, Dive into, Elevate your, Discover the magic, Let's delve.";
+    const baseRules = `- İLK CÜMLE merak uyandırsın, iddialı ya da sohbet havasında olsun.
+- Satır aralarına boşluk koy. Metin tek blok olmasın.
+- ${bannedWords}
+- Kısa ve öz yaz. Görselin önüne geçme.
+- Sanki bir arkadaşına anlatıyormuş gibi yaz, süslü/resmi olma.`;
 
     const commonFields = `${instructionLang}
 ${genderInstruction}
+${toneInstruction}
 ${lengthInstruction}
 ${emojiInstruction}
 ${hashtagInstruction}
-Age range: ${ageRange || "general"}`;
+Age range: ${ageRange || "general"}${customPromptBlock}`;
 
     let prompt;
     if (isPerImage) {
-      prompt = `You are writing Instagram captions like a real user, not an AI or a poet.
-Look at each numbered photo below and write a UNIQUE, specific caption for that individual image.
+      prompt = `${carouselInstruction}Bir arkadaşının fotoğraflarına bakıyorsun. Her fotoğraf için o ana özel, samimi ve cool bir caption yaz. Instagram'da kaydırırken durduracak türden metinler olsun.
 
 ${baseRules}
 
-IMPORTANT: There are ${images.length} image(s). For EACH image, write ONE unique caption that specifically describes that image. Each caption must be different and tailored to its image.
+ÖNEMLİ: ${images.length} görsel var. Her görsel için BİR adet benzersiz caption yaz. Her caption farklı ve o görsele özel olmalı.
 
 ${commonFields}
 
-Reply ONLY with this JSON format:
+Sadece JSON formatında yanıt ver:
 
 {
   "captions": [
-    { "image_index": 0, "caption_text": "caption for image 1", "hashtags": ["#tag1", "#tag2"] },
-    { "image_index": 1, "caption_text": "caption for image 2", "hashtags": ["#tag3", "#tag4"] }
+    { "image_index": 0, "caption_text": "caption for image 1 (\\n ile satır arası boşluk ekle)", "hashtags": ["#tag1", "#tag2"] },
+    { "image_index": 1, "caption_text": "caption for image 2 (\\n ile satır arası boşluk ekle)", "hashtags": ["#tag3", "#tag4"] }
   ]
 }
 
-You MUST generate exactly ${images.length} caption(s) — one per image. The image_index must match the order of the photos above.`;
+Tam olarak ${images.length} caption üret. image_index sırası görsellerle eşleşmeli.`;
     } else {
-      prompt = `You are writing Instagram captions like a real user, not an AI or a poet.
-Look at the photo(s) and write what naturally comes to mind — like a friend sharing a moment.
+      prompt = `${carouselInstruction}Bir arkadaşının fotoğraflarına bakıyorsun. Gördüğünü doğal, samimi ve cool bir şekilde anlat. Instagram'da kaydırırken durduracak türden bir metin yaz.
 
 ${baseRules}
 
 ${commonFields}
 
-Reply ONLY with this JSON format:
+Sadece JSON formatında yanıt ver:
 
 {
   "captions": [
-    { "caption_text": "caption text", "hashtags": ["#tag1", "#tag2"] },
-    { "caption_text": "caption text", "hashtags": ["#tag3", "#tag4"] }
+    { "caption_text": "caption text (\\n ile satır arası boşluk ekle)", "hashtags": ["#tag1", "#tag2"] },
+    { "caption_text": "caption text (\\n ile satır arası boşluk ekle)", "hashtags": ["#tag3", "#tag4"] }
   ]
 }
 
-Generate at least 2, at most 4 captions.`;
+En az 2, en fazla 4 caption üret.`;
     }
 
     const callOpenAI = async (retryPrompt) => {
@@ -720,8 +877,8 @@ Generate at least 2, at most 4 captions.`;
       ? "Lütfen görsel(ler) için mutlaka altyazı üret. Boş yanıt verme. Soru cümlesi kullanma."
       : "Please generate captions for the image(s). Do not return empty. Do NOT use question sentences.";
     const fallbackPrompt = langName === "Türkçe"
-      ? `Görsel için kısa, doğal bir Instagram altyazısı yaz. ${retryMsg}`
-      : `Write a short, natural Instagram caption for the image. ${retryMsg}`;
+      ? `Görsel için kısa, doğal bir Instagram altyazısı yaz. JSON formatında yanıt ver. ${retryMsg}`
+      : `Write a short, natural Instagram caption for the image. Respond in JSON format. ${retryMsg}`;
 
     let attempts = 0;
     let aiCaptions = [];
@@ -786,24 +943,33 @@ Generate at least 2, at most 4 captions.`;
         [postId, req.userId, aiCaptions[0].caption_text, aiCaptions[0].hashtags, "base64", postId],
       );
 
-      await client.query(
-        "UPDATE profiles SET credits = credits - $1 WHERE id = $2",
-        [requiredCredits, req.userId],
-      );
+      if (!userRow.is_premium) {
+        await client.query(
+          "UPDATE profiles SET credits = credits - $1 WHERE id = $2",
+          [requiredCredits, req.userId],
+        );
+      }
 
       await client.query("COMMIT");
 
       const remainingResult = await pool.query(
-        "SELECT credits FROM profiles WHERE id = $1",
+        "SELECT credits, is_premium FROM profiles WHERE id = $1",
         [req.userId],
       );
-      const remainingCredits = remainingResult.rows[0].credits;
+      const remainingCredits = remainingResult.rows[0].is_premium ? -1 : remainingResult.rows[0].credits;
 
       const captions = aiCaptions.map((c) => ({
         text: c.caption_text,
         hashtags: c.hashtags,
         image_index: c.image_index,
       }));
+
+      sendPushNotification(
+        req.userId,
+        "Başlıkların Hazır! ✨",
+        "Yapay zeka harika caption'lar üretti. İncelemek için dokun!",
+        { screen: "details", post_id: postId }
+      );
 
       res.status(201).json({
         success: true,
@@ -833,6 +999,39 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Sunucu hatası." });
 });
 
+async function sendPushNotification(userId, title, body, data = {}) {
+  try {
+    const userRes = await pool.query("SELECT push_token FROM profiles WHERE id = $1", [userId]);
+    const pushToken = userRes.rows[0]?.push_token;
+
+    if (!pushToken) {
+      console.log(`[Push Notification] Kullanıcı ${userId} için token bulunamadı.`);
+      return;
+    }
+
+    const response = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        to: pushToken,
+        sound: "capshion_sound",
+        title: title,
+        body: body,
+        data: data,
+        channelId: "capshion_sound_v3",
+      }),
+    });
+
+    const resData = await response.json();
+    console.log(`[Push Notification] Gönderim durumu:`, resData);
+  } catch (err) {
+    console.error("[Push Notification] Hata:", err.message);
+  }
+}
+
 function gracefulShutdown(signal) {
   console.log(`[Server] ${signal} alındı, kapatılıyor...`);
   pool.end(() => {
@@ -850,6 +1049,15 @@ async function start() {
     console.warn(
       "[Server] UYARI: Veritabanına bağlanılamadı. Sunucu yine de başlatılıyor ancak auth istekleri başarısız olacak.",
     );
+  }
+
+  try {
+    await pool.query("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_premium BOOLEAN DEFAULT false");
+    console.log("[DB] is_premium sütunu kontrol edildi/eklendi.");
+    await pool.query("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS push_token TEXT");
+    console.log("[DB] push_token sütunu kontrol edildi/eklendi.");
+  } catch (migErr) {
+    console.warn("[DB] Migrasyon hatası (önemsiz):", migErr.message);
   }
 
   const PORT = process.env.PORT || 3000;

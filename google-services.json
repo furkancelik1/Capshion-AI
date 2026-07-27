@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "764189133377",
+    "project_id": "gen-lang-client-0504991952",
+    "storage_bucket": "gen-lang-client-0504991952.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:764189133377:android:e4776d3fcbe89307ed14c0",
+        "android_client_info": {
+          "package_name": "com.furkan.capshion"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCzFaV6qXYQkUD8xZM0JSy4d41qDIH-oNQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

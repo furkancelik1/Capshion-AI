@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -87,7 +88,7 @@ function GlassToast({ message, type, onHide }: { message: string; type: ToastTyp
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const [counter, setCounter] = useState(0);
+  const counterRef = useRef(0);
 
   const showToast = useCallback((message: string, type: ToastType = "success") => {
     Haptics.notificationAsync(
@@ -97,9 +98,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           ? Haptics.NotificationFeedbackType.Warning
           : Haptics.NotificationFeedbackType.Success,
     );
-    setCounter((c) => c + 1);
-    setToasts((prev) => [...prev, { id: counter + 1, message, type }]);
-  }, [counter]);
+    counterRef.current += 1;
+    const id = counterRef.current;
+    setToasts((prev) => [...prev, { id, message, type }]);
+  }, []);
 
   const removeToast = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));

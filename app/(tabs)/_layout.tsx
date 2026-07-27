@@ -11,6 +11,7 @@ export default function TabLayout() {
         screenOptions={{
           swipeEnabled: true,
           animationEnabled: true,
+          contentStyle: { backgroundColor: 'transparent' },
         }}
         tabBar={(props: any) => <FloatingTabBar {...props} />}
       >

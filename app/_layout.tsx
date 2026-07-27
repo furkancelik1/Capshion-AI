@@ -3,7 +3,7 @@ import { useColorScheme, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import * as SplashScreen from "expo-splash-screen";
-import { LinearGradient } from "expo-linear-gradient";
+import * as Notifications from "expo-notifications";
 import {
   DarkTheme,
   DefaultTheme,
@@ -13,24 +13,31 @@ import {
   useSegments,
 } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withSpring,
-  withTiming,
-} from "react-native-reanimated";
-import { GlassTheme } from "../constants/LiquidGlass";
-import AmbientGlow from "../components/AmbientGlow";
+import { StripeProvider } from "@stripe/stripe-react-native";
+import { usePushNotifications } from "../hooks/usePushNotifications";
+import AnimatedBackground from "../components/AnimatedBackground";
+import AnimatedSplashScreen from "../components/AnimatedSplashScreen";
 import { useAuth, AuthProvider } from "../hooks/useAuth";
+import { api } from "../services/api";
 import { ToastProvider } from "../context/ToastContext";
 import i18next, { initPromise } from "../i18n";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
   const [i18nReady, setI18nReady] = useState(false);
+  const [splashDone, setSplashDone] = useState(false);
+  console.log("RootLayout: usePushNotifications tetiklendi...");
+  const { expoPushToken } = usePushNotifications();
+  console.log("RootLayout: Token Değeri:", expoPushToken);
   const rawScheme = useColorScheme();
   const colorScheme: "light" | "dark" =
     rawScheme === "light" ? "light" : "dark";
@@ -39,13 +46,37 @@ function RootLayoutNav() {
   const router = useRouter();
 
   useEffect(() => {
+    if (expoPushToken) {
+      console.log("Expo Push Token:", expoPushToken);
+    }
+  }, [expoPushToken]);
+
+  useEffect(() => {
+    const saveTokenToDatabase = async () => {
+      if (user?.email && expoPushToken) {
+        try {
+          await api.savePushToken(expoPushToken);
+          console.log("PUSH_DEBUG: Token API ile başarıyla kaydedildi!");
+        } catch (err) {
+          console.error("PUSH_DEBUG: Token kaydedilemedi:", err instanceof Error ? err.message : err);
+        }
+      }
+    };
+
+    saveTokenToDatabase();
+  }, [user, expoPushToken]);
+
+  useEffect(() => {
     initPromise.then(() => setI18nReady(true));
   }, []);
 
   useEffect(() => {
     if (loading || !i18nReady) return;
-
     SplashScreen.hideAsync();
+  }, [loading, i18nReady]);
+
+  useEffect(() => {
+    if (!splashDone || loading || !i18nReady) return;
 
     const inAuthGroup = segments[0] === "(auth)" || (segments[0] as string) === "(public)";
 
@@ -54,117 +85,43 @@ function RootLayoutNav() {
     } else if (user && inAuthGroup) {
       router.replace("/(tabs)");
     }
-  }, [user, loading, segments, i18nReady]);
-
-  if (loading || !i18nReady) {
-    return <AnimatedSplash />;
-  }
+  }, [splashDone, user, loading, segments, i18nReady]);
 
   const inAuth = segments[0] === "(auth)" || (segments[0] as string) === "(public)";
 
+  const customTheme = {
+    ...(colorScheme === "dark" ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(colorScheme === "dark" ? DarkTheme : DefaultTheme).colors,
+      background: 'transparent',
+    },
+  };
+
   return (
-    <View style={{ flex: 1, backgroundColor: GlassTheme.background }}>
-      {!inAuth && (
-        <LinearGradient
-          colors={[...GlassTheme.primaryGradient]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-        />
+    <View style={{ flex: 1, backgroundColor: '#05050A' }}>
+      <AnimatedBackground />
+      {!splashDone ? (
+        <AnimatedSplashScreen onAnimationFinish={() => setSplashDone(true)} />
+      ) : (
+        <>
+          <ThemeProvider value={customTheme}>
+            <Stack screenOptions={{ animation: 'slide_from_right', contentStyle: { backgroundColor: 'transparent' } }}>
+              <Stack.Screen name="(public)/onboarding" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)/register" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="caption/[id]"
+                options={{
+                  headerShown: false,
+                  presentation: "modal",
+                }}
+              />
+            </Stack>
+          </ThemeProvider>
+          <StatusBar style="light" />
+        </>
       )}
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <Stack screenOptions={{ animation: 'slide_from_right' }}>
-          <Stack.Screen name="(public)/onboarding" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)/register" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="caption/[id]"
-            options={{
-              headerShown: false,
-              presentation: "modal",
-            }}
-          />
-        </Stack>
-      </ThemeProvider>
-      <StatusBar style="light" />
-    </View>
-  );
-}
-
-function AnimatedSplash() {
-  const logoOpacity = useSharedValue(0);
-  const logoTranslateY = useSharedValue(-50);
-  const logoScale = useSharedValue(0.8);
-  const textOpacity = useSharedValue(0);
-  const textTranslateY = useSharedValue(50);
-  const textLetterSpacing = useSharedValue(3);
-
-  useEffect(() => {
-    logoOpacity.value = withDelay(500, withSpring(1, { damping: 14, stiffness: 100 }));
-    logoTranslateY.value = withDelay(500, withSpring(0, { damping: 14, stiffness: 100 }));
-    logoScale.value = withDelay(500, withSpring(1, { damping: 12, stiffness: 90 }));
-  }, []);
-
-  useEffect(() => {
-    textOpacity.value = withDelay(800, withTiming(1, {
-      duration: 800,
-      easing: Easing.out(Easing.cubic),
-    }));
-    textTranslateY.value = withDelay(800, withTiming(0, {
-      duration: 700,
-      easing: Easing.out(Easing.cubic),
-    }));
-    textLetterSpacing.value = withDelay(800, withTiming(10, {
-      duration: 900,
-      easing: Easing.out(Easing.cubic),
-    }));
-  }, []);
-
-  const logoStyle = useAnimatedStyle(() => ({
-    opacity: logoOpacity.value,
-    transform: [
-      { translateY: logoTranslateY.value },
-      { scale: logoScale.value },
-    ],
-  }));
-
-  const textStyle = useAnimatedStyle(() => ({
-    opacity: textOpacity.value,
-    transform: [{ translateY: textTranslateY.value }],
-    letterSpacing: textLetterSpacing.value,
-  }));
-
-  return (
-    <View style={{ flex: 1, backgroundColor: GlassTheme.background }}>
-      <AmbientGlow />
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          gap: 20,
-        }}
-      >
-        <Animated.Image
-          source={require("../assets/images/logo.png")}
-          style={[{ width: 100, height: 100 }, logoStyle]}
-          resizeMode="contain"
-        />
-        <Animated.Text
-          style={[
-            {
-              fontSize: 28,
-              fontWeight: "800",
-              color: GlassTheme.neonPlatinum,
-              textTransform: "uppercase",
-            },
-            textStyle,
-          ]}
-        >
-          CAPSHION
-        </Animated.Text>
-      </View>
     </View>
   );
 }
@@ -174,9 +131,11 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheetModalProvider>
         <ToastProvider>
-          <AuthProvider>
-            <RootLayoutNav />
-          </AuthProvider>
+          <StripeProvider publishableKey="pk_test_51Tx5gVIdWpTyLlw8RFhrsFNpzbKPzLzLFfP0h56w9wgcpTZzWjfimyoHzK253wN6UYBl1dYB9eS6D4cFemHvUe7G00a1eJrPlg">
+            <AuthProvider>
+              <RootLayoutNav />
+            </AuthProvider>
+          </StripeProvider>
         </ToastProvider>
       </BottomSheetModalProvider>
     </GestureHandlerRootView>

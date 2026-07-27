@@ -11,17 +11,30 @@ import { GlassTheme } from "@/constants/LiquidGlass";
 interface TypeWriterTextProps {
   text: string;
   speed?: number;
+  delay?: number;
 }
 
 export default function TypeWriterText({
   text,
   speed = 20,
+  delay = 0,
 }: TypeWriterTextProps) {
   const [displayedText, setDisplayedText] = useState("");
   const [done, setDone] = useState(false);
+  const [started, setStarted] = useState(delay === 0);
   const opacity = useSharedValue(1);
 
   useEffect(() => {
+    if (delay <= 0) {
+      setStarted(true);
+      return;
+    }
+    const timer = setTimeout(() => setStarted(true), delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+
+  useEffect(() => {
+    if (!started) return;
     setDisplayedText("");
     setDone(false);
 
@@ -37,7 +50,7 @@ export default function TypeWriterText({
     }, speed);
 
     return () => clearInterval(timer);
-  }, [text, speed]);
+  }, [text, speed, started]);
 
   useEffect(() => {
     opacity.value = withRepeat(withTiming(0.15, { duration: 500 }), -1, true);

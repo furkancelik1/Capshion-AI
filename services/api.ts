@@ -46,6 +46,8 @@ interface GenerateCaptionRequest {
   useEmojis: boolean;
   useHashtags: boolean;
   mode?: "alternatives" | "per_image";
+  customPrompt?: string;
+  carouselMode?: boolean;
 }
 
 interface CaptionItem {
@@ -179,7 +181,7 @@ export const api = {
     }),
 
   getProfile: () =>
-    request<{ id: string; email: string; age_range: string | null; credits_remaining: number }>(
+    request<{ id: string; email: string; age_range: string | null; credits_remaining: number; is_premium: boolean }>(
       '/auth/profile',
     ),
 
@@ -226,6 +228,18 @@ export const api = {
   deleteCaption: (captionId: string) =>
     request<{ message: string }>(`/captions/${captionId}`, {
       method: 'DELETE',
+    }),
+
+  createPaymentIntent: (amount: number, currency?: string, userId?: string) =>
+    request<{ clientSecret: string }>('/payments/create-payment-intent', {
+      method: 'POST',
+      body: JSON.stringify({ amount, currency: currency || 'usd', userId }),
+    }),
+
+  savePushToken: (pushToken: string) =>
+    request<{ message: string }>('/auth/push-token', {
+      method: 'POST',
+      body: JSON.stringify({ pushToken }),
     }),
 };
 

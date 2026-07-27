@@ -1,4 +1,5 @@
 import TypeWriterText from "@/components/TypeWriterText";
+import GlassSkeleton from "@/components/GlassSkeleton";
 import HapticButton from "@/components/HapticButton";
 import { GlassTheme } from "@/constants/LiquidGlass";
 import { supabase } from "@/services/supabase";
@@ -16,6 +17,7 @@ import {
   Alert,
   Animated,
   Image,
+  InteractionManager,
   Linking,
   Modal,
   Pressable,
@@ -89,7 +91,7 @@ function PerImageCard({
             <View style={styles.cardInner}>
               <Image source={{ uri: imageUri }} style={styles.perImagePreview} resizeMode="cover" />
               <Text style={styles.perImageLabel}>{t("common.image")} {index + 1}</Text>
-              <TypeWriterText text={caption.text ?? ''} />
+              <TypeWriterText text={caption.text ?? ''} delay={(index + 1) * 150 + 200} />
               {(caption.hashtags ?? []).length > 0 && (
                 <View style={styles.hashtagRow}>
                   {(caption.hashtags ?? []).map((tag, tagIndex) => (
@@ -159,7 +161,7 @@ function GlassCard({
             <View style={styles.cardInner}>
               <Text style={styles.cardLabel}>{t("common.alternative")} {index + 1}</Text>
 
-              <TypeWriterText text={caption.text ?? ''} />
+              <TypeWriterText text={caption.text ?? ''} delay={(index + 1) * 150 + 200} />
 
               {(caption.hashtags ?? []).length > 0 && (
                 <View style={styles.hashtagRow}>
@@ -224,7 +226,14 @@ export default function CaptionDetailScreen() {
   );
 
   const [loading, setLoading] = useState(!inlineData);
+  const [isReady, setIsReady] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    InteractionManager.runAfterInteractions(() => {
+      setIsReady(true);
+    });
+  }, []);
 
   // Modal ve WebView State'leri
   const [showCreditModal, setShowCreditModal] = useState(false);
@@ -383,10 +392,30 @@ export default function CaptionDetailScreen() {
   console.log("[Caption] imageUrls.length:", imageUrls.length);
   console.log("[Caption] first imageUri (50 chars):", imageUrls[0]?.substring(0, 50));
 
-  if (loading) {
+  if (!isReady) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={GlassTheme.textMain} />
+      <View style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.header}>
+            <View style={styles.headerBtn} />
+            <Text style={styles.headerTitle}>{t("common.details")}</Text>
+            <View style={styles.headerBtn} />
+          </View>
+        </SafeAreaView>
+        <View style={styles.content}>
+          <GlassSkeleton width="100%" height={130} borderRadius={20} />
+          <View style={{ height: 24 }} />
+          <GlassSkeleton width={140} height={20} borderRadius={8} />
+          <View style={{ height: 16 }} />
+          <GlassSkeleton width="100%" height={200} borderRadius={20} />
+          <View style={{ height: 16 }} />
+          <GlassSkeleton width="100%" height={200} borderRadius={20} />
+          <View style={{ height: 100 }} />
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <GlassSkeleton style={{ flex: 1 }} height={56} borderRadius={16} />
+            <GlassSkeleton style={{ flex: 1 }} height={56} borderRadius={16} />
+          </View>
+        </View>
       </View>
     );
   }
@@ -453,8 +482,8 @@ export default function CaptionDetailScreen() {
                 onPress={() => setShowCreditModal(true)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.creditBadge}>
-                  {t("common.creditRemaining", { count: creditsRemaining })}
+                <Text style={[styles.creditBadge, creditsRemaining === -1 && styles.creditBadgePremium]}>
+                  {creditsRemaining === -1 ? "♾️ " + t("common.unlimited") : t("common.creditRemaining", { count: creditsRemaining })}
                 </Text>
               </TouchableOpacity>
             )}
@@ -469,13 +498,15 @@ export default function CaptionDetailScreen() {
         </Reanimated.Text>
 
         {captions.length === 0 ? (
-          <BlurView
-            intensity={GlassTheme.blurIntensity}
-            tint="systemThinMaterialDark"
-            style={styles.emptyCard}
-          >
-            <Text style={styles.emptyText}>{t("common.emptyTexts")}</Text>
-          </BlurView>
+          <Reanimated.View entering={FadeInUp.delay(300).springify().damping(14)}>
+            <BlurView
+              intensity={GlassTheme.blurIntensity}
+              tint="systemThinMaterialDark"
+              style={styles.emptyCard}
+            >
+              <Text style={styles.emptyText}>{t("common.emptyTexts")}</Text>
+            </BlurView>
+          </Reanimated.View>
         ) : isPerImage ? (
           captions.map((caption, index) => (
             <PerImageCard
@@ -510,7 +541,7 @@ export default function CaptionDetailScreen() {
           </ScrollView>
         )}
 
-        <View style={styles.shareRow}>
+        <Reanimated.View style={styles.shareRow} entering={FadeInUp.delay(captions.length * 150 + 400).springify().damping(14)}>
           <HapticButton
             style={[styles.shareButton, styles.shareButtonHalf]}
             onPress={() => handleInstagram(captions[0]?.text ?? '')}
@@ -542,7 +573,7 @@ export default function CaptionDetailScreen() {
               <Text style={styles.shareButtonText}> {t("common.share")}</Text>
             </LinearGradient>
           </HapticButton>
-        </View>
+        </Reanimated.View>
       </ScrollView>
 
 
@@ -650,16 +681,16 @@ export default function CaptionDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: GlassTheme.background,
+    backgroundColor: 'transparent',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: GlassTheme.background,
+    backgroundColor: 'transparent',
   },
   safeArea: {
-    backgroundColor: GlassTheme.background,
+    backgroundColor: 'transparent',
     zIndex: 10,
   },
   header: {
@@ -724,6 +755,12 @@ const styles = StyleSheet.create({
     color: GlassTheme.textMain,
     textAlign: "center",
     textDecorationLine: "underline",
+  },
+  creditBadgePremium: {
+    color: "#FBBF24",
+    textShadowColor: "rgba(251,191,36,0.5)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
   sectionTitle: {
     fontSize: 18,

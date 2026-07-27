@@ -1,8 +1,9 @@
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useFocusEffect } from "expo-router";
 import {
   Alert,
   FlatList,
@@ -40,9 +41,11 @@ export default function HistoryScreen() {
   const [error, setError] = useState<string | null>(null);
   const swipeRefs = useRef<Record<string, Swipeable | null>>({});
 
-  useEffect(() => {
-    fetchHistory();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchHistory();
+    }, []),
+  );
 
   const fetchHistory = async () => {
     setLoading(true);
@@ -221,7 +224,7 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: GlassTheme.background,
+    backgroundColor: 'transparent',
     padding: 20,
     paddingTop: 100,
   },

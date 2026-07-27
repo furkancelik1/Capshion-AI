@@ -32,7 +32,8 @@
     "copiedInstagramDesc": "Caption copied to clipboard. You can paste it when Instagram opens.",
     "openInstagram": "Open Instagram",
     "seeAll": "See All",
-    "image": "Image"
+    "image": "Image",
+    "unlimited": "Unlimited"
   },
   "home": {
     "heroBadge": "Premium Content Studio",
@@ -146,7 +147,9 @@
     "humorous": { "name": "Humorous", "prompt": "Witty / Humorous" },
     "minimal": { "name": "Minimalist", "prompt": "Minimal / Aesthetic" },
     "professional": { "name": "Professional", "prompt": "Professional / Corporate" },
-    "storyteller": { "name": "Storyteller", "prompt": "Storyteller" }
+    "storyteller": { "name": "Storyteller", "prompt": "Storyteller" },
+    "viral": { "name": "Viral Hook", "prompt": "Viral / High Engagement" },
+    "luxury": { "name": "Ultra Luxury", "prompt": "Luxury / Premium" }
   },
   "settings": {
     "title": "Advanced Settings",
@@ -159,9 +162,13 @@
     "corporate": "Corporate",
     "emojis": "Emojis",
     "hashtags": "Hashtags",
+    "carouselMode": "Carousel Mode",
     "captionMode": "Caption Mode",
     "modeAlternatives": "Whole Post",
-    "modePerImage": "Per Image"
+    "modePerImage": "Per Image",
+    "customPrompt": "Custom Brand Voice (Optional)",
+    "customPromptPlaceholder": "Describe your brand voice, style, or special instructions...",
+    "customPromptPremiumOnly": "Custom Brand Voice (Premium Only)"
   },
   "tabs": {
     "create": "Create",

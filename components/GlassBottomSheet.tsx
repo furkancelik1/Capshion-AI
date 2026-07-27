@@ -10,28 +10,39 @@ import {
 import { GlassTheme } from "@/constants/LiquidGlass";
 import HapticButton from "./HapticButton";
 
-const TONE_IDS = ["cool", "humorous", "minimal", "professional", "storyteller"];
+const TONE_IDS = ["cool", "humorous", "minimal", "professional", "storyteller", "viral", "luxury"];
+
+const VIP_TONE_IDS = new Set(["viral", "luxury", "storyteller"]);
 
 interface GlassBottomSheetProps {
   bottomSheetRef: React.RefObject<BottomSheetModal | null>;
   selectedTone: string | null;
   onToneSelect: (toneId: string) => void;
+  isPremium?: boolean;
+  onPremiumRequired?: () => void;
 }
 
 export default function GlassBottomSheet({
   bottomSheetRef,
   selectedTone,
   onToneSelect,
+  isPremium,
+  onPremiumRequired,
 }: GlassBottomSheetProps) {
   const { t } = useTranslation();
   const snapPoints = useMemo(() => ["55%"], []);
 
   const handleSelect = useCallback(
     (toneId: string) => {
+      const isVip = VIP_TONE_IDS.has(toneId);
+      if (isVip && !isPremium) {
+        onPremiumRequired?.();
+        return;
+      }
       onToneSelect(toneId);
       bottomSheetRef.current?.dismiss();
     },
-    [onToneSelect, bottomSheetRef],
+    [onToneSelect, bottomSheetRef, isPremium, onPremiumRequired],
   );
 
   return (
@@ -59,24 +70,34 @@ export default function GlassBottomSheet({
           <View style={styles.list}>
             {TONE_IDS.map((id) => {
               const isSelected = selectedTone === id;
+              const isVip = VIP_TONE_IDS.has(id);
+              const locked = isVip && !isPremium;
               return (
                 <HapticButton
                   key={id}
                   style={[
                     styles.row,
                     isSelected && styles.rowSelected,
+                    locked && styles.rowLocked,
                   ]}
                   onPress={() => handleSelect(id)}
                 >
                   <View style={styles.rowLeft}>
-                    <Text style={styles.rowName}>
-                      {t(`tones.${id}.name`)}
-                    </Text>
-                    <Text style={styles.rowPrompt}>
+                    <View style={styles.rowLabelRow}>
+                      <Text style={[styles.rowName, locked && styles.rowNameLocked]}>
+                        {locked ? "🔒  " : ""}{t(`tones.${id}.name`)}
+                      </Text>
+                      {locked && (
+                        <View style={styles.proBadge}>
+                          <Text style={styles.proBadgeText}>PRO</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[styles.rowPrompt, locked && styles.rowPromptLocked]}>
                       {t(`tones.${id}.prompt`)}
                     </Text>
                   </View>
-                  {isSelected && (
+                  {isSelected && !locked && (
                     <Ionicons
                       name="checkmark-circle"
                       size={24}
@@ -146,8 +167,18 @@ const styles = StyleSheet.create({
     borderColor: GlassTheme.primary,
     backgroundColor: "rgba(139, 92, 246, 0.1)",
   },
+  rowLocked: {
+    opacity: 0.6,
+    borderColor: "rgba(251,191,36,0.25)",
+  },
   rowLeft: {
-    gap: 2,
+    gap: 4,
+    flex: 1,
+  },
+  rowLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   rowName: {
     fontSize: 15,
@@ -155,9 +186,27 @@ const styles = StyleSheet.create({
     color: GlassTheme.textMain,
     letterSpacing: 0.5,
   },
+  rowNameLocked: {
+    color: "rgba(255,255,255,0.4)",
+  },
   rowPrompt: {
     fontSize: 12,
     fontWeight: "500",
     color: GlassTheme.textMuted,
+  },
+  rowPromptLocked: {
+    color: "rgba(255,255,255,0.25)",
+  },
+  proBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    backgroundColor: "rgba(251,191,36,0.15)",
+  },
+  proBadgeText: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: "#FBBF24",
+    letterSpacing: 0.5,
   },
 });
