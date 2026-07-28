@@ -27,6 +27,10 @@ export function getToken() {
   return _token;
 }
 
+export let lastNavigationTimestamp = 0;
+
+export type CaptionRow = { id: string; caption_text: string; hashtags: string[]; created_at: string; post_id: string; image_url?: string };
+
 class ApiError extends Error {
   status: number;
 
@@ -192,9 +196,10 @@ export const api = {
     }),
 
   getCaptions: () =>
-    request<Array<{ id: string; caption_text: string; hashtags: string[]; created_at: string; post_id: string }>>(
-      '/captions',
-    ),
+    request<CaptionRow[]>('/captions'),
+
+  getCaptionByPostId: (postId: string) =>
+    request<CaptionRow[]>(`/captions/post/${postId}`),
 
   createPayment: (price: string, credits: number, currency: string) =>
     request<{ paymentUrl: string }>('/payment/create', {

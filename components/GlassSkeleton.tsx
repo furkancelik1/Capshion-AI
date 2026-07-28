@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { StyleSheet, View, ViewStyle } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withTiming,
+  cancelAnimation,
 } from "react-native-reanimated";
 
 interface GlassSkeletonProps {
@@ -28,6 +29,7 @@ export default function GlassSkeleton({
       -1,
       true,
     );
+    return () => cancelAnimation(opacity);
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => ({

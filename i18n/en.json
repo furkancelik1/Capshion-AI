@@ -17,6 +17,7 @@
     "share": "Share",
     "instagram": "Instagram",
     "emptyTexts": "No texts found yet.",
+    "refreshing": "Updating data...",
     "alertClipboardError": "Could not copy to clipboard.",
     "alertShareError": "Could not open share.",
     "alertInstagramNotFound": "Instagram Not Found",

@@ -292,12 +292,26 @@ app.get("/api/captions", authenticateToken, async (req, res) => {
   console.log("[Captions] İstek alındı, userId:", req.userId);
   try {
     const result = await pool.query(
-      "SELECT id, caption_text, hashtags, created_at, post_id FROM generated_captions WHERE user_id = $1 ORDER BY created_at DESC",
+      "SELECT id, caption_text, hashtags, created_at, post_id, image_url FROM generated_captions WHERE user_id = $1 ORDER BY created_at DESC",
       [req.userId],
     );
     res.json(result.rows);
   } catch (err) {
     console.error("[Captions] Hata:", err.message);
+    res.status(500).json({ error: "Sunucu hatası." });
+  }
+});
+
+app.get("/api/captions/post/:postId", authenticateToken, async (req, res) => {
+  console.log("[Captions] PostID ile sorgu, userId:", req.userId, "postId:", req.params.postId);
+  try {
+    const result = await pool.query(
+      "SELECT id, caption_text, hashtags, created_at, post_id, image_url FROM generated_captions WHERE post_id = $1 AND user_id = $2 ORDER BY id",
+      [req.params.postId, req.userId],
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("[Captions] PostID sorgu hatası:", err.message);
     res.status(500).json({ error: "Sunucu hatası." });
   }
 });
@@ -644,8 +658,8 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
 
     const customPromptBlock = safeCustomPrompt ? `\nKULLANICININ ÖZEL İSTEĞİ (Buna KESİNLİKLE uy): ${safeCustomPrompt}` : "";
 
-    const bannedWords = "ASLA KULLANMA: unleash, journey, transformative, embrace, unlock the potential, world of, Dive into, Elevate your, Discover the magic, Let\'s delve.";
-    const prompt = `${carouselInstruction}Bir arkadaşının fotoğraflarına bakıyorsun. Gördüğünü doğal, samimi ve cool bir şekilde anlat. Instagram'da kaydırırken durduracak türden bir metin yaz.\n\nKurallar:\n- İLK CÜMLE merak uyandırsın, iddialı ya da sohbet havasında olsun. Okuyucu "devamını oku"ya tıklamak istesin.\n- Satır aralarına boşluk koy. Metin tek blok olmasın, nefes alsın.\n- ${bannedWords}\n- Kısa ve öz yaz. Görselin önüne geçme.\n- Sanki bir arkadaşına anlatıyormuş gibi yaz, çok süslü veya resmi olma.\n\n${instructionLang}\n${genderInstruction}\n${toneInstruction}\n${lengthInstruction}\n${emojiInstruction}\n${hashtagInstruction}\nAge range: ${ageRange || "general"}${customPromptBlock}\n\nSadece JSON formatında yanıt ver:\n\n{\n  "captions": [\n    { "caption_text": "caption text (\\n ile satır arası boşluk ekle)", "hashtags": ["#tag1", "#tag2"] },\n    { "caption_text": "caption text (\\n ile satır arası boşluk ekle)", "hashtags": ["#tag3", "#tag4"] }\n  ]\n}\n\nEn az 2, en fazla 4 caption üret.`;
+    const bannedWords = "ASLA KULLANMA: unleash, journey, transformative, embrace, unlock the potential, world of, Dive into, Elevate your, Discover the magic, Let's delve, Find your, It's time to, Get ready to, Let your, Embrace the, Unlock your, Radiate confidence, Step into, Your inner, Channel your, The ultimate guide to";
+    const prompt = `${carouselInstruction}FOTOĞRAFI PAYLAŞAN KİŞİNİN AĞZINDAN (BEN DİLİ), sanki kendi Instagram hesabına doğal bir an paylaşıyormuş gibi yaz. KESİNLİKLE üçüncü şahıs övgüsü yapma ("Bu kadın çok güzel", "Bu adam çok cool"). Sadece "Ben" gözünden yaz.\n\nKurallar:\n- İLK CÜMLE merak uyandırsın, iddialı ya da samimi bir sohbet havasında başlasın. Okuyucu "devamını oku"ya tıklamak istesin.\n- Satır aralarına mutlaka boşluk ekle. Metin tek blok olmasın.\n- ${bannedWords}\n- Kısa ve öz. Görselin önüne geçme, az ama etkili yaz.\n- Sanki yakın arkadaşına fotoğraf atıyormuş gibi doğal ve samimi ol. Karmaşık cümleler kurma.\n\n${instructionLang}\n${genderInstruction}\n${toneInstruction}\n${lengthInstruction}\n${emojiInstruction}\n${hashtagInstruction}\nAge range: ${ageRange || "general"}${customPromptBlock}\n\nSadece JSON formatında yanıt ver:\n\n{\n  "captions": [\n    { "caption_text": "caption text (\\n ile satır arası boşluk ekle)", "hashtags": ["#tag1", "#tag2"] },\n    { "caption_text": "caption text (\\n ile satır arası boşluk ekle)", "hashtags": ["#tag3", "#tag4"] }\n  ]\n}\n\nEn az 2, en fazla 4 caption üret.`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -686,11 +700,14 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
     try {
       await client.query("BEGIN");
 
-      await client.query(
-        `INSERT INTO generated_captions (id, user_id, caption_text, hashtags, image_url, post_id, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-        [postId, req.userId, aiCaptions[0].caption_text, aiCaptions[0].hashtags, imageUrls[0], postId],
-      );
+      for (const caption of aiCaptions) {
+        const rowId = crypto.randomUUID();
+        await client.query(
+          `INSERT INTO generated_captions (id, user_id, caption_text, hashtags, image_url, post_id, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+          [rowId, req.userId, caption.caption_text, caption.hashtags, imageUrls[0], postId],
+        );
+      }
 
       if (!userRow.is_premium) {
         await client.query(
@@ -709,18 +726,24 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
       sendPushNotification(
         req.userId,
         "Başlıkların Hazır! ✨",
-        "Yapay zeka harika caption'lar üretti. İncelemek için dokun!",
-        { screen: "details", post_id: postId }
-      );
+        "Yapay zeka harika içerikler üretti. İncelemek için dokun!",
+        { screen: "history", post_id: postId }
+      ).catch(err => console.error("[Push] Async error:", err.message));
 
-      res.status(201).json({
-        success: true,
-        captions,
-        post_id: postId,
-        image_url: imageUrls[0],
-        image_urls: imageUrls,
-        remainingCredits,
-      });
+      try {
+        if (!res.headersSent) {
+          res.status(201).json({
+            success: true,
+            captions,
+            post_id: postId,
+            image_url: imageUrls[0],
+            image_urls: imageUrls,
+            remainingCredits,
+          });
+        }
+      } catch (clientErr) {
+        console.log("[Backend] İstemci bağlantısı koptu ama metin başarıyla üretilip kaydedildi.");
+      }
     } catch (txErr) {
       await client.query("ROLLBACK");
       throw txErr;
@@ -805,12 +828,12 @@ app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
 
     const carouselInstruction = carouselMode ? `Sen bir Carousel (Kaydırmalı) Post uzmanısın. Yüklenen görselleri sırasıyla analiz et. Her görsel için o ana özel, birbiriyle bağlantılı ve merak uyandıran metinler yaz. Her görsel için ayrı bir caption üret. Hikayenin akışkan ve sürükleyici olduğundan emin ol.\n\n` : "";
 
-    const bannedWords = "ASLA KULLANMA: unleash, journey, transformative, embrace, unlock the potential, world of, Dive into, Elevate your, Discover the magic, Let's delve.";
-    const baseRules = `- İLK CÜMLE merak uyandırsın, iddialı ya da sohbet havasında olsun.
-- Satır aralarına boşluk koy. Metin tek blok olmasın.
+    const bannedWords = "ASLA KULLANMA: unleash, journey, transformative, embrace, unlock the potential, world of, Dive into, Elevate your, Discover the magic, Let's delve, Find your, It's time to, Get ready to, Let your, Embrace the, Unlock your, Radiate confidence, Step into, Your inner, Channel your, The ultimate guide to";
+    const baseRules = `- İLK CÜMLE merak uyandırsın, iddialı ya da samimi bir sohbet havasında başlasın.
+- Satır aralarına mutlaka boşluk ekle. Metin tek blok olmasın.
 - ${bannedWords}
 - Kısa ve öz yaz. Görselin önüne geçme.
-- Sanki bir arkadaşına anlatıyormuş gibi yaz, süslü/resmi olma.`;
+- Sanki yakın arkadaşına anlatıyormuş gibi doğal ol, karmaşık cümleler kurma.`;
 
     const commonFields = `${instructionLang}
 ${genderInstruction}
@@ -822,7 +845,7 @@ Age range: ${ageRange || "general"}${customPromptBlock}`;
 
     let prompt;
     if (isPerImage) {
-      prompt = `${carouselInstruction}Bir arkadaşının fotoğraflarına bakıyorsun. Her fotoğraf için o ana özel, samimi ve cool bir caption yaz. Instagram'da kaydırırken durduracak türden metinler olsun.
+      prompt = `${carouselInstruction}FOTOĞRAFI PAYLAŞAN KİŞİNİN AĞZINDAN (BEN DİLİ) yaz. KESİNLİKLE üçüncü şahıs övgüsü yapma. Her fotoğraf için o ana özel, samimi, "Ben" gözünden bir caption yaz. Instagram'da kaydırırken durduracak türden metinler olsun.
 
 ${baseRules}
 
@@ -841,7 +864,7 @@ Sadece JSON formatında yanıt ver:
 
 Tam olarak ${images.length} caption üret. image_index sırası görsellerle eşleşmeli.`;
     } else {
-      prompt = `${carouselInstruction}Bir arkadaşının fotoğraflarına bakıyorsun. Gördüğünü doğal, samimi ve cool bir şekilde anlat. Instagram'da kaydırırken durduracak türden bir metin yaz.
+      prompt = `${carouselInstruction}FOTOĞRAFI PAYLAŞAN KİŞİNİN AĞZINDAN (BEN DİLİ) yaz. KESİNLİKLE üçüncü şahıs övgüsü yapma. Sanki kendi Instagram hesabına doğal bir an paylaşıyormuş gibi yaz.
 
 ${baseRules}
 
@@ -874,11 +897,11 @@ En az 2, en fazla 4 caption üret.`;
     console.log("[Generate-JSON] AI yanıtı alındı" + (raw ? "" : " (bos)"));
 
     const retryMsg = langName === "Türkçe"
-      ? "Lütfen görsel(ler) için mutlaka altyazı üret. Boş yanıt verme. Soru cümlesi kullanma."
-      : "Please generate captions for the image(s). Do not return empty. Do NOT use question sentences.";
+      ? "Caption'ları KESİNLİKLE birinci tekil şahıs (Ben) ağzından yaz. Boş yanıt verme. Soru cümlesi kullanma."
+      : "Write captions from FIRST-PERSON (I/me/my) perspective. Do not return empty. Do NOT use question sentences.";
     const fallbackPrompt = langName === "Türkçe"
-      ? `Görsel için kısa, doğal bir Instagram altyazısı yaz. JSON formatında yanıt ver. ${retryMsg}`
-      : `Write a short, natural Instagram caption for the image. Respond in JSON format. ${retryMsg}`;
+      ? `Fotoğraf için "Ben" ağzından kısa, doğal bir Instagram altyazısı yaz. JSON formatında yanıt ver. ${retryMsg}`
+      : `Write a short, first-person Instagram caption for the image. Respond in JSON format. ${retryMsg}`;
 
     let attempts = 0;
     let aiCaptions = [];
@@ -937,11 +960,14 @@ En az 2, en fazla 4 caption üret.`;
     try {
       await client.query("BEGIN");
 
-      await client.query(
-        `INSERT INTO generated_captions (id, user_id, caption_text, hashtags, image_url, post_id, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-        [postId, req.userId, aiCaptions[0].caption_text, aiCaptions[0].hashtags, "base64", postId],
-      );
+      for (const caption of aiCaptions) {
+        const rowId = crypto.randomUUID();
+        await client.query(
+          `INSERT INTO generated_captions (id, user_id, caption_text, hashtags, image_url, post_id, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+          [rowId, req.userId, caption.caption_text, caption.hashtags, "base64", postId],
+        );
+      }
 
       if (!userRow.is_premium) {
         await client.query(
@@ -967,16 +993,22 @@ En az 2, en fazla 4 caption üret.`;
       sendPushNotification(
         req.userId,
         "Başlıkların Hazır! ✨",
-        "Yapay zeka harika caption'lar üretti. İncelemek için dokun!",
-        { screen: "details", post_id: postId }
-      );
+        "Yapay zeka harika içerikler üretti. İncelemek için dokun!",
+        { screen: "history", post_id: postId }
+      ).catch(err => console.error("[Push] Async error:", err.message));
 
-      res.status(201).json({
-        success: true,
-        captions,
-        post_id: postId,
-        remainingCredits,
-      });
+      try {
+        if (!res.headersSent) {
+          res.status(201).json({
+            success: true,
+            captions,
+            post_id: postId,
+            remainingCredits,
+          });
+        }
+      } catch (clientErr) {
+        console.log("[Backend] İstemci bağlantısı koptu ama metin başarıyla üretilip kaydedildi.");
+      }
     } catch (txErr) {
       await client.query("ROLLBACK");
       throw txErr;
@@ -1021,7 +1053,7 @@ async function sendPushNotification(userId, title, body, data = {}) {
         title: title,
         body: body,
         data: data,
-        channelId: "capshion_sound_v3",
+        channelId: "capshion_sound_v5",
       }),
     });
 

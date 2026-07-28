@@ -5,6 +5,7 @@ import Animated, {
   useSharedValue,
   withRepeat,
   withTiming,
+  cancelAnimation,
 } from "react-native-reanimated";
 import { GlassTheme } from "@/constants/LiquidGlass";
 
@@ -54,6 +55,7 @@ export default function TypeWriterText({
 
   useEffect(() => {
     opacity.value = withRepeat(withTiming(0.15, { duration: 500 }), -1, true);
+    return () => cancelAnimation(opacity);
   }, []);
 
   const cursorStyle = useAnimatedStyle(() => ({

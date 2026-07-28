@@ -66,7 +66,7 @@ async function registerForPushNotificationsAsync(): Promise<string | undefined> 
     console.log('Expo Push Token:', tokenData.data);
 
     if (Platform.OS === 'android') {
-      const createdChannel = await Notifications.setNotificationChannelAsync('capshion_sound_v3', {
+      const createdChannel = await Notifications.setNotificationChannelAsync('capshion_sound_v5', {
         name: 'Capshion Özel Bildirimler',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
@@ -94,7 +94,7 @@ export async function schedulePeriodicReminder() {
       body: "Yeni fotoğrafların için en trend açıklama metinlerini oluşturma zamanı!",
       sound: "capshion_sound",
       data: { type: "reminder" },
-      channelId: "capshion_sound_v3",
+      channelId: "capshion_sound_v5",
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,

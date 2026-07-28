@@ -2,20 +2,20 @@ import TypeWriterText from "@/components/TypeWriterText";
 import GlassSkeleton from "@/components/GlassSkeleton";
 import HapticButton from "@/components/HapticButton";
 import { GlassTheme } from "@/constants/LiquidGlass";
-import { supabase } from "@/services/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import * as Clipboard from "expo-clipboard";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getCachedImageUris } from "../../services/api";
+import { getCachedImageUris, api } from "../../services/api";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../../context/ToastContext";
 import {
   ActivityIndicator,
   Alert,
   Animated,
+  Dimensions,
   Image,
   InteractionManager,
   Linking,
@@ -226,6 +226,7 @@ export default function CaptionDetailScreen() {
   );
 
   const [loading, setLoading] = useState(!inlineData);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
@@ -243,41 +244,100 @@ export default function CaptionDetailScreen() {
 
   const { showToast } = useToast();
 
-  useEffect(() => {
-    if (inlineData) return;
+  const parseCaptionRows = (rows: any[]): CaptionItem[] => {
+    return rows
+      .map((row) => {
+      let text = "";
+      let hashtags: string[] = [];
 
-    const fetchData = async () => {
-      setLoading(true);
-
-      const { data: post } = await supabase
-        .from("posts")
-        .select("image_url")
-        .eq("id", id)
-        .single();
-
-      if (post && post.image_url) {
-        setImageUrls([post.image_url]);
+      if (typeof row.caption_text === "string") {
+        try {
+          const parsed = JSON.parse(row.caption_text);
+          if (Array.isArray(parsed)) {
+            text = parsed.join(" ");
+          } else if (typeof parsed === "string") {
+            text = parsed;
+          } else {
+            text = row.caption_text;
+          }
+        } catch {
+          text = row.caption_text;
+        }
+      } else if (row.caption_text && typeof row.caption_text === "object") {
+        text = String(row.caption_text);
       }
 
-      const { data: captionRows } = await supabase
-        .from("generated_captions")
-        .select("caption_text, hashtags")
-        .eq("post_id", id)
-        .order("id");
-
-      if (captionRows) {
-        setCaptions(
-          (captionRows as { caption_text: string; hashtags: string[] }[]).map(
-            (row) => ({ text: row.caption_text, hashtags: row.hashtags }),
-          ),
-        );
+      if (Array.isArray(row.hashtags)) {
+        hashtags = row.hashtags;
+      } else if (typeof row.hashtags === "string") {
+        try {
+          const parsed = JSON.parse(row.hashtags);
+          hashtags = Array.isArray(parsed) ? parsed : [row.hashtags];
+        } catch {
+          hashtags = [row.hashtags];
+        }
       }
 
-      setLoading(false);
-    };
+      return { text, hashtags };
+    })
+    .filter((item) => item.text.trim().length > 0);
+  };
 
-    fetchData();
-  }, [id, inlineData]);
+  const fetchInProgressRef = useRef(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (inlineData) return;
+      if (fetchInProgressRef.current) return;
+
+      let isActive = true;
+
+      const fetchLatestData = async (retries = 0) => {
+        if (!id) {
+          console.log("[Details] ID parametresi henüz gelmedi, bekleniyor...");
+          return;
+        }
+
+        try {
+          fetchInProgressRef.current = true;
+          setIsRefreshing(true);
+
+          const rows = await api.getCaptionByPostId(id);
+
+          if (isActive && rows && rows.length > 0) {
+            console.log("[Details Render Debug] API'den gelen raw veri (focus):", JSON.stringify(rows));
+            const first = rows[0];
+            const imgUrl = first.image_url && first.image_url !== "base64" ? first.image_url : "";
+            if (imgUrl) {
+              setImageUrls([imgUrl]);
+            }
+            setCaptions(parseCaptionRows(rows as any[]));
+          } else if (isActive && retries < 2) {
+            setTimeout(() => fetchLatestData(retries + 1), 1000);
+            return;
+          }
+        } catch (error) {
+          console.error("Veri yenileme hatası:", error);
+          if (isActive && retries < 2) {
+            setTimeout(() => fetchLatestData(retries + 1), 1000);
+            return;
+          }
+        } finally {
+          if (isActive) {
+            fetchInProgressRef.current = false;
+            setIsRefreshing(false);
+            setLoading(false);
+          }
+        }
+      };
+
+      fetchLatestData();
+
+      return () => {
+        isActive = false;
+      };
+    }, [id, inlineData]),
+  );
 
   const handleCopy = useCallback(
     async (text: string, index: number) => {
@@ -463,16 +523,25 @@ export default function CaptionDetailScreen() {
                 snapToAlignment="start"
                 disableIntervalMomentum={true}
               >
-                {imageUrls.map((uri, idx) => (
-                  <BlurView
-                    key={idx}
-                    intensity={GlassTheme.blurIntensity}
-                    tint="systemThinMaterialDark"
-                    style={styles.imageBlurWrapper}
-                  >
-                    <Image source={{ uri }} style={styles.previewImage} resizeMode="cover" />
-                  </BlurView>
-                ))}
+                {imageUrls.map((uri, idx) => {
+                  const isValidUri = typeof uri === "string" && (uri.startsWith("http") || uri.startsWith("file://") || uri.startsWith("content://") || uri.startsWith("ph://"));
+                  return (
+                    <BlurView
+                      key={idx}
+                      intensity={GlassTheme.blurIntensity}
+                      tint="systemThinMaterialDark"
+                      style={styles.imageBlurWrapper}
+                    >
+                      {isValidUri ? (
+                        <Image source={{ uri }} style={styles.previewImage} resizeMode="cover" />
+                      ) : (
+                        <View style={[styles.previewImage, styles.imageFallback]}>
+                          <Ionicons name="image-outline" size={32} color="rgba(255,255,255,0.3)" />
+                        </View>
+                      )}
+                    </BlurView>
+                  );
+                })}
               </ScrollView>
             </View>
 
@@ -504,7 +573,9 @@ export default function CaptionDetailScreen() {
               tint="systemThinMaterialDark"
               style={styles.emptyCard}
             >
-              <Text style={styles.emptyText}>{t("common.emptyTexts")}</Text>
+              <Text style={styles.emptyText}>
+                {isRefreshing ? t("common.refreshing") : t("common.emptyTexts")}
+              </Text>
             </BlurView>
           </Reanimated.View>
         ) : isPerImage ? (
@@ -789,14 +860,14 @@ const styles = StyleSheet.create({
     ...GlassTheme.cardShadow,
   },
   cardBlur: {
-    width: GlassTheme.cardWidth,
+    width: Dimensions.get("window").width * 0.85,
     borderRadius: GlassTheme.cardBorderRadius,
     overflow: "hidden",
     borderWidth: 1.5,
     borderColor: GlassTheme.glassBorder,
   },
   cardInner: {
-    padding: 20,
+    padding: 24,
     backgroundColor: GlassTheme.cardBackground,
   },
   cardLabel: {
@@ -840,6 +911,7 @@ const styles = StyleSheet.create({
     borderColor: GlassTheme.vibrantBorder,
     alignItems: "center",
     backgroundColor: GlassTheme.glassBg,
+    marginTop: 16,
   },
   copyButtonText: {
     fontSize: 14,
@@ -976,5 +1048,10 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     color: GlassTheme.textSub,
     marginBottom: 12,
+  },
+  imageFallback: {
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.05)",
   },
 });

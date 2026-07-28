@@ -7,8 +7,9 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
+  cancelAnimation,
 } from "react-native-reanimated";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { GlassTheme } from "@/constants/LiquidGlass";
 
 const { width } = Dimensions.get("window");
@@ -20,6 +21,7 @@ interface AILoadingOverlayProps {
 function BreathingCore() {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
+  const mounted = useRef(true);
 
   useEffect(() => {
     scale.value = withRepeat(
@@ -38,6 +40,11 @@ function BreathingCore() {
       -1,
       true,
     );
+    return () => {
+      mounted.current = false;
+      cancelAnimation(scale);
+      cancelAnimation(opacity);
+    };
   }, []);
 
   const outerGlowStyle = useAnimatedStyle(() => ({
@@ -60,6 +67,7 @@ function BreathingCore() {
 
 function PulsingText({ text }: { text: string }) {
   const opacity = useSharedValue(1);
+  const mounted = useRef(true);
 
   useEffect(() => {
     opacity.value = withRepeat(
@@ -70,6 +78,10 @@ function PulsingText({ text }: { text: string }) {
       -1,
       true,
     );
+    return () => {
+      mounted.current = false;
+      cancelAnimation(opacity);
+    };
   }, []);
 
   const textStyle = useAnimatedStyle(() => ({

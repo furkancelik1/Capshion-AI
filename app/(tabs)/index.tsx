@@ -1,12 +1,13 @@
 import * as Haptics from "expo-haptics";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useRootNavigationState } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
   Animated,
+  AppState,
   Keyboard,
   Modal,
   Pressable,
@@ -17,6 +18,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  AppStateStatus,
 } from "react-native";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import AmbientGlow from "../../components/AmbientGlow";
@@ -40,7 +42,8 @@ import { useAuth } from "../../hooks/useAuth";
 import { useGenerateCaption } from "../../hooks/useGenerateCaption";
 import { usePayment } from "../../hooks/usePayment";
 import { useStripePayment } from "../../hooks/useStripePayment";
-import { api } from "../../services/api";
+import { api, lastNavigationTimestamp } from "../../services/api";
+import { useToast } from "../../context/ToastContext";
 
 function renderFeatureIcon(icon: string) {
   switch (icon) {
@@ -127,6 +130,8 @@ export default function HomeScreen() {
   const [customPrompt, setCustomPrompt] = useState("");
   const customPromptRef = useRef<TextInput>(null);
 
+  const { showToast } = useToast();
+
   const bottomSheetRef = useRef<BottomSheetModal | null>(null);
 
   const { user } = useAuth();
@@ -147,7 +152,87 @@ export default function HomeScreen() {
     refreshProfile();
   }, [user, refreshProfile]);
 
+  const captionCountRef = useRef(0);
+  const rootNavigationState = useRootNavigationState();
+  const isNavigationReady = rootNavigationState?.key != null;
+
+  useEffect(() => {
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+    let safetyTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const subscription = AppState.addEventListener("change", async (nextAppState: AppStateStatus) => {
+      if (nextAppState === "active" && isGenerating) {
+        console.log("[AppState] Uygulama ön plana geldi, veri kontrol ediliyor...");
+
+        const checkData = async () => {
+          await refreshProfile();
+          try {
+            const captions = await api.getCaptions();
+            if (captions && captions.length > captionCountRef.current) {
+              console.log("[AppState] Yeni veri bulundu! Yönlendiriliyor...");
+              captionCountRef.current = captions.length;
+              if (pollInterval) clearInterval(pollInterval);
+              if (safetyTimeout) clearTimeout(safetyTimeout);
+              setIsGenerating(false);
+              if (isNavigationReady && Date.now() - lastNavigationTimestamp > 3000) {
+                const targetId = captions[0].post_id;
+                console.log(`[AppState] Yeni veri bulundu! Yönlendirilecek ID: ${targetId}`);
+                setTimeout(() => {
+                  router.push({
+                    pathname: '/caption/[id]',
+                    params: { id: targetId }
+                  });
+                }, 500);
+              } else if (!isNavigationReady) {
+                console.log("[AppState] Router henüz hazır değil, yönlendirme ertelendi.");
+              }
+              return true;
+            }
+          } catch {
+            // keep polling
+          }
+          return false;
+        };
+
+        const firstResult = await checkData();
+        if (firstResult) return;
+
+        pollInterval = setInterval(async () => {
+          const found = await checkData();
+          if (found && pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
+        }, 2000);
+
+        safetyTimeout = setTimeout(() => {
+          if (pollInterval) clearInterval(pollInterval);
+          if (isGenerating) {
+            setIsGenerating(false);
+          }
+        }, 15000);
+      } else if (nextAppState.match(/inactive|background/)) {
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+        }
+        if (safetyTimeout) {
+          clearTimeout(safetyTimeout);
+          safetyTimeout = null;
+        }
+      }
+    });
+
+    return () => {
+      subscription.remove();
+      if (pollInterval) clearInterval(pollInterval);
+      if (safetyTimeout) clearTimeout(safetyTimeout);
+    };
+  }, [isGenerating, isNavigationReady, refreshProfile]);
+
   const handleGenerate = async () => {
+    if (isGenerating) return;
+
     if (selectedImages.length === 0 || !selectedTone) {
       Alert.alert(t("home.alertMissingTitle"), t("home.alertMissingMessage"));
       return;
@@ -166,6 +251,7 @@ export default function HomeScreen() {
     }
 
     setIsGenerating(true);
+    showToast?.("Üretim başladı. Arka plana alabilirsiniz, hazır olduğunda bildirim göndereceğiz. ✨", "info");
 
     try {
       const genFn = captionMode === "per_image" ? generatePerImage : generate;
@@ -193,8 +279,22 @@ export default function HomeScreen() {
         setSelectedImages([]);
         setSelectedTone(null);
       }
+      setIsGenerating(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
+      const isNetworkError =
+        msg.toLowerCase().includes("fetch failed") ||
+        msg.toLowerCase().includes("network") ||
+        msg.toLowerCase().includes("bağlanılamadı") ||
+        msg.toLowerCase().includes("zaman aşımı") ||
+        (err as any)?.name === "AbortError" ||
+        (err as any)?.status === 0 ||
+        (err as any)?.status === 408;
+      if (isNetworkError) {
+        console.log("Fetch işlemi arka plana geçiş sebebiyle iptal edildi, sunucu işlemi devraldı.");
+        showToast?.("İşlem arka planda devam ediyor, hazır olunca bildirim alacaksın. ⏳", "info");
+        return;
+      }
       if (msg.toLowerCase().includes("kredi")) {
         Alert.alert(
           t("outOfCredits.title"),
@@ -210,7 +310,6 @@ export default function HomeScreen() {
       } else {
         Alert.alert(t("home.alertError"), msg);
       }
-    } finally {
       setIsGenerating(false);
     }
   };

@@ -1,8 +1,5 @@
-import { useEffect, useState } from "react";
-import { useColorScheme, View } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
-import * as SplashScreen from "expo-splash-screen";
+import { StripeProvider } from "@stripe/stripe-react-native";
 import * as Notifications from "expo-notifications";
 import {
   DarkTheme,
@@ -12,19 +9,25 @@ import {
   useRouter,
   useSegments,
 } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { StripeProvider } from "@stripe/stripe-react-native";
-import { usePushNotifications } from "../hooks/usePushNotifications";
+import { useEffect, useRef, useState } from "react";
+import { useColorScheme, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import AnimatedBackground from "../components/AnimatedBackground";
 import AnimatedSplashScreen from "../components/AnimatedSplashScreen";
-import { useAuth, AuthProvider } from "../hooks/useAuth";
-import { api } from "../services/api";
 import { ToastProvider } from "../context/ToastContext";
-import i18next, { initPromise } from "../i18n";
+import { AuthProvider, useAuth } from "../hooks/useAuth";
+import { usePushNotifications } from "../hooks/usePushNotifications";
+import { initPromise } from "../i18n";
+import {
+  api
+} from "../services/api";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -44,6 +47,7 @@ function RootLayoutNav() {
   const { user, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const lastNavigationTimestamp = useRef<number>(0);
 
   useEffect(() => {
     if (expoPushToken) {
@@ -58,7 +62,10 @@ function RootLayoutNav() {
           await api.savePushToken(expoPushToken);
           console.log("PUSH_DEBUG: Token API ile başarıyla kaydedildi!");
         } catch (err) {
-          console.error("PUSH_DEBUG: Token kaydedilemedi:", err instanceof Error ? err.message : err);
+          console.error(
+            "PUSH_DEBUG: Token kaydedilemedi:",
+            err instanceof Error ? err.message : err,
+          );
         }
       }
     };
@@ -78,7 +85,8 @@ function RootLayoutNav() {
   useEffect(() => {
     if (!splashDone || loading || !i18nReady) return;
 
-    const inAuthGroup = segments[0] === "(auth)" || (segments[0] as string) === "(public)";
+    const inAuthGroup =
+      segments[0] === "(auth)" || (segments[0] as string) === "(public)";
 
     if (!user && !inAuthGroup) {
       router.replace("/(auth)/login");
@@ -87,28 +95,63 @@ function RootLayoutNav() {
     }
   }, [splashDone, user, loading, segments, i18nReady]);
 
-  const inAuth = segments[0] === "(auth)" || (segments[0] as string) === "(public)";
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener(
+      async (r) => {
+        const data = r.notification.request.content.data as
+          | Record<string, any>
+          | undefined;
+        if (data?.post_id) {
+          lastNavigationTimestamp.current = Date.now();
+        await new Promise(resolve => setTimeout(resolve, 800));
+        router.push(`/caption/${data.post_id}`);
+      } else if (data?.screen === "history") {
+        lastNavigationTimestamp.current = Date.now();
+          await new Promise((resolve) => setTimeout(resolve, 800));
+          router.push("/(tabs)/history");
+        }
+      },
+    );
+    return () => sub.remove();
+  }, [router]);
+
+  const inAuth =
+    segments[0] === "(auth)" || (segments[0] as string) === "(public)";
 
   const customTheme = {
     ...(colorScheme === "dark" ? DarkTheme : DefaultTheme),
     colors: {
       ...(colorScheme === "dark" ? DarkTheme : DefaultTheme).colors,
-      background: 'transparent',
+      background: "transparent",
     },
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#05050A' }}>
+    <View style={{ flex: 1, backgroundColor: "#05050A" }}>
       <AnimatedBackground />
       {!splashDone ? (
         <AnimatedSplashScreen onAnimationFinish={() => setSplashDone(true)} />
       ) : (
         <>
           <ThemeProvider value={customTheme}>
-            <Stack screenOptions={{ animation: 'slide_from_right', contentStyle: { backgroundColor: 'transparent' } }}>
-              <Stack.Screen name="(public)/onboarding" options={{ headerShown: false }} />
-              <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
-              <Stack.Screen name="(auth)/register" options={{ headerShown: false }} />
+            <Stack
+              screenOptions={{
+                animation: "slide_from_right",
+                contentStyle: { backgroundColor: "transparent" },
+              }}
+            >
+              <Stack.Screen
+                name="(public)/onboarding"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="(auth)/login"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="(auth)/register"
+                options={{ headerShown: false }}
+              />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen
                 name="caption/[id]"
