@@ -21,7 +21,7 @@ import { AuthProvider, useAuth } from "../hooks/useAuth";
 import { usePushNotifications } from "../hooks/usePushNotifications";
 import { initPromise } from "../i18n";
 import {
-  api
+  api, setLastNavigationTimestamp
 } from "../services/api";
 
 Notifications.setNotificationHandler({
@@ -47,7 +47,6 @@ function RootLayoutNav() {
   const { user, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
-  const lastNavigationTimestamp = useRef<number>(0);
 
   useEffect(() => {
     if (expoPushToken) {
@@ -101,15 +100,15 @@ function RootLayoutNav() {
         const data = r.notification.request.content.data as
           | Record<string, any>
           | undefined;
-        if (data?.post_id) {
-          lastNavigationTimestamp.current = Date.now();
+      if (data?.post_id) {
+        setLastNavigationTimestamp(Date.now());
         await new Promise(resolve => setTimeout(resolve, 800));
         router.push(`/caption/${data.post_id}`);
       } else if (data?.screen === "history") {
-        lastNavigationTimestamp.current = Date.now();
-          await new Promise((resolve) => setTimeout(resolve, 800));
-          router.push("/(tabs)/history");
-        }
+        setLastNavigationTimestamp(Date.now());
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        router.push("/(tabs)/history");
+      }
       },
     );
     return () => sub.remove();

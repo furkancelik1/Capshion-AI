@@ -153,6 +153,7 @@ export default function HomeScreen() {
   }, [user, refreshProfile]);
 
   const captionCountRef = useRef(0);
+  const hasNavigatedRef = useRef(false);
   const rootNavigationState = useRootNavigationState();
   const isNavigationReady = rootNavigationState?.key != null;
 
@@ -165,6 +166,10 @@ export default function HomeScreen() {
         console.log("[AppState] Uygulama ön plana geldi, veri kontrol ediliyor...");
 
         const checkData = async () => {
+          if (hasNavigatedRef.current) {
+            console.log("[AppState] hasNavigated=true, polling atlandı.");
+            return true;
+          }
           await refreshProfile();
           try {
             const captions = await api.getCaptions();
@@ -177,6 +182,7 @@ export default function HomeScreen() {
               if (isNavigationReady && Date.now() - lastNavigationTimestamp > 3000) {
                 const targetId = captions[0].post_id;
                 console.log(`[AppState] Yeni veri bulundu! Yönlendirilecek ID: ${targetId}`);
+                hasNavigatedRef.current = true;
                 setTimeout(() => {
                   router.push({
                     pathname: '/caption/[id]',
@@ -265,6 +271,7 @@ export default function HomeScreen() {
 
       if (result) {
         setCredits(result.remainingCredits === -1 ? (isPremium ? -1 : 0) : result.remainingCredits);
+        hasNavigatedRef.current = true;
         router.push({
           pathname: "/caption/[id]",
           params: {

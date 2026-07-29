@@ -73,11 +73,12 @@
         {
           "icon": "./assets/images/icon.png",
           "color": "#8B5CF6",
-            "sounds": [
-              "./assets/sounds/capshion_sound.wav"
-            ]
+          "sounds": [
+            "./assets/sounds/capshion_sound.wav"
+          ]
         }
-      ]
+      ],
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true

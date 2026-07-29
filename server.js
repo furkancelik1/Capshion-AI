@@ -588,6 +588,77 @@ app.post("/api/payments/create-payment-intent", authenticateToken, async (req, r
   }
 });
 
+// ─── MASTER SYSTEM PROMPT BUILDER ───────────────────────────────────────────
+function buildSystemPrompt({ gender, tone, length, useEmojis, useHashtags, ageRange, customPrompt, isPremium, carouselMode, isPerImage, imageCount, langName }) {
+  const bannedWords = "'Unleash', 'elevate', 'transformative', 'journey', 'delve', 'embrace', 'captivating', 'unlock', 'unlock the potential', 'world of', 'Dive into', 'Elevate your', 'Discover the magic', \"Let's delve\", 'Find your', \"It's time to\", 'Get ready to', 'Let your', 'Radiate confidence', 'Step into', 'Your inner', 'Channel your', 'The ultimate guide to'";
+
+  // 1. TEMEL PERSONA VE KURALLAR
+  let prompt = `Sen Instagram ve TikTok için çalışan seçkin, trendleri belirleyen ve viral içerikler üreten bir Sosyal Medya Metin Yazarısın.
+Amacın, verilen görseli analiz ederek en yüksek etkileşimi (beğeni, yorum, kaydetme) alacak açıklamalar (caption) yazmaktır.
+
+KESİN KURALLAR (BUNLARA UYMAZSAN SİSTEM ÇÖKER):
+1. BİRİNCİ TEKİL ŞAHIS (POV): Metni her zaman fotoğrafı/videoyu paylaşan kişinin (veya markanın) ağzından yaz. Kendinden bahseden, kendi hislerini anlatan, doğal bir dil kullan. Asla dışarıdan bir gözlemci gibi betimleme yapma.
+2. KANCA (HOOK): İlk cümle kesinlikle vurucu, merak uyandırıcı, iddialı veya okuyucuyu durduracak (scroll-stopping) bir kanca olmalıdır.
+3. OKUNABİLİRLİK: Metni tek bir blok halinde YAZMA. Cümleler arasında ve paragraflar arasında mutlaka boşluklar bırak (Visual pacing). Instagram'da okunabilirlik her şeydir.
+4. YASAKLI KELİMELER: ${bannedWords} gibi yapay zeka klişesi olan yavan kelimeleri KESİNLİKLE kullanma.
+5. DOĞALLIK: Sanki yakın bir arkadaşına veya çok havalı bir topluluğa yazıyormuşsun gibi samimi, modern ve akıcı ol.`;
+
+  // 2. CİNSİYET / ÖZNE DİNAMİĞİ
+  if (gender === 'female') {
+    prompt += `\n\nKİMLİK: Sen zarif, özgüvenli ve modern bir KADINSIN. Hitabetini, övgülerini ve enerjini dişil enerjiye, zarafete ve kadınsal trendlere uygun ayarla.`;
+  } else if (gender === 'male') {
+    prompt += `\n\nKİMLİK: Sen karizmatik, net ve özgüvenli bir ERKEKSİN. Hitabetini ve enerjini maskülen, cool ve sade bir stile uygun ayarla.`;
+  } else if (gender === 'corporate') {
+    prompt += `\n\nKİMLİK: Sen vizyoner ve profesyonel bir MARKASIN (Kurumsal). 'Ben' yerine 'Biz' dilini kullan. Müşterilere güven, kalite ve prestij yansıtan, satış ve pazarlama odaklı bir dil kullan. Asla kişisel fiziksel övgüler yapma.`;
+  }
+
+  // 3. TON DİNAMİĞİ
+  if (tone === 'viral') {
+    prompt += `\n\nTON: VIRAL & KANCA ODAKLI. İnsanları yorum yapmaya veya postu arkadaşlarına göndermeye (share) zorlayacak tartışmalı veya çok merak uyandıran bir dil kullan.`;
+  } else if (tone === 'luxury') {
+    prompt += `\n\nTON: ULTRA LÜKS & MİNİMAL. Çok az kelime kullan. 'Old money' tarzında, gizemli, fazlasıyla özgüvenli ve ulaşılmaz bir ton. Asla açıklama yapma, sadece hissettir.`;
+  } else if (tone === 'storyteller') {
+    prompt += `\n\nTON: HİKAYE ANLATICI. Bu karenin arkasındaki duyguyu, anıyı veya perde arkasını samimi ve sürükleyici bir dille anlat. Duygusal bağ kur.`;
+  } else if (tone === 'cool') {
+    prompt += `\n\nTON: TRENDY & COOL. Modern argo kullan, zahmetsizce şık ve stil sahibi bir dil.`;
+  } else if (tone === 'humorous') {
+    prompt += `\n\nTON: ESPRİLİ & EĞLENCELİ. Zekice kelime oyunları, hafif şakalar ve oyuncu bir tavır.`;
+  } else if (tone === 'minimal') {
+    prompt += `\n\nTON: MİNİMALİST & ESTETİK. Temiz, sade ve görsel olarak şiirsel. Az kelime, yüksek etki.`;
+  } else if (tone === 'professional') {
+    prompt += `\n\nTON: PROFESYONEL & KURUMSAL. Ciddi, özgüvenli ve iş dünyasına uygun bir dil.`;
+  }
+
+  // 4. UZUNLUK, EMOJİ VE HASHTAG
+  const lengthDesc = length === 'short' ? 'çok kısa ve öz (1-2 cümle)' : length === 'long' ? 'uzun, detaylı ve blog tarzı' : 'orta uzunlukta, dengeli';
+  prompt += `\n\nUZUNLUK: Metin ${lengthDesc} olmalı.`;
+  prompt += `\nEMOJİ: ${useEmojis !== false ? 'Metnin tonuna uygun, göze batmayan estetik emojiler kullan.' : 'KESİNLİKLE HİÇ EMOJİ KULLANMA.'}`;
+  prompt += `\nHASHTAG: ${useHashtags !== false ? 'Metnin en sonuna, keşfete düşmeyi sağlayacak 3-5 adet popüler ve niş hashtag ekle.' : 'KESİNLİKLE HİÇ HASHTAG YAZMA.'}`;
+  prompt += `\nYAŞ ARALIĞI: ${ageRange || 'Genel / Tüm yaş grupları'}`;
+
+  // 5. KULLANICI ÖZEL İSTEĞİ (varsa ve premium ise)
+  if (customPrompt && isPremium) {
+    prompt += `\n\n🚨 KULLANICININ ÖZEL İSTEĞİ (Bu kural diğer tüm kuralları ezer, KESİNLİKLE UYGULA): "${customPrompt}"`;
+  }
+
+  // 6. CAROUSEL / PER_IMAGE MODU
+  if (carouselMode) {
+    prompt += `\n\n📌 FORMAT: Sana birden fazla görsel gönderildi (Carousel Post). Çıktını KESİNLİKLE şu formatta ver:
+    Slide 1: [İlk görsel için vurucu bir metin]
+    Slide 2: [İkinci görsel için hikayeyi devam ettiren metin]
+    ...
+    (Her bir görselin birbiriyle bağlantılı, kaydırdıkça merak uyandıran bir hikaye anlattığından emin ol).`;
+  } else if (isPerImage) {
+    prompt += `\n\n📌 FORMAT: ${imageCount} görsel var. Her görsel için BİR adet benzersiz caption yaz. Her caption farklı ve o görsele özel olmalı. image_index sırası görsellerle eşleşmeli.`;
+  }
+
+  // DİL
+  const langDisplay = langName || "Türkçe";
+  prompt += `\n\nDİL: ${langDisplay === "Türkçe" ? "Türkçe yaz. Günlük konuşma Türkçesi kullan, resmi olmasın." : `Write in ${langDisplay}. Use everyday ${langDisplay}, don't be formal.`}`;
+
+  return prompt;
+}
+
 app.post("/api/captions/generate", authenticateToken, upload.array("images", 5), async (req, res) => {
   console.log("[Generate] İstek alındı, userId:", req.userId);
 
@@ -622,44 +693,30 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
 
     const langMap = { tr: "Türkçe", en: "English", de: "Deutsch", fr: "Français", es: "Español", ar: "العربية", ru: "Русский" };
     const langName = langMap[language] || language || "Türkçe";
-    const instructionLang = langName === "Türkçe" ? "Türkçe yaz. Günlük konuşma Türkçesi kullan, resmi olmasın." : `Write in ${langName}. Use everyday ${langName}, don't be formal.`;
 
-    const genderInstructions = {
-      female: "İçeriğin öznesi/kullanıcısı bir KADIN. Hitabeti, övgüleri, kelime seçimlerini ve emojileri bir kadına/kadın stiline uygun, zarif ve doğal bir şekilde ayarla.",
-      male: "İçeriğin öznesi/kullanıcısı bir ERKEK. Hitabeti, övgüleri, kelime seçimlerini ve emojileri bir erkeğe/erkek stiline uygun, karizmatik ve doğal bir şekilde ayarla.",
-      corporate: "İçeriğin öznesi bir MARKA, İŞLETME veya KURUMSAL bir hesap. Metni yazarken 'Ben' yerine 'Biz' dilini kullan (veya markanın kurumsal ağzından yaz). Kişisel fiziksel övgüler yerine; profesyonellik, kalite, vizyon ve sunulan hizmete/ürüne/mekana odaklan. Hitabeti daha prestijli, güven verici ve kurumsal bir tonda ayarla.",
-    };
-    const genderInstruction = genderInstructions[gender] || `Gender: ${gender || "neutral"}`;
+    const prompt = buildSystemPrompt({
+      gender,
+      tone,
+      length,
+      useEmojis: useEmojis !== false,
+      useHashtags: useHashtags !== false,
+      ageRange,
+      customPrompt: customPrompt && userRow.is_premium ? customPrompt.trim() : "",
+      isPremium: userRow.is_premium,
+      carouselMode: !!carouselMode,
+      isPerImage: false,
+      imageCount: files.length,
+      langName,
+    }) + `\n\nSadece JSON formatında yanıt ver:
 
-    const toneInstructions = {
-      cool: "Write in a trendy, cool, and fashionable tone. Use modern slang and keep it effortlessly stylish.",
-      humorous: "Write in a witty and humorous tone. Use clever wordplay, light jokes, and a playful attitude.",
-      minimal: "Write in a minimal and aesthetic tone. Keep it clean, simple, and visually poetic. Few words, high impact.",
-      professional: "Write in a professional and corporate tone. Be polished, confident, and business-appropriate.",
-      viral: "Write an extremely engaging, viral-style caption. Start with a strong 'hook' (a controversial statement, a bold question, or a cliffhanger) that forces people to read the rest. Optimize for high engagement, comments, and saves. Use modern social media pacing.",
-      luxury: "Write an ultra-luxury, 'old money', and highly prestigious caption. Use very few words. Minimalist, mysterious, and highly confident. Do not over-explain. Act like a top-tier designer brand.",
-      storyteller: "Write an emotional and captivating storytelling caption. Describe the feeling, the behind-the-scenes, or the memory associated with this moment. Create a deep connection with the reader.",
-    };
-    const toneInstruction = toneInstructions[tone] || "";
-    const safeCustomPrompt = customPrompt && userRow.is_premium ? customPrompt.trim() : "";
+{
+  "captions": [
+    { "caption_text": "caption text (\\n ile satır arası boşluk ekle)", "hashtags": ["#tag1", "#tag2"] },
+    { "caption_text": "caption text (\\n ile satır arası boşluk ekle)", "hashtags": ["#tag3", "#tag4"] }
+  ]
+}
 
-    const lengthMap = { short: "very short (1-2 sentences)", medium: "moderate length (2-3 sentences)", long: "detailed (3-5 sentences)" };
-    const lengthInstruction = `Caption length: ${lengthMap[length] || lengthMap.medium}.`;
-
-    const emojiInstruction = useEmojis !== false
-      ? "Emojis OK but don't overdo it."
-      : "KESİNLİKLE EMOJİ KULLANMA.";
-
-    const hashtagInstruction = useHashtags !== false
-      ? "Add 2-4 relevant hashtags per caption."
-      : "KESİNLİKLE HASHTAG KULLANMA.";
-
-    const carouselInstruction = carouselMode ? `Sen bir Carousel (Kaydırmalı) Post uzmanısın. Yüklenen görselleri sırasıyla analiz et. Her görsel için o ana özel, birbiriyle bağlantılı ve merak uyandıran metinler yaz. Her görsel için ayrı bir caption üret. Hikayenin akışkan ve sürükleyici olduğundan emin ol.\n\n` : "";
-
-    const customPromptBlock = safeCustomPrompt ? `\nKULLANICININ ÖZEL İSTEĞİ (Buna KESİNLİKLE uy): ${safeCustomPrompt}` : "";
-
-    const bannedWords = "ASLA KULLANMA: unleash, journey, transformative, embrace, unlock the potential, world of, Dive into, Elevate your, Discover the magic, Let's delve, Find your, It's time to, Get ready to, Let your, Embrace the, Unlock your, Radiate confidence, Step into, Your inner, Channel your, The ultimate guide to";
-    const prompt = `${carouselInstruction}FOTOĞRAFI PAYLAŞAN KİŞİNİN AĞZINDAN (BEN DİLİ), sanki kendi Instagram hesabına doğal bir an paylaşıyormuş gibi yaz. KESİNLİKLE üçüncü şahıs övgüsü yapma ("Bu kadın çok güzel", "Bu adam çok cool"). Sadece "Ben" gözünden yaz.\n\nKurallar:\n- İLK CÜMLE merak uyandırsın, iddialı ya da samimi bir sohbet havasında başlasın. Okuyucu "devamını oku"ya tıklamak istesin.\n- Satır aralarına mutlaka boşluk ekle. Metin tek blok olmasın.\n- ${bannedWords}\n- Kısa ve öz. Görselin önüne geçme, az ama etkili yaz.\n- Sanki yakın arkadaşına fotoğraf atıyormuş gibi doğal ve samimi ol. Karmaşık cümleler kurma.\n\n${instructionLang}\n${genderInstruction}\n${toneInstruction}\n${lengthInstruction}\n${emojiInstruction}\n${hashtagInstruction}\nAge range: ${ageRange || "general"}${customPromptBlock}\n\nSadece JSON formatında yanıt ver:\n\n{\n  "captions": [\n    { "caption_text": "caption text (\\n ile satır arası boşluk ekle)", "hashtags": ["#tag1", "#tag2"] },\n    { "caption_text": "caption text (\\n ile satır arası boşluk ekle)", "hashtags": ["#tag3", "#tag4"] }\n  ]\n}\n\nEn az 2, en fazla 4 caption üret.`;
+En az 2, en fazla 4 caption üret.`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -790,70 +847,25 @@ app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
 
     const langMap = { tr: "Türkçe", en: "English", de: "Deutsch", fr: "Français", es: "Español", ar: "العربية", ru: "Русский" };
     const langName = langMap[language] || language || "Türkçe";
-    const instructionLang = langName === "Türkçe"
-      ? "Türkçe yaz. Günlük konuşma Türkçesi kullan, resmi olmasın."
-      : `Write in ${langName}. Use everyday ${langName}, don't be formal.`;
 
-    const genderInstructions = {
-      female: "İçeriğin öznesi/kullanıcısı bir KADIN. Hitabeti, övgüleri, kelime seçimlerini ve emojileri bir kadına/kadın stiline uygun, zarif ve doğal bir şekilde ayarla.",
-      male: "İçeriğin öznesi/kullanıcısı bir ERKEK. Hitabeti, övgüleri, kelime seçimlerini ve emojileri bir erkeğe/erkek stiline uygun, karizmatik ve doğal bir şekilde ayarla.",
-      corporate: "İçeriğin öznesi bir MARKA, İŞLETME veya KURUMSAL bir hesap. Metni yazarken 'Ben' yerine 'Biz' dilini kullan (veya markanın kurumsal ağzından yaz). Kişisel fiziksel övgüler yerine; profesyonellik, kalite, vizyon ve sunulan hizmete/ürüne/mekana odaklan. Hitabeti daha prestijli, güven verici ve kurumsal bir tonda ayarla.",
-    };
-    const genderInstruction = genderInstructions[gender] || `Gender: ${gender || "neutral"}`;
-
-    const toneInstructions = {
-      cool: "Write in a trendy, cool, and fashionable tone. Use modern slang and keep it effortlessly stylish.",
-      humorous: "Write in a witty and humorous tone. Use clever wordplay, light jokes, and a playful attitude.",
-      minimal: "Write in a minimal and aesthetic tone. Keep it clean, simple, and visually poetic. Few words, high impact.",
-      professional: "Write in a professional and corporate tone. Be polished, confident, and business-appropriate.",
-      viral: "Write an extremely engaging, viral-style caption. Start with a strong 'hook' (a controversial statement, a bold question, or a cliffhanger) that forces people to read the rest. Optimize for high engagement, comments, and saves. Use modern social media pacing.",
-      luxury: "Write an ultra-luxury, 'old money', and highly prestigious caption. Use very few words. Minimalist, mysterious, and highly confident. Do not over-explain. Act like a top-tier designer brand.",
-      storyteller: "Write an emotional and captivating storytelling caption. Describe the feeling, the behind-the-scenes, or the memory associated with this moment. Create a deep connection with the reader.",
-    };
-    const toneInstruction = toneInstructions[tone] || "";
-    const safeCustomPrompt = customPrompt && userRow.is_premium ? customPrompt.trim() : "";
-
-    const lengthMap = { short: "very short (1-2 sentences)", medium: "moderate length (2-3 sentences)", long: "detailed (3-5 sentences)" };
-    const lengthInstruction = `Caption length: ${lengthMap[length] || lengthMap.medium}.`;
-
-    const emojiInstruction = useEmojis !== false
-      ? "Emojis OK but don't overdo it."
-      : "KESİNLİKLE EMOJİ KULLANMA.";
-
-    const hashtagInstruction = useHashtags !== false
-      ? "Add 2-4 relevant hashtags per caption."
-      : "KESİNLİKLE HASHTAG KULLANMA.";
-
-    const customPromptBlock = safeCustomPrompt ? `\nKULLANICININ ÖZEL İSTEĞİ (Buna KESİNLİKLE uy): ${safeCustomPrompt}` : "";
-
-    const carouselInstruction = carouselMode ? `Sen bir Carousel (Kaydırmalı) Post uzmanısın. Yüklenen görselleri sırasıyla analiz et. Her görsel için o ana özel, birbiriyle bağlantılı ve merak uyandıran metinler yaz. Her görsel için ayrı bir caption üret. Hikayenin akışkan ve sürükleyici olduğundan emin ol.\n\n` : "";
-
-    const bannedWords = "ASLA KULLANMA: unleash, journey, transformative, embrace, unlock the potential, world of, Dive into, Elevate your, Discover the magic, Let's delve, Find your, It's time to, Get ready to, Let your, Embrace the, Unlock your, Radiate confidence, Step into, Your inner, Channel your, The ultimate guide to";
-    const baseRules = `- İLK CÜMLE merak uyandırsın, iddialı ya da samimi bir sohbet havasında başlasın.
-- Satır aralarına mutlaka boşluk ekle. Metin tek blok olmasın.
-- ${bannedWords}
-- Kısa ve öz yaz. Görselin önüne geçme.
-- Sanki yakın arkadaşına anlatıyormuş gibi doğal ol, karmaşık cümleler kurma.`;
-
-    const commonFields = `${instructionLang}
-${genderInstruction}
-${toneInstruction}
-${lengthInstruction}
-${emojiInstruction}
-${hashtagInstruction}
-Age range: ${ageRange || "general"}${customPromptBlock}`;
+    const basePrompt = buildSystemPrompt({
+      gender,
+      tone,
+      length,
+      useEmojis: useEmojis !== false,
+      useHashtags: useHashtags !== false,
+      ageRange,
+      customPrompt: customPrompt && userRow.is_premium ? customPrompt.trim() : "",
+      isPremium: userRow.is_premium,
+      carouselMode: !!carouselMode,
+      isPerImage: !!isPerImage,
+      imageCount: images.length,
+      langName,
+    });
 
     let prompt;
     if (isPerImage) {
-      prompt = `${carouselInstruction}FOTOĞRAFI PAYLAŞAN KİŞİNİN AĞZINDAN (BEN DİLİ) yaz. KESİNLİKLE üçüncü şahıs övgüsü yapma. Her fotoğraf için o ana özel, samimi, "Ben" gözünden bir caption yaz. Instagram'da kaydırırken durduracak türden metinler olsun.
-
-${baseRules}
-
-ÖNEMLİ: ${images.length} görsel var. Her görsel için BİR adet benzersiz caption yaz. Her caption farklı ve o görsele özel olmalı.
-
-${commonFields}
-
-Sadece JSON formatında yanıt ver:
+      prompt = basePrompt + `\n\nSadece JSON formatında yanıt ver:
 
 {
   "captions": [
@@ -864,13 +876,7 @@ Sadece JSON formatında yanıt ver:
 
 Tam olarak ${images.length} caption üret. image_index sırası görsellerle eşleşmeli.`;
     } else {
-      prompt = `${carouselInstruction}FOTOĞRAFI PAYLAŞAN KİŞİNİN AĞZINDAN (BEN DİLİ) yaz. KESİNLİKLE üçüncü şahıs övgüsü yapma. Sanki kendi Instagram hesabına doğal bir an paylaşıyormuş gibi yaz.
-
-${baseRules}
-
-${commonFields}
-
-Sadece JSON formatında yanıt ver:
+      prompt = basePrompt + `\n\nSadece JSON formatında yanıt ver:
 
 {
   "captions": [

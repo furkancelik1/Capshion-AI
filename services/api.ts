@@ -28,6 +28,7 @@ export function getToken() {
 }
 
 export let lastNavigationTimestamp = 0;
+export const setLastNavigationTimestamp = (val: number) => { lastNavigationTimestamp = val; };
 
 export type CaptionRow = { id: string; caption_text: string; hashtags: string[]; created_at: string; post_id: string; image_url?: string };
 

@@ -5,6 +5,7 @@ import { GlassTheme } from "@/constants/LiquidGlass";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import * as Clipboard from "expo-clipboard";
+import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -16,7 +17,6 @@ import {
   Alert,
   Animated,
   Dimensions,
-  Image,
   InteractionManager,
   Linking,
   Modal,
@@ -29,6 +29,7 @@ import {
   View,
 } from "react-native";
 import Reanimated, {
+  FadeInDown,
   FadeInUp,
   useAnimatedStyle,
   useSharedValue,
@@ -78,7 +79,7 @@ function PerImageCard({
 
   return (
     <Reanimated.View
-      entering={FadeInUp.delay(index * 120).springify().damping(14)}
+      entering={FadeInDown.delay(index * 150).springify().damping(14)}
       style={styles.perImageCard}
     >
       <Reanimated.View style={[animatedStyle, styles.cardShadow]}>
@@ -89,7 +90,7 @@ function PerImageCard({
             style={styles.cardBlur}
           >
             <View style={styles.cardInner}>
-              <Image source={{ uri: imageUri }} style={styles.perImagePreview} resizeMode="cover" />
+              <ExpoImage source={{ uri: imageUri }} style={styles.perImagePreview} contentFit="cover" cachePolicy="memory-disk" />
               <Text style={styles.perImageLabel}>{t("common.image")} {index + 1}</Text>
               <TypeWriterText text={caption.text ?? ''} delay={(index + 1) * 150 + 200} />
               {(caption.hashtags ?? []).length > 0 && (
@@ -102,7 +103,7 @@ function PerImageCard({
                 </View>
               )}
               <HapticButton
-                style={styles.copyButton}
+                style={styles.perImageCopyButton}
                 onPress={() => onCopy(caption.text ?? '', index)}
                 activeOpacity={0.7}
               >
@@ -147,7 +148,7 @@ function GlassCard({
 
   return (
     <Reanimated.View
-      entering={FadeInUp.delay(index * 120)
+      entering={FadeInDown.delay(index * 150)
         .springify()
         .damping(14)}
     >
@@ -229,6 +230,15 @@ export default function CaptionDetailScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [localData, setLocalData] = useState<any[] | null>(null);
+  const [isTransitionReady, setIsTransitionReady] = useState(false);
+
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      setIsTransitionReady(true);
+    });
+    return () => task.cancel();
+  }, []);
 
   useEffect(() => {
     InteractionManager.runAfterInteractions(() => {
@@ -306,6 +316,7 @@ export default function CaptionDetailScreen() {
 
           if (isActive && rows && rows.length > 0) {
             console.log("[Details Render Debug] API'den gelen raw veri (focus):", JSON.stringify(rows));
+            setLocalData(rows);
             const first = rows[0];
             const imgUrl = first.image_url && first.image_url !== "base64" ? first.image_url : "";
             if (imgUrl) {
@@ -451,6 +462,12 @@ export default function CaptionDetailScreen() {
 
   console.log("[Caption] imageUrls.length:", imageUrls.length);
   console.log("[Caption] first imageUri (50 chars):", imageUrls[0]?.substring(0, 50));
+  console.log("[Details Image Debug] localData:", localData);
+  console.log("[Details Image Debug] inlineData?.image_urls:", inlineData?.image_urls);
+
+  if (!isTransitionReady) {
+    return <View style={styles.container} />;
+  }
 
   if (!isReady) {
     return (
@@ -491,13 +508,22 @@ export default function CaptionDetailScreen() {
             <Ionicons name="arrow-back" size={24} color={GlassTheme.textMain} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t("common.details")}</Text>
-          <TouchableOpacity onPress={() => {}} style={styles.headerBtn}>
-            <Ionicons
-              name="settings-outline"
-              size={24}
-              color={GlassTheme.textMain}
-            />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            {creditsRemaining !== null && (
+              <TouchableOpacity onPress={() => setShowCreditModal(true)} activeOpacity={0.7}>
+                <Text style={[styles.creditBadgeHeader, creditsRemaining === -1 && styles.creditBadgePremium]}>
+                  {creditsRemaining === -1 ? "♾️" : `🔋${creditsRemaining}`}
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={() => {}} style={styles.headerBtn}>
+              <Ionicons
+                name="settings-outline"
+                size={24}
+                color={GlassTheme.textMain}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
 
@@ -508,54 +534,28 @@ export default function CaptionDetailScreen() {
         decelerationRate={0.99}
         bounces={true}
       >
-        {imageUrls.length > 0 && (
+        {!isPerImage && (
           <Reanimated.View
             entering={FadeInUp.springify().damping(14)}
-            style={styles.imageSection}
+            style={{ marginBottom: 24, paddingHorizontal: 20 }}
           >
-            <View style={styles.imageCarouselWrapper}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.imageCarousel}
-                decelerationRate="fast"
-                snapToInterval={132}
-                snapToAlignment="start"
-                disableIntervalMomentum={true}
-              >
-                {imageUrls.map((uri, idx) => {
-                  const isValidUri = typeof uri === "string" && (uri.startsWith("http") || uri.startsWith("file://") || uri.startsWith("content://") || uri.startsWith("ph://"));
-                  return (
-                    <BlurView
-                      key={idx}
-                      intensity={GlassTheme.blurIntensity}
-                      tint="systemThinMaterialDark"
-                      style={styles.imageBlurWrapper}
-                    >
-                      {isValidUri ? (
-                        <Image source={{ uri }} style={styles.previewImage} resizeMode="cover" />
-                      ) : (
-                        <View style={[styles.previewImage, styles.imageFallback]}>
-                          <Ionicons name="image-outline" size={32} color="rgba(255,255,255,0.3)" />
-                        </View>
-                      )}
-                    </BlurView>
-                  );
-                })}
-              </ScrollView>
-            </View>
-
-            {/* Kredi Testi İçin Tıklanabilir Rozet */}
-            {creditsRemaining !== null && (
-              <TouchableOpacity
-                onPress={() => setShowCreditModal(true)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.creditBadge, creditsRemaining === -1 && styles.creditBadgePremium]}>
-                  {creditsRemaining === -1 ? "♾️ " + t("common.unlimited") : t("common.creditRemaining", { count: creditsRemaining })}
-                </Text>
-              </TouchableOpacity>
-            )}
+            {(() => {
+              const localImgUrl = localData?.[0]?.image_url && localData[0].image_url !== "base64" ? localData[0].image_url : "";
+              const uri = (imageUrls.length > 0 && imageUrls[0]) || localImgUrl || "";
+              const isValidUri = typeof uri === "string" && (uri.startsWith("http") || uri.startsWith("file://") || uri.startsWith("content://") || uri.startsWith("ph://"));
+              return isValidUri ? (
+                <ExpoImage
+                  source={{ uri }}
+                  style={{ width: 120, height: 120, borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                />
+              ) : (
+                <View style={{ width: 120, height: 120, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.05)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                  <Ionicons name="image-outline" size={32} color="rgba(255,255,255,0.3)" />
+                </View>
+              );
+            })()}
           </Reanimated.View>
         )}
 
@@ -827,6 +827,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     textDecorationLine: "underline",
   },
+  creditBadgeHeader: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: GlassTheme.textMain,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
   creditBadgePremium: {
     color: "#FBBF24",
     textShadowColor: "rgba(251,191,36,0.5)",
@@ -912,6 +919,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: GlassTheme.glassBg,
     marginTop: 16,
+  },
+  perImageCopyButton: {
+    paddingVertical: 11,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: GlassTheme.vibrantBorder,
+    alignItems: "center",
+    backgroundColor: GlassTheme.glassBg,
+    marginTop: 24,
   },
   copyButtonText: {
     fontSize: 14,
@@ -1036,17 +1052,17 @@ const styles = StyleSheet.create({
   },
   perImagePreview: {
     width: "100%",
-    height: 200,
+    height: 180,
     borderRadius: 12,
     marginBottom: 12,
     backgroundColor: GlassTheme.panelStrong,
   },
   perImageLabel: {
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: 11,
+    fontWeight: "600",
     textTransform: "uppercase",
-    letterSpacing: 1.2,
-    color: GlassTheme.textSub,
+    letterSpacing: 1.5,
+    color: "rgba(255,255,255,0.45)",
     marginBottom: 12,
   },
   imageFallback: {
