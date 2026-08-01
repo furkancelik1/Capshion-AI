@@ -10,6 +10,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCachedImageUris, api } from "../../services/api";
+import { posthog } from "../../services/posthog";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../../context/ToastContext";
 import {
@@ -354,6 +355,9 @@ export default function CaptionDetailScreen() {
     async (text: string, index: number) => {
       try {
         await Clipboard.setStringAsync(text);
+        posthog.capture('caption_copied', {
+          source: 'detail',
+        });
         setCopiedIndex(index);
         showToast(t("common.copiedDesc"), "success");
         setTimeout(() => setCopiedIndex(null), 2000);
@@ -371,6 +375,9 @@ export default function CaptionDetailScreen() {
     }
     try {
       await Share.share({ message: textToShare });
+      posthog.capture('caption_shared', {
+        destination: 'system_share_sheet',
+      });
     } catch {
       Alert.alert(t("home.alertError"), t("common.alertShareError"));
     }
@@ -379,6 +386,9 @@ export default function CaptionDetailScreen() {
   const handleInstagram = useCallback(async (textToShare: string) => {
     if (!textToShare) return;
     await Clipboard.setStringAsync(textToShare);
+    posthog.capture('caption_shared', {
+      destination: 'instagram',
+    });
     Alert.alert(
       t("common.copiedTitle"),
       t("common.copiedInstagramDesc"),

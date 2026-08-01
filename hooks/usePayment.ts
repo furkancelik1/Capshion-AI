@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { api } from '../services/api';
+import { posthog } from '../services/posthog';
 
 interface PaymentState {
   loading: boolean;
@@ -35,6 +36,10 @@ export function usePayment(onRefresh?: () => void): UsePaymentReturn {
     setState(prev => ({ ...prev, loading: true }));
     try {
       const result = await api.createPayment(price, credits, currency);
+      posthog.capture('credit_purchase_started', {
+        credit_amount: credits,
+        currency,
+      });
       pendingCreditsRef.current = credits;
       setState(prev => ({
         ...prev,
@@ -50,6 +55,9 @@ export function usePayment(onRefresh?: () => void): UsePaymentReturn {
   }, []);
 
   const handlePaymentSuccess = useCallback(() => {
+    posthog.capture('credit_purchase_completed', {
+      credit_amount: pendingCreditsRef.current,
+    });
     setState(prev => ({ ...prev, showWebView: false, paymentUrl: null }));
     onRefresh?.();
   }, [onRefresh]);

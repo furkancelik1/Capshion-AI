@@ -11,6 +11,7 @@ import {
 } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import { PostHogErrorBoundary, PostHogProvider } from "posthog-react-native";
 import { useEffect, useRef, useState } from "react";
 import { useColorScheme, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -23,6 +24,7 @@ import { initPromise } from "../i18n";
 import {
   api, setLastNavigationTimestamp
 } from "../services/api";
+import { posthog } from "../services/posthog";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -168,18 +170,26 @@ function RootLayoutNav() {
   );
 }
 
+function ErrorFallback() {
+  return <View style={{ flex: 1, backgroundColor: "#05050A" }} />;
+}
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <BottomSheetModalProvider>
-        <ToastProvider>
-          <StripeProvider publishableKey="pk_test_51Tx5gVIdWpTyLlw8RFhrsFNpzbKPzLzLFfP0h56w9wgcpTZzWjfimyoHzK253wN6UYBl1dYB9eS6D4cFemHvUe7G00a1eJrPlg">
-            <AuthProvider>
-              <RootLayoutNav />
-            </AuthProvider>
-          </StripeProvider>
-        </ToastProvider>
-      </BottomSheetModalProvider>
+      <PostHogProvider client={posthog}>
+        <PostHogErrorBoundary fallback={ErrorFallback}>
+          <BottomSheetModalProvider>
+            <ToastProvider>
+              <StripeProvider publishableKey="pk_test_51Tx5gVIdWpTyLlw8RFhrsFNpzbKPzLzLFfP0h56w9wgcpTZzWjfimyoHzK253wN6UYBl1dYB9eS6D4cFemHvUe7G00a1eJrPlg">
+                <AuthProvider>
+                  <RootLayoutNav />
+                </AuthProvider>
+              </StripeProvider>
+            </ToastProvider>
+          </BottomSheetModalProvider>
+        </PostHogErrorBoundary>
+      </PostHogProvider>
     </GestureHandlerRootView>
   );
 }
