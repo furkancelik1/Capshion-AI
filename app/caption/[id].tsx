@@ -42,6 +42,7 @@ interface CaptionItem {
   text?: string;
   hashtags?: string[];
   image_index?: number;
+  image_url?: string;
 }
 
 interface DetailScreenData {
@@ -464,6 +465,7 @@ export default function CaptionDetailScreen() {
   console.log("[Caption] first imageUri (50 chars):", imageUrls[0]?.substring(0, 50));
   console.log("[Details Image Debug] localData:", localData);
   console.log("[Details Image Debug] inlineData?.image_urls:", inlineData?.image_urls);
+  console.log("[Image Debug] Mevcut Obje:", captions?.[0] || localData);
 
   if (!isTransitionReady) {
     return <View style={styles.container} />;
@@ -540,18 +542,33 @@ export default function CaptionDetailScreen() {
             style={{ marginBottom: 24, paddingHorizontal: 20 }}
           >
             {(() => {
-              const localImgUrl = localData?.[0]?.image_url && localData[0].image_url !== "base64" ? localData[0].image_url : "";
-              const uri = (imageUrls.length > 0 && imageUrls[0]) || localImgUrl || "";
-              const isValidUri = typeof uri === "string" && (uri.startsWith("http") || uri.startsWith("file://") || uri.startsWith("content://") || uri.startsWith("ph://"));
-              return isValidUri ? (
+              const targetImageUrl = imageUrls[0] || captions?.[0]?.image_url || localData?.[0]?.image_url;
+
+              return targetImageUrl && targetImageUrl !== "base64" ? (
                 <ExpoImage
-                  source={{ uri }}
-                  style={{ width: 120, height: 120, borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
+                  source={{ uri: targetImageUrl }}
+                  style={{
+                    width: 120,
+                    height: 120,
+                    borderRadius: 24,
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.1)'
+                  }}
                   contentFit="cover"
                   cachePolicy="memory-disk"
+                  transition={300}
                 />
               ) : (
-                <View style={{ width: 120, height: 120, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.05)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                <View style={{
+                  width: 120,
+                  height: 120,
+                  borderRadius: 24,
+                  backgroundColor: 'rgba(255,255,255,0.05)',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.1)'
+                }}>
                   <Ionicons name="image-outline" size={32} color="rgba(255,255,255,0.3)" />
                 </View>
               );

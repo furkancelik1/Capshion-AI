@@ -12,8 +12,10 @@ import {
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
-import { useColorScheme, View } from "react-native";
+import { Platform, useColorScheme, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { PostHogProvider } from "posthog-react-native";
+import Purchases from "react-native-purchases";
 import AnimatedBackground from "../components/AnimatedBackground";
 import AnimatedSplashScreen from "../components/AnimatedSplashScreen";
 import { ToastProvider } from "../context/ToastContext";
@@ -168,18 +170,49 @@ function RootLayoutNav() {
   );
 }
 
+const POSTHOG_API_KEY = process.env.EXPO_PUBLIC_POSTHOG_API_KEY;
+const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST;
+
 export default function RootLayout() {
+  useEffect(() => {
+    const rcApiKey =
+      Platform.OS === "ios"
+        ? process.env.EXPO_PUBLIC_RC_APPLE_KEY
+        : process.env.EXPO_PUBLIC_RC_GOOGLE_KEY;
+
+    if (rcApiKey) {
+      try {
+        Purchases.configure({ apiKey: rcApiKey });
+      } catch (err: unknown) {
+        console.error(
+          "[RevenueCat] Yapılandırma hatası:",
+          err instanceof Error ? err.message : String(err),
+        );
+      }
+    }
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <BottomSheetModalProvider>
-        <ToastProvider>
-          <StripeProvider publishableKey="pk_test_51Tx5gVIdWpTyLlw8RFhrsFNpzbKPzLzLFfP0h56w9wgcpTZzWjfimyoHzK253wN6UYBl1dYB9eS6D4cFemHvUe7G00a1eJrPlg">
-            <AuthProvider>
-              <RootLayoutNav />
-            </AuthProvider>
-          </StripeProvider>
-        </ToastProvider>
-      </BottomSheetModalProvider>
+      <PostHogProvider
+        apiKey={"phc_ya4kkZMmmNMtDNNSHw2vtK38rifmwNThUEzJ8qNC4QwZ"}
+        debug={true}
+        options={{
+          host: "https://eu.i.posthog.com",
+          flushAt: 1,
+          disabled: false,
+        }}
+      >
+        <BottomSheetModalProvider>
+          <ToastProvider>
+            <StripeProvider publishableKey="pk_test_51Tx5gVIdWpTyLlw8RFhrsFNpzbKPzLzLFfP0h56w9wgcpTZzWjfimyoHzK253wN6UYBl1dYB9eS6D4cFemHvUe7G00a1eJrPlg">
+              <AuthProvider>
+                <RootLayoutNav />
+              </AuthProvider>
+            </StripeProvider>
+          </ToastProvider>
+        </BottomSheetModalProvider>
+      </PostHogProvider>
     </GestureHandlerRootView>
   );
 }

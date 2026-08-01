@@ -1,6 +1,11 @@
 import { Platform } from 'react-native';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:3000/api';
+const DEFAULT_HOST = Platform.select({
+  android: '10.0.2.2',
+  ios: 'localhost',
+  default: 'localhost',
+});
+const API_URL = process.env.EXPO_PUBLIC_API_URL || `http://${DEFAULT_HOST}:3000/api`;
 
 let _token: string | null = null;
 

@@ -1,8 +1,30 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import i18next from 'i18next';
 import { useState } from 'react';
+import { usePostHog } from 'posthog-react-native';
+import Purchases from 'react-native-purchases';
+import { Alert } from 'react-native';
 import { api, setCachedImageUris } from '../services/api';
 import { useToast } from '../context/ToastContext';
+
+async function requirePremium(): Promise<boolean> {
+  try {
+    const customerInfo = await Purchases.getCustomerInfo();
+    const hasPremium =
+      typeof customerInfo.entitlements.active['premium'] !== "undefined";
+    if (!hasPremium) {
+      Alert.alert(
+        "Premium Gerekli",
+        "İçerik üretmek için premium pakete geçmelisiniz.",
+      );
+      return false;
+    }
+    return true;
+  } catch (err: any) {
+    console.error("[RevenueCat] Abonelik kontrolü yapılamadı:", err?.message ?? err);
+    return true;
+  }
+}
 
 function mimeFromUri(uri: string): string {
   const ext = uri.split('.').pop()?.toLowerCase();
@@ -37,8 +59,11 @@ export function useGenerateCaption() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { showToast } = useToast();
+  const posthog = usePostHog();
 
   const generate = async (localUris: any[], tone: any, gender?: any, ageRange?: any, settings?: { length: string; useEmojis: boolean; useHashtags: boolean; customPrompt?: string; carouselMode?: boolean }) => {
+    if (!(await requirePremium())) return;
+
     setGenerating(true);
     setError(null);
 
@@ -69,12 +94,18 @@ export function useGenerateCaption() {
 
       setCachedImageUris(result.post_id, base64Images);
 
+      posthog?.capture('caption_olusturuldu', {
+        secilen_ton: String(tone || 'neutral'),
+        gorsel_yuklendi_mi: true,
+      });
+
       return result;
 
     } catch (err: any) {
       const msg = err?.message || 'Sunucuya bağlanılamadı.';
       console.log('[Generate] Istek durduruldu:', msg);
       setError(msg);
+      posthog?.capture('caption_olusturma_hatasi', { hata_mesaji: msg });
       throw err;
     } finally {
       setGenerating(false);
@@ -82,6 +113,8 @@ export function useGenerateCaption() {
   };
 
   const generatePerImage = async (localUris: any[], tone: any, gender?: any, ageRange?: any, settings?: { length: string; useEmojis: boolean; useHashtags: boolean; customPrompt?: string; carouselMode?: boolean }) => {
+    if (!(await requirePremium())) return;
+
     setGenerating(true);
     setError(null);
 
@@ -112,12 +145,18 @@ export function useGenerateCaption() {
 
       setCachedImageUris(result.post_id, base64Images);
 
+      posthog?.capture('caption_olusturuldu', {
+        secilen_ton: String(tone || 'neutral'),
+        gorsel_yuklendi_mi: true,
+      });
+
       return result;
 
     } catch (err: any) {
       const msg = err?.message || 'Sunucuya bağlanılamadı.';
       console.log('[Generate-PerImage] Istek durduruldu:', msg);
       setError(msg);
+      posthog?.capture('caption_olusturma_hatasi', { hata_mesaji: msg });
       throw err;
     } finally {
       setGenerating(false);

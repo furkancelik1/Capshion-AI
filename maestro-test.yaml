@@ -1,0 +1,38 @@
+appId: com.furkan.capshion
+---
+# --- 1. Giriş İşlemi ---
+- launchApp
+- tapOn: "E-posta"
+- inputText: "tester3@gmail.com"
+- tapOn: "Şifre"
+- inputText: "Sifre1234"
+- pressKey: Enter
+- tapOn: "GIRIŞ YAP"
+
+# --- 2. İçerik Oluşturma (Görsel ve Ton Seçimi) ---
+
+- extendedWaitUntil:
+    visible: "Gallery" # Uygulamandaki galeri açma butonunun adı
+    timeout: 10000
+
+# 1. Adım: Galeriye Gir
+- tapOn: "Gallery"
+
+# 2. Adım: Oradan Bir Fotoğraf Seç (Maestro galerinin açılmasını kendi bekler)
+- tapOn:
+    point: 25%, 35%
+
+- tapOn: "Done"
+
+# 3. Adım: Tone'ları Seç
+- tapOn: "PROFESSIONAL" # Buraya kendi uygulmandaki ton adını yaz
+
+- tapOn: "Male"
+
+# 4. Adım: Try For Free Demeli
+- tapOn: "Try for free"
+
+# --- 3. AI Yanıtını Bekleme ve Doğrulama ---
+- extendedWaitUntil:
+    visible: "Copy"
+    timeout: 25000

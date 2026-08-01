@@ -18,6 +18,7 @@ import { router, Stack } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/context/ToastContext';
 import { supabase } from '@/services/supabase';
+import { usePostHog } from 'posthog-react-native';
 import AmbientGlow from '@/components/AmbientGlow';
 import GlassPanel from '@/components/GlassPanel';
 import HapticButton from '@/components/HapticButton';
@@ -26,6 +27,7 @@ import { GlassTheme } from '@/constants/LiquidGlass';
 export default function LoginScreen() {
   const { signInWithEmail, signUpWithEmail, loading } = useAuth();
   const { showToast } = useToast();
+  const posthog = usePostHog();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -95,6 +97,7 @@ export default function LoginScreen() {
       return;
     }
 
+    posthog?.capture('kullanici_giris_yapti', { method: 'email' });
     router.replace('/(tabs)');
   };
 
