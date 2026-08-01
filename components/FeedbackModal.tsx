@@ -13,6 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import HapticButton from "./HapticButton";
 import { supabase } from "../services/supabase";
+import { posthog } from "../services/posthog";
 
 interface FeedbackModalProps {
   visible: boolean;
@@ -41,6 +42,7 @@ export default function FeedbackModal({
       console.log("Geri bildirim gönderilemedi:", error.message);
       return;
     }
+    posthog.capture('feedback_submitted');
     setMessage("");
     onClose();
   };

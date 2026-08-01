@@ -43,6 +43,7 @@ import { useGenerateCaption } from "../../hooks/useGenerateCaption";
 import { usePayment } from "../../hooks/usePayment";
 import { useStripePayment } from "../../hooks/useStripePayment";
 import { api, lastNavigationTimestamp } from "../../services/api";
+import { posthog } from "../../services/posthog";
 import { useToast } from "../../context/ToastContext";
 
 function renderFeatureIcon(icon: string) {
@@ -256,6 +257,15 @@ export default function HomeScreen() {
       return;
     }
 
+    posthog.capture('caption_generation_started', {
+      image_count: selectedImages.length,
+      tone: selectedTone,
+      caption_mode: captionMode,
+      length,
+      emojis_enabled: useEmojis,
+      hashtags_enabled: useHashtags,
+      carousel_enabled: isPremium && carouselMode,
+    });
     setIsGenerating(true);
     showToast?.("Üretim başladı. Arka plana alabilirsiniz, hazır olduğunda bildirim göndereceğiz. ✨", "info");
 
@@ -270,6 +280,11 @@ export default function HomeScreen() {
       );
 
       if (result) {
+        posthog.capture('caption_generation_completed', {
+          image_count: selectedImages.length,
+          caption_count: result.captions.length,
+          caption_mode: captionMode,
+        });
         setCredits(result.remainingCredits === -1 ? (isPremium ? -1 : 0) : result.remainingCredits);
         hasNavigatedRef.current = true;
         router.push({
@@ -689,6 +704,9 @@ export default function HomeScreen() {
               onPress={async () => {
                 const result = await checkout(999, "usd", user?.id);
                 if (result.success) {
+                  posthog.capture('premium_checkout_completed', {
+                    currency: 'usd',
+                  });
                   refreshProfile();
                   setShowProModal(false);
                 }

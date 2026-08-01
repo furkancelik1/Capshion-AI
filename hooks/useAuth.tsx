@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { api, setToken } from '../services/api';
+import { posthog } from '../services/posthog';
 
 interface AuthUser {
   id: string;
@@ -28,6 +29,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (result && result.user && result.token) {
         setToken(result.token);
         setUser(result.user);
+        posthog.identify(result.user.id, {
+          $set: {
+            email: result.user.email,
+          },
+        });
+        posthog.capture('user_signed_in', {
+          authentication_method: 'email',
+        });
         return { error: null };
       }
       return { error: 'Token veya kullanıcı bilgisi alınamadı.' };
@@ -46,6 +55,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (result && result.user && result.token) {
         setToken(result.token);
         setUser(result.user);
+        posthog.identify(result.user.id, {
+          $set: {
+            email: result.user.email,
+          },
+        });
+        posthog.capture('user_registered', {
+          age_range_provided: Boolean(ageRange),
+        });
         return { error: null };
       }
       return { error: 'Kayıt sonrası kullanıcı oluşturulamadı.' };
@@ -58,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = () => {
+    posthog.reset();
     setToken(null);
     setUser(null);
   };

@@ -22,6 +22,7 @@ import { HistoryCardSkeleton } from "../../components/GlassSkeleton";
 import { useToast } from "../../context/ToastContext";
 import { GlassTheme } from "../../constants/LiquidGlass";
 import { api, getToken } from "../../services/api";
+import { posthog } from "../../services/posthog";
 import { router } from "expo-router";
 
 interface HistoryItem {
@@ -76,6 +77,7 @@ export default function HistoryScreen() {
         onPress: async () => {
           try {
             await api.deleteCaption(item.id);
+            posthog.capture('caption_deleted');
             setData((prev) => prev.filter((c) => c.id !== item.id));
             showToast(t("history.deleted"), "success");
           } catch {
@@ -88,6 +90,9 @@ export default function HistoryScreen() {
 
   const handleCopy = useCallback(async (item: HistoryItem) => {
     await Clipboard.setStringAsync(item.caption_text);
+    posthog.capture('caption_copied', {
+      source: 'history',
+    });
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     setCopiedId(item.id);
