@@ -11,8 +11,8 @@ export interface PushNotificationState {
 export function usePushNotifications(): PushNotificationState {
   const [expoPushToken, setExpoPushToken] = useState<string | undefined>();
   const [notification, setNotification] = useState<Notifications.Notification | undefined>();
-  const notificationListener = useRef<Notifications.EventSubscription>();
-  const responseListener = useRef<Notifications.EventSubscription>();
+  const notificationListener = useRef<Notifications.EventSubscription>(null);
+  const responseListener = useRef<Notifications.EventSubscription>(null);
 
   useEffect(() => {
     registerForPushNotificationsAsync().then((token) => {
@@ -94,10 +94,10 @@ export async function schedulePeriodicReminder() {
       body: "Yeni fotoğrafların için en trend açıklama metinlerini oluşturma zamanı!",
       sound: "capshion_sound",
       data: { type: "reminder" },
-      channelId: "capshion_sound_v5",
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      channelId: "capshion_sound_v5",
       seconds: 60 * 60 * 24 * 3,
       repeats: true,
     },

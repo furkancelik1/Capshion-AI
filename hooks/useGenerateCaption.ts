@@ -1,9 +1,9 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import i18next from 'i18next';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { usePostHog } from 'posthog-react-native';
 import Purchases from 'react-native-purchases';
-import { Alert } from 'react-native';
 import { api, setCachedImageUris } from '../services/api';
 import { useToast } from '../context/ToastContext';
 
@@ -13,10 +13,7 @@ async function requirePremium(): Promise<boolean> {
     const hasPremium =
       typeof customerInfo.entitlements.active['premium'] !== "undefined";
     if (!hasPremium) {
-      Alert.alert(
-        "Premium Gerekli",
-        "İçerik üretmek için premium pakete geçmelisiniz.",
-      );
+      router.push('/paywall');
       return false;
     }
     return true;

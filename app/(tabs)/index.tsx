@@ -41,7 +41,6 @@ import { GlassTheme } from "../../constants/LiquidGlass";
 import { useAuth } from "../../hooks/useAuth";
 import { useGenerateCaption } from "../../hooks/useGenerateCaption";
 import { usePayment } from "../../hooks/usePayment";
-import { useStripePayment } from "../../hooks/useStripePayment";
 import { api, lastNavigationTimestamp } from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 
@@ -136,7 +135,6 @@ export default function HomeScreen() {
 
   const { user } = useAuth();
   const { generate, generatePerImage } = useGenerateCaption();
-  const { checkout, loading: stripeLoading } = useStripePayment();
 
   const refreshProfile = useCallback(() => {
     api.getProfile().then((data) => {
@@ -685,20 +683,14 @@ export default function HomeScreen() {
             <Text style={styles.modalDesc}>{t("premium.description")}</Text>
 
             <Pressable
-              style={[styles.modalCta, stripeLoading && styles.modalCtaMuted]}
-              onPress={async () => {
-                const result = await checkout(999, "usd", user?.id);
-                if (result.success) {
-                  refreshProfile();
-                  setShowProModal(false);
-                }
+              style={styles.modalCta}
+              onPress={() => {
+                setShowProModal(false);
+                router.push('/paywall');
               }}
-              disabled={stripeLoading}
             >
               <Ionicons name="star" size={18} color="#FFFFFF" />
-              <Text style={styles.modalCtaText}>
-                {stripeLoading ? t("common.loading") : t("premium.cta")}
-              </Text>
+              <Text style={styles.modalCtaText}>{t("premium.cta")}</Text>
             </Pressable>
 
             <Pressable onPress={() => setShowProModal(false)}>

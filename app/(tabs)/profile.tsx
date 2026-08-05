@@ -10,6 +10,9 @@ import {
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
+import Purchases from "react-native-purchases";
 import { useAuth } from "@/hooks/useAuth";
 import { usePayment } from "@/hooks/usePayment";
 import { api } from "@/services/api";
@@ -87,6 +90,27 @@ export default function ProfileScreen() {
   const [editingAge, setEditingAge] = useState(false);
   const [ageRange, setAgeRange] = useState<string | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadSubscription = async () => {
+      try {
+        const customerInfo = await Purchases.getCustomerInfo();
+        if (mounted) {
+          setIsPremium(
+            typeof customerInfo.entitlements.active["premium"] !== "undefined",
+          );
+        }
+      } catch (err: any) {
+        console.error("[Profile] Abonelik durumu alınamadı:", err?.message ?? err);
+      }
+    };
+    loadSubscription();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -163,6 +187,36 @@ export default function ProfileScreen() {
             {profile?.email || user?.email}
           </Text>
         </View>
+
+        {/* ── Premium Durumu ── */}
+        <BlurView
+          intensity={50}
+          tint="systemThinMaterialDark"
+          style={styles.premiumCard}
+        >
+          {isPremium ? (
+            <View style={styles.premiumBadgeRow}>
+              <Ionicons name="diamond" size={18} color="#FBBF24" />
+              <Text style={styles.premiumBadgeText}>👑 Premium Üye</Text>
+            </View>
+          ) : (
+            <HapticButton
+              style={styles.upgradeButton}
+              onPress={() => router.push("/paywall")}
+              activeOpacity={0.85}
+            >
+              <LinearGradient
+                colors={[...GlassTheme.gradient]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.upgradeGradient}
+              >
+                <Ionicons name="diamond" size={16} color="#FFF" />
+                <Text style={styles.upgradeText}>Premium'a Yükselt</Text>
+              </LinearGradient>
+            </HapticButton>
+          )}
+        </BlurView>
 
         {/* ── Section: Hesap ── */}
         <SectionHeader title={t("profile.balance")} />
@@ -369,6 +423,48 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: GlassTheme.neonPlatinum,
     letterSpacing: 1.5,
+    textTransform: "uppercase",
+  },
+
+  /* ── Premium ── */
+  premiumCard: {
+    borderRadius: 20,
+    overflow: "hidden",
+    borderWidth: 0.5,
+    borderColor: "rgba(255,255,255,0.1)",
+    padding: 14,
+    marginTop: 4,
+  },
+  premiumBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingVertical: 10,
+  },
+  premiumBadgeText: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#FBBF24",
+    letterSpacing: 0.5,
+  },
+  upgradeButton: {
+    borderRadius: 16,
+    overflow: "hidden",
+    ...GlassTheme.cardShadow,
+  },
+  upgradeGradient: {
+    paddingVertical: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  upgradeText: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: 0.5,
     textTransform: "uppercase",
   },
 

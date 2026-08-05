@@ -10,6 +10,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCachedImageUris, api } from "../../services/api";
+import { supabase } from "@/services/supabase";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../../context/ToastContext";
 import {

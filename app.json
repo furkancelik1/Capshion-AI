@@ -2,17 +2,12 @@
   "expo": {
     "name": "Capshion",
     "slug": "capshion",
-    "sdkVersion": "49.0.0",
+    "sdkVersion": "57.0.0",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "capshion",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "image": "./assets/images/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#05050A"
-    },
     "ios": {
       "supportsTablet": true,
       "backgroundColor": "#05050A",
@@ -35,11 +30,7 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "READ_MEDIA_IMAGES"
-      ],
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "READ_MEDIA_IMAGES"],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -57,9 +48,6 @@
           "backgroundColor": "#05050A"
         }
       ],
-      "expo-secure-store",
-      "expo-localization",
-      "expo-status-bar",
       "expo-web-browser",
       [
         "@stripe/stripe-react-native",
@@ -68,18 +56,16 @@
           "enableGooglePay": false
         }
       ],
-      "@react-native-google-signin/google-signin",
       [
         "expo-notifications",
         {
           "icon": "./assets/images/icon.png",
           "color": "#8B5CF6",
-          "sounds": [
-            "./assets/sounds/capshion_sound.wav"
-          ]
+          "sounds": ["./assets/sounds/capshion_sound.wav"]
         }
       ],
-      "expo-image"
+      "expo-image",
+      "./plugins/withCleartextTraffic.js"
     ],
     "experiments": {
       "typedRoutes": true
