@@ -39,7 +39,6 @@
       "favicon": "./assets/images/logo.png"
     },
     "plugins": [
-      "expo-router",
       [
         "expo-splash-screen",
         {
@@ -48,7 +47,7 @@
           "backgroundColor": "#05050A"
         }
       ],
-      "expo-web-browser",
+
       [
         "@stripe/stripe-react-native",
         {
