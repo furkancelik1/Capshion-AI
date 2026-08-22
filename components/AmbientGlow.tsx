@@ -12,14 +12,14 @@ export default function AmbientGlow() {
     >
       <Defs>
         <RadialGradient id="purpleGlow" cx="50%" cy="50%" r="50%">
-          <Stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.3" />
-          <Stop offset="50%" stopColor="#8B5CF6" stopOpacity="0.1" />
-          <Stop offset="100%" stopColor="#8B5CF6" stopOpacity="0" />
+          <Stop offset="0%" stopColor="#0A84FF" stopOpacity="0.3" />
+          <Stop offset="50%" stopColor="#0A84FF" stopOpacity="0.1" />
+          <Stop offset="100%" stopColor="#0A84FF" stopOpacity="0" />
         </RadialGradient>
         <RadialGradient id="blueGlow" cx="50%" cy="50%" r="50%">
-          <Stop offset="0%" stopColor="#3B82F6" stopOpacity="0.25" />
-          <Stop offset="50%" stopColor="#3B82F6" stopOpacity="0.08" />
-          <Stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
+          <Stop offset="0%" stopColor="#64D2FF" stopOpacity="0.25" />
+          <Stop offset="50%" stopColor="#64D2FF" stopOpacity="0.08" />
+          <Stop offset="100%" stopColor="#64D2FF" stopOpacity="0" />
         </RadialGradient>
         <RadialGradient id="neonGlow" cx="50%" cy="50%" r="50%">
           <Stop offset="0%" stopColor="#E2E8F0" stopOpacity="0.12" />
@@ -30,14 +30,14 @@ export default function AmbientGlow() {
 
       {/* Deep purple orb — top-left */}
       <Circle cx={width * 0.08} cy={height * 0.12} r={160} fill="url(#purpleGlow)" />
-      <Circle cx={width * 0.08} cy={height * 0.12} r={80} fill="#8B5CF6" opacity={0.08} />
+      <Circle cx={width * 0.08} cy={height * 0.12} r={80} fill="#0A84FF" opacity={0.08} />
 
       {/* Neon platinum orb — mid-right */}
       <Circle cx={width * 0.82} cy={height * 0.35} r={140} fill="url(#neonGlow)" />
 
       {/* Electric blue orb — bottom-center */}
       <Circle cx={width * 0.5} cy={height * 0.78} r={200} fill="url(#blueGlow)" />
-      <Circle cx={width * 0.5} cy={height * 0.78} r={100} fill="#3B82F6" opacity={0.05} />
+      <Circle cx={width * 0.5} cy={height * 0.78} r={100} fill="#64D2FF" opacity={0.05} />
 
       {/* Midnight purple orb — bottom-left */}
       <Circle cx={width * 0.15} cy={height * 0.88} r={120} fill="url(#purpleGlow)" />

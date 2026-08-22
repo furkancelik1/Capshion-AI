@@ -133,7 +133,7 @@ export default function PaywallScreen() {
         >
           <View style={styles.hero}>
             <View style={styles.heroIconWrapper}>
-              <Ionicons name="diamond" size={32} color="#8B5CF6" />
+              <Ionicons name="diamond" size={32} color="#0A84FF" />
             </View>
             <Text style={styles.heroTitle}>Premium'a Geç</Text>
             <Text style={styles.heroSubtitle}>
@@ -143,7 +143,7 @@ export default function PaywallScreen() {
 
           {loadingOfferings ? (
             <View style={styles.loadingBox}>
-              <ActivityIndicator size="large" color="#8B5CF6" />
+              <ActivityIndicator size="large" color="#0A84FF" />
               <Text style={styles.loadingText}>Paketler yükleniyor...</Text>
             </View>
           ) : packages.length === 0 ? (
@@ -293,12 +293,12 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: "rgba(139, 92, 246, 0.12)",
+    backgroundColor: "rgba(10, 132, 255, 0.12)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "rgba(139, 92, 246, 0.3)",
+    borderColor: "rgba(10, 132, 255, 0.3)",
   },
   heroTitle: {
     fontSize: 26,

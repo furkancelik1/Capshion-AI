@@ -118,7 +118,7 @@ export default function HistoryScreen() {
               close();
             }}
           >
-            <Ionicons name="copy-outline" size={22} color="#8B5CF6" />
+            <Ionicons name="copy-outline" size={22} color="#0A84FF" />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.swipeBtn, styles.swipeBtnDanger]}
@@ -314,9 +314,9 @@ const styles = StyleSheet.create({
     width: 72,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(139, 92, 246, 0.2)",
+    backgroundColor: "rgba(10, 132, 255, 0.2)",
     borderWidth: 0.5,
-    borderColor: "#8B5CF6",
+    borderColor: "#0A84FF",
     borderTopLeftRadius: GlassTheme.radiusMd,
     borderBottomLeftRadius: GlassTheme.radiusMd,
   },

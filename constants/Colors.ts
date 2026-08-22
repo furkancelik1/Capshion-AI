@@ -1,4 +1,4 @@
-const tintColorLight = "#818CF8"; // Indigo-400
+const tintColorLight = "#007AFF"; // iOS Blue
 const tintColorDark = "#F43F5E"; // Rose-500
 
 const Colors = {

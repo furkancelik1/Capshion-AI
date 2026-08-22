@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   },
   rowSelected: {
     borderColor: GlassTheme.primary,
-    backgroundColor: "rgba(139, 92, 246, 0.1)",
+    backgroundColor: "rgba(10, 132, 255, 0.1)",
   },
   rowLocked: {
     opacity: 0.6,

@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   iconWrapActive: {
-    backgroundColor: "rgba(139, 92, 246, 0.2)",
+    backgroundColor: "rgba(10, 132, 255, 0.2)",
   },
   label: {
     fontSize: 10,

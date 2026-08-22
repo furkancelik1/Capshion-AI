@@ -1,19 +1,19 @@
 export const GlassTheme = {
-  background: '#05050A',
-  primary: '#8B5CF6',
-  secondary: '#3B82F6',
+  background: '#0A0A0F',
+  primary: '#0A84FF',
+  secondary: '#64D2FF',
   neonPlatinum: '#E2E8F0',
-  gradient: ['#8B5CF6', '#3B82F6'],
+  gradient: ['#0A84FF', '#64D2FF'],
   cardBackground: 'rgba(20, 20, 30, 0.6)',
 
-  bg: '#05050A',
+  bg: '#0A0A0F',
   panel: 'rgba(255, 255, 255, 0.05)',
   panelStrong: 'rgba(255, 255, 255, 0.10)',
   border: 'rgba(255, 255, 255, 0.08)',
   textMain: '#F1F5F9',
   textMuted: '#94A3B8',
 
-  primaryGradient: ['#8B5CF6', '#2798FF'],
+  primaryGradient: ['#0A84FF', '#64D2FF'],
   radiusSm: 10,
   radiusMd: 20,
   radiusLg: 26,
@@ -28,7 +28,7 @@ export const GlassTheme = {
   textSub: '#CBD5E1',
   cardBorderRadius: 26,
   blurIntensity: 30,
-  selectedBorder: 'rgba(139, 92, 246, 0.3)',
+  selectedBorder: 'rgba(10, 132, 255, 0.3)',
   vibrantBorder: 'rgba(255, 255, 255, 0.08)',
   dangerBorder: 'rgba(255, 75, 75, 0.5)',
   dangerBg: 'rgba(255, 107, 107, 0.08)',
@@ -41,7 +41,7 @@ export const GlassTheme = {
   overlayBg: 'rgba(0, 0, 0, 0.7)',
 
   cardShadow: {
-    shadowColor: '#8B5CF6',
+    shadowColor: '#0A84FF',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 20,

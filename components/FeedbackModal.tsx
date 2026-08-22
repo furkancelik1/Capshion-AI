@@ -32,6 +32,11 @@ export default function FeedbackModal({
   const handleSend = async () => {
     if (!message.trim()) return;
     setSending(true);
+    if (!supabase) {
+      setSending(false);
+      console.warn("[Supabase] Yapılandırma eksik, geri bildirim gönderilemedi.");
+      return;
+    }
     const { error } = await supabase.from("feedbacks").insert({
       user_id: userId || null,
       message: message.trim(),
@@ -164,7 +169,7 @@ const styles = StyleSheet.create({
   sendBtn: {
     height: 48,
     borderRadius: 100,
-    backgroundColor: "#8B5CF6",
+    backgroundColor: "#0A84FF",
     alignItems: "center",
     justifyContent: "center",
   },

@@ -12,7 +12,7 @@ import {
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
-import { Platform, useColorScheme, View } from "react-native";
+import { LogBox, Platform, useColorScheme, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PostHogProvider } from "posthog-react-native";
 import Purchases from "react-native-purchases";
@@ -36,6 +36,33 @@ Notifications.setNotificationHandler({
 });
 
 SplashScreen.preventAutoHideAsync();
+
+LogBox.ignoreLogs(["Failed to ready ui_config before getOfferings"]);
+
+function installUnhandledRejectionGuard() {
+  try {
+    const proc = (globalThis as any).process as
+      | { on?: (event: string, cb: (reason: unknown) => void) => void }
+      | undefined;
+    proc?.on?.("unhandledRejection", (reason) => {
+      console.warn("[Capshion] Yakalanmamış Promise hatası göz ardı edildi:", reason);
+    });
+  } catch {
+    // koruma kurulamazsa sessizce devam et
+  }
+}
+installUnhandledRejectionGuard();
+
+if (!__DEV__ && (globalThis as any).ErrorUtils) {
+  const ErrorUtilsAny = (globalThis as any).ErrorUtils;
+  const originalHandler = ErrorUtilsAny.getGlobalHandler?.();
+  ErrorUtilsAny.setGlobalHandler((error: unknown, isFatal: boolean) => {
+    console.error("[Capshion] Yakalanan JS hatası:", error);
+    if (isFatal) {
+      originalHandler?.(error, isFatal);
+    }
+  });
+}
 
 function RootLayoutNav() {
   const [i18nReady, setI18nReady] = useState(false);
@@ -128,7 +155,7 @@ function RootLayoutNav() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#05050A" }}>
+    <View style={{ flex: 1, backgroundColor: "#0A0A0F" }}>
       <AnimatedBackground />
       {!splashDone ? (
         <AnimatedSplashScreen onAnimationFinish={() => setSplashDone(true)} />

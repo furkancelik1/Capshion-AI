@@ -1,6 +1,20 @@
+import AgeRangeSelector from "@/components/AgeRangeSelector";
+import AmbientGlow from "@/components/AmbientGlow";
+import FeedbackModal from "@/components/FeedbackModal";
+import { LogOutIcon } from "@/components/GlassIcons";
+import GlassPanel from "@/components/GlassPanel";
+import HapticButton from "@/components/HapticButton";
+import { GlassTheme } from "@/constants/LiquidGlass";
+import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/services/api";
+import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
@@ -8,22 +22,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { BlurView } from "expo-blur";
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
 import Purchases from "react-native-purchases";
-import { useAuth } from "@/hooks/useAuth";
-import { usePayment } from "@/hooks/usePayment";
-import { api } from "@/services/api";
-import { GlassTheme } from "@/constants/LiquidGlass";
-import AmbientGlow from "@/components/AmbientGlow";
-import GlassPanel from "@/components/GlassPanel";
-import HapticButton from "@/components/HapticButton";
-import AgeRangeSelector from "@/components/AgeRangeSelector";
-import FeedbackModal from "@/components/FeedbackModal";
-import PaymentWebViewModal from "@/components/PaymentWebViewModal";
-import { LogOutIcon } from "@/components/GlassIcons";
 
 interface UserProfile {
   email: string;
@@ -62,12 +61,13 @@ function RowItem({
   const Container = onPress ? HapticButton : View;
 
   return (
-    <Container
-      style={styles.row}
-      onPress={onPress}
-      activeOpacity={0.5}
-    >
-      <View style={[styles.iconWrap, { backgroundColor: tint || "rgba(139,92,246,0.2)" }]}>
+    <Container style={styles.row} onPress={onPress} activeOpacity={0.5}>
+      <View
+        style={[
+          styles.iconWrap,
+          { backgroundColor: tint || "rgba(10,132,255,0.2)" },
+        ]}
+      >
         <Ionicons name={icon} size={18} color={GlassTheme.primary} />
       </View>
       <Text style={[styles.rowLabel, destructive && { color: "#FF3B30" }]}>
@@ -75,7 +75,11 @@ function RowItem({
       </Text>
       {value && <Text style={styles.rowValue}>{value}</Text>}
       {onPress && !destructive && (
-        <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.2)" />
+        <Ionicons
+          name="chevron-forward"
+          size={16}
+          color="rgba(255,255,255,0.2)"
+        />
       )}
     </Container>
   );
@@ -90,23 +94,37 @@ export default function ProfileScreen() {
   const [editingAge, setEditingAge] = useState(false);
   const [ageRange, setAgeRange] = useState<string | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
+
+  // RevenueCat States
   const [isPremium, setIsPremium] = useState(false);
+  const [rcPackages, setRcPackages] = useState<any[]>([]);
 
   useEffect(() => {
     let mounted = true;
-    const loadSubscription = async () => {
+    const initRevenueCat = async () => {
       try {
+        // 1. Kullanıcı premium mu kontrolü
         const customerInfo = await Purchases.getCustomerInfo();
         if (mounted) {
           setIsPremium(
             typeof customerInfo.entitlements.active["premium"] !== "undefined",
           );
         }
+
+        // 2. Kredi paketlerini (default teklifini) çekme
+        const offerings = await Purchases.getOfferings();
+        if (mounted && offerings.current !== null) {
+          // default içindeki paketleri arayüze basmak için state'e atıyoruz
+          setRcPackages(offerings.current.availablePackages);
+        }
       } catch (err: any) {
-        console.error("[Profile] Abonelik durumu alınamadı:", err?.message ?? err);
+        console.error(
+          "[Profile] RevenueCat verileri alınamadı:",
+          err?.message ?? err,
+        );
       }
     };
-    loadSubscription();
+    initRevenueCat();
     return () => {
       mounted = false;
     };
@@ -128,8 +146,6 @@ export default function ProfileScreen() {
     }
   }, [user]);
 
-  const pay = usePayment(fetchProfile);
-
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
@@ -146,22 +162,31 @@ export default function ProfileScreen() {
   };
 
   const handleSignOut = () => {
-    Alert.alert(
-      t("profile.signOut"),
-      t("profile.signOutConfirm"),
-      [
-        { text: t("common.cancel"), style: "cancel" },
-        { text: t("common.yes"), style: "destructive", onPress: signOut },
-      ],
-    );
+    Alert.alert(t("profile.signOut"), t("profile.signOutConfirm"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("common.yes"), style: "destructive", onPress: signOut },
+    ]);
   };
 
-  const initiatePayment = async (credits: number, price: string) => {
-    const currency = i18n.language?.startsWith("tr") ? "TRY" : "USD";
+  // Google Play Satın Alma Tetikleyicisi
+  const handlePurchase = async (pack: any) => {
     try {
-      await pay.initiatePayment(price, credits, currency);
-    } catch {
-      Alert.alert(t("common.error"), t("outOfCredits.paymentFailureDesc"));
+      // 1. Google Play penceresini açar ve ödemeyi bekler
+      const { customerInfo } = await Purchases.purchasePackage(pack);
+
+      // 2. Başarılı olursa kullanıcıya bilgi ver
+      Alert.alert(
+        "Başarılı!",
+        "Satın alma işlemi tamamlandı, kredilerin yükleniyor.",
+      );
+
+      // 3. Backend'den güncel kredi miktarını çekmek için profili yenile
+      fetchProfile();
+    } catch (e: any) {
+      // Kullanıcı kendi isteğiyle pencereyi kapatmadıysa hatayı göster
+      if (!e.userCancelled) {
+        Alert.alert("Satın Alma Hatası", e.message);
+      }
     }
   };
 
@@ -177,15 +202,11 @@ export default function ProfileScreen() {
           <View style={styles.avatarRing}>
             <View style={styles.avatarInner}>
               <Text style={styles.avatarText}>
-                {profile?.email
-                  ? profile.email[0].toUpperCase()
-                  : "C"}
+                {profile?.email ? profile.email[0].toUpperCase() : "C"}
               </Text>
             </View>
           </View>
-          <Text style={styles.emailText}>
-            {profile?.email || user?.email}
-          </Text>
+          <Text style={styles.emailText}>{profile?.email || user?.email}</Text>
         </View>
 
         {/* ── Premium Durumu ── */}
@@ -227,13 +248,21 @@ export default function ProfileScreen() {
           style={styles.section}
         >
           {loadingProfile ? (
-            <RowItem icon="wallet-outline" label={t("profile.credits")} value="..." />
+            <RowItem
+              icon="wallet-outline"
+              label={t("profile.credits")}
+              value="..."
+            />
           ) : (
             <>
               <RowItem
                 icon="wallet-outline"
                 label={t("profile.credits")}
-                value={profile?.is_premium ? "♾️" : `${profile?.credits_remaining ?? 0}`}
+                value={
+                  profile?.is_premium
+                    ? "♾️"
+                    : `${profile?.credits_remaining ?? 0}`
+                }
               />
               <Separator />
               <RowItem
@@ -246,12 +275,15 @@ export default function ProfileScreen() {
           )}
         </BlurView>
 
-        {/* ── Yaş Düzenleme (editingAge açıkken) ── */}
+        {/* ── Yaş Düzenleme ── */}
         {editingAge && (
           <GlassPanel style={styles.agePanel}>
             <AgeRangeSelector value={ageRange} onChange={setAgeRange} />
             <View style={styles.ageActions}>
-              <HapticButton style={styles.ageSaveBtn} onPress={handleSaveAgeRange}>
+              <HapticButton
+                style={styles.ageSaveBtn}
+                onPress={handleSaveAgeRange}
+              >
                 <Text style={styles.ageSaveText}>{t("common.save")}</Text>
               </HapticButton>
               <HapticButton
@@ -267,39 +299,47 @@ export default function ProfileScreen() {
           </GlassPanel>
         )}
 
-        {/* ── Kredi Paketleri ── */}
+        {/* ── Kredi Paketleri (RevenueCat'ten Dinamik Gelecek) ── */}
         <SectionHeader title={t("profile.topUp")} />
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.packagesRow}
         >
-          {[
-            { credits: 10, priceTr: "₺50", priceEn: "$2.99", amtTr: "50.0", amtEn: "2.99" },
-            { credits: 30, priceTr: "₺120", priceEn: "$6.99", amtTr: "120.0", amtEn: "6.99" },
-            { credits: 50, priceTr: "₺200", priceEn: "$11.99", amtTr: "200.0", amtEn: "11.99" },
-          ].map((pkg) => {
-            const isPopular = pkg.credits === 30;
-            return (
-              <HapticButton
-                key={pkg.credits}
-                style={[styles.packageCard, isPopular && styles.packageCardPopular]}
-                onPress={() =>
-                  initiatePayment(
-                    pkg.credits,
-                    i18n.language?.startsWith("tr") ? pkg.amtTr : pkg.amtEn,
-                  )
-                }
-              >
-                <Text style={styles.packageCredits}>{pkg.credits}</Text>
-                <Text style={styles.packageLabel}>{t("profile.credits")}</Text>
-                <View style={styles.packageDivider} />
-                <Text style={styles.packagePrice}>
-                  {i18n.language?.startsWith("tr") ? pkg.priceTr : pkg.priceEn}
-                </Text>
-              </HapticButton>
-            );
-          })}
+          {rcPackages.length === 0 ? (
+            <View style={{ padding: 20 }}>
+              <ActivityIndicator color={GlassTheme.primary} />
+            </View>
+          ) : (
+            rcPackages.map((pkg) => {
+              // Ürün kimliğinden (örn: "30_credits") rakamı otomatik ayıkla
+              const match = pkg.product.identifier.match(/\d+/);
+              const credits = match ? parseInt(match[0], 10) : 0;
+              const isPopular = credits === 30; // 30 kredilik olanı popüler stilinde göster
+
+              return (
+                <HapticButton
+                  key={pkg.identifier}
+                  style={[
+                    styles.packageCard,
+                    isPopular && styles.packageCardPopular,
+                  ]}
+                  onPress={() => handlePurchase(pkg)}
+                >
+                  <Text style={styles.packageCredits}>{credits || "💎"}</Text>
+                  <Text style={styles.packageLabel}>
+                    {t("profile.credits")}
+                  </Text>
+                  <View style={styles.packageDivider} />
+
+                  {/* Google Play'den dönen yerel fiyatı doğrudan buraya basıyoruz */}
+                  <Text style={styles.packagePrice}>
+                    {pkg.product.priceString}
+                  </Text>
+                </HapticButton>
+              );
+            })
+          )}
         </ScrollView>
 
         {/* ── Section: Uygulama ── */}
@@ -311,8 +351,17 @@ export default function ProfileScreen() {
           style={styles.section}
         >
           <View style={styles.langRowItem}>
-            <View style={[styles.iconWrap, { backgroundColor: "rgba(139,92,246,0.2)" }]}>
-              <Ionicons name="language-outline" size={18} color={GlassTheme.primary} />
+            <View
+              style={[
+                styles.iconWrap,
+                { backgroundColor: "rgba(10,132,255,0.2)" },
+              ]}
+            >
+              <Ionicons
+                name="language-outline"
+                size={18}
+                color={GlassTheme.primary}
+              />
             </View>
             <Text style={styles.rowLabel}>{t("profile.language")}</Text>
             <View style={styles.langInlineToggle}>
@@ -323,7 +372,15 @@ export default function ProfileScreen() {
                 ]}
                 onPress={() => i18n.changeLanguage("tr")}
               >
-                <Text style={[styles.langChipText, i18n.language?.startsWith("tr") && styles.langChipTextActive]}>TR</Text>
+                <Text
+                  style={[
+                    styles.langChipText,
+                    i18n.language?.startsWith("tr") &&
+                      styles.langChipTextActive,
+                  ]}
+                >
+                  TR
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -332,7 +389,15 @@ export default function ProfileScreen() {
                 ]}
                 onPress={() => i18n.changeLanguage("en")}
               >
-                <Text style={[styles.langChipText, i18n.language?.startsWith("en") && styles.langChipTextActive]}>EN</Text>
+                <Text
+                  style={[
+                    styles.langChipText,
+                    i18n.language?.startsWith("en") &&
+                      styles.langChipTextActive,
+                  ]}
+                >
+                  EN
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -364,15 +429,6 @@ export default function ProfileScreen() {
         onClose={() => setShowFeedback(false)}
         userId={user?.id}
       />
-      {pay.paymentUrl && (
-        <PaymentWebViewModal
-          visible={pay.showWebView}
-          paymentUrl={pay.paymentUrl}
-          onSuccess={pay.handlePaymentSuccess}
-          onFailure={pay.handlePaymentFailure}
-          onClose={pay.closeWebView}
-        />
-      )}
     </View>
   );
 }
@@ -380,7 +436,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   scrollContent: {
     paddingTop: 100,
@@ -403,7 +459,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,
-    backgroundColor: "rgba(139,92,246,0.15)",
+    backgroundColor: "rgba(10,132,255,0.15)",
   },
   avatarInner: {
     width: 68,
@@ -626,7 +682,7 @@ const styles = StyleSheet.create({
   },
   langChipActive: {
     borderColor: GlassTheme.primary,
-    backgroundColor: "rgba(139,92,246,0.15)",
+    backgroundColor: "rgba(10,132,255,0.15)",
   },
   langChipText: {
     fontSize: 12,
@@ -644,7 +700,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: "hidden",
     borderWidth: 0.5,
-    borderColor: "rgba(255,59,48,0.3)",
+    borderColor: "rgba(255,35,48,0.3)",
   },
   signOutRow: {
     flexDirection: "row",

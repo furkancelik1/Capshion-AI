@@ -412,6 +412,9 @@ export default function CaptionDetailScreen() {
   const initiateIyzicoPayment = async () => {
     setIsProcessingPayment(true);
     try {
+      if (!supabase) {
+        return;
+      }
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -678,7 +681,7 @@ export default function CaptionDetailScreen() {
 
           <View style={styles.creditModalCard}>
             <View style={styles.creditIconWrapper}>
-              <Ionicons name="battery-dead" size={32} color="#8B5CF6" />
+              <Ionicons name="battery-dead" size={32} color="#0A84FF" />
             </View>
             <Text style={styles.creditModalTitle}>
               {t("outOfCredits.title")}
@@ -749,7 +752,7 @@ export default function CaptionDetailScreen() {
               renderLoading={() => (
                 <ActivityIndicator
                   size="large"
-                  color="#8B5CF6"
+                  color="#0A84FF"
                   style={{
                     position: "absolute",
                     top: "50%",
@@ -989,8 +992,8 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(139, 92, 246, 0.2)",
-    shadowColor: "#8B5CF6",
+    borderColor: "rgba(10, 132, 255, 0.2)",
+    shadowColor: "#0A84FF",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 15,
@@ -1000,12 +1003,12 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "rgba(139, 92, 246, 0.1)",
+    backgroundColor: "rgba(10, 132, 255, 0.1)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "rgba(139, 92, 246, 0.3)",
+    borderColor: "rgba(10, 132, 255, 0.3)",
   },
   creditModalTitle: {
     fontSize: 22,
@@ -1056,7 +1059,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(255,255,255,0.1)",
   },
   webviewCancelText: {
-    color: "#8B5CF6",
+    color: "#0A84FF",
     fontSize: 16,
     fontWeight: "500",
   },

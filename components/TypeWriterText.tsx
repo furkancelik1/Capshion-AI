@@ -86,14 +86,14 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: GlassTheme.neonPlatinum,
     lineHeight: 21,
-    textShadowColor: "rgba(139, 92, 246, 0.4)",
+    textShadowColor: "rgba(10, 132, 255, 0.4)",
     textShadowRadius: 8,
   },
   cursor: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#8B5CF6",
-    textShadowColor: "rgba(139, 92, 246, 0.6)",
+    color: "#0A84FF",
+    textShadowColor: "rgba(10, 132, 255, 0.6)",
     textShadowRadius: 10,
   },
 });

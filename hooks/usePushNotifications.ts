@@ -71,7 +71,7 @@ async function registerForPushNotificationsAsync(): Promise<string | undefined> 
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         sound: 'capshion_sound',
-        lightColor: '#8B5CF6',
+        lightColor: '#0A84FF',
       });
       console.log("PUSH_DEBUG: Kanal oluşturuldu:", JSON.stringify(createdChannel));
       const allChannels = await Notifications.getNotificationChannelsAsync();

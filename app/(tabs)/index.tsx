@@ -543,7 +543,7 @@ export default function HomeScreen() {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setUseEmojis(v);
               }}
-              trackColor={{ false: "rgba(255,255,255,0.1)", true: "#8B5CF6" }}
+              trackColor={{ false: "rgba(255,255,255,0.1)", true: "#0A84FF" }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -563,7 +563,7 @@ export default function HomeScreen() {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setUseHashtags(v);
               }}
-              trackColor={{ false: "rgba(255,255,255,0.1)", true: "#8B5CF6" }}
+              trackColor={{ false: "rgba(255,255,255,0.1)", true: "#0A84FF" }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -588,7 +588,7 @@ export default function HomeScreen() {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setCarouselMode(v);
               }}
-              trackColor={{ false: "rgba(255,255,255,0.1)", true: "#8B5CF6" }}
+              trackColor={{ false: "rgba(255,255,255,0.1)", true: "#0A84FF" }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -675,7 +675,7 @@ export default function HomeScreen() {
             <Ionicons
               name="diamond"
               size={64}
-              color="#8B5CF6"
+              color="#0A84FF"
               style={styles.modalIcon}
             />
 
@@ -935,7 +935,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   lengthChipActive: {
-    backgroundColor: "#8B5CF6",
+    backgroundColor: "#0A84FF",
   },
   lengthChipText: {
     fontSize: 13,
@@ -979,9 +979,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(122,83,255,0.2)",
+    backgroundColor: "rgba(10,132,255,0.2)",
     borderWidth: 1,
-    borderColor: "rgba(122,83,255,0.3)",
+    borderColor: "rgba(10,132,255,0.3)",
   },
   featureTitle: {
     fontSize: 16,
@@ -1009,7 +1009,7 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     borderRadius: 32,
     borderWidth: 1,
-    borderColor: "rgba(139, 92, 246, 0.5)",
+    borderColor: "rgba(10, 132, 255, 0.5)",
     padding: 32,
     alignItems: "center",
     overflow: "hidden",
@@ -1043,7 +1043,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#8B5CF6",
+    backgroundColor: "#0A84FF",
     borderRadius: 999,
     paddingVertical: 14,
     paddingHorizontal: 32,

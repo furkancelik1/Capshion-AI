@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#8B5CF6",
+    backgroundColor: "#0A84FF",
     borderRadius: 999,
     paddingVertical: 14,
     paddingHorizontal: 28,

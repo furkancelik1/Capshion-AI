@@ -10,7 +10,7 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "backgroundColor": "#05050A",
+      "backgroundColor": "#0A0A0F",
       "bundleIdentifier": "com.furkan.capshion",
       "buildNumber": "1",
       "infoPlist": {
@@ -21,11 +21,11 @@
     },
     "android": {
       "googleServicesFile": "./google-services.json",
-      "backgroundColor": "#05050A",
+      "backgroundColor": "#0A0A0F",
       "package": "com.furkan.capshion",
-      "versionCode": 1,
+      "versionCode": 9,
       "adaptiveIcon": {
-        "backgroundColor": "#05050A",
+        "backgroundColor": "#0A0A0F",
         "foregroundImage": "./assets/images/logo.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -44,7 +44,7 @@
         {
           "image": "./assets/images/splash.png",
           "resizeMode": "contain",
-          "backgroundColor": "#05050A"
+          "backgroundColor": "#0A0A0F"
         }
       ],
 
@@ -59,7 +59,7 @@
         "expo-notifications",
         {
           "icon": "./assets/images/icon.png",
-          "color": "#8B5CF6",
+          "color": "#0A84FF",
           "sounds": ["./assets/sounds/capshion_sound.wav"]
         }
       ],

@@ -35,6 +35,7 @@ export default function LoginScreen() {
   const [focusedField, setFocusedField] = useState<'email' | 'password' | null>(null);
 
   const handleSocialAuth = useCallback(async (provider: 'apple' | 'google', idToken: string) => {
+    if (!supabase) throw new Error('Supabase yapılandırması eksik.');
     const { data, error } = await supabase.auth.signInWithIdToken({ provider, token: idToken });
     if (error) throw error;
     const email = data.user?.email;

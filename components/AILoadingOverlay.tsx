@@ -141,14 +141,14 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: "rgba(139, 92, 246, 0.15)",
+    backgroundColor: "rgba(10, 132, 255, 0.15)",
   },
   glowInner: {
     position: "absolute",
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: "rgba(139, 92, 246, 0.25)",
+    backgroundColor: "rgba(10, 132, 255, 0.25)",
   },
   coreDot: {
     width: 40,

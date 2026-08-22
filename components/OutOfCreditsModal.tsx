@@ -39,7 +39,7 @@ export default function OutOfCreditsModal({
           </TouchableOpacity>
 
           <View style={styles.iconWrap}>
-            <Ionicons name="flash" size={36} color="#A78BFA" />
+            <Ionicons name="flash" size={36} color="#5AC8FA" />
           </View>
 
           <Text style={styles.title}>{t("outOfCredits.title")}</Text>
@@ -54,7 +54,7 @@ export default function OutOfCreditsModal({
             activeOpacity={0.85}
           >
             <LinearGradient
-              colors={["#7A53FF", "#3B82F6"]}
+              colors={["#0A84FF", "#64D2FF"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.buyGradient}
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     maxWidth: 340,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(139, 92, 246, 0.2)",
+    borderColor: "rgba(10, 132, 255, 0.2)",
     overflow: "hidden",
     backgroundColor: "rgba(15, 15, 20, 0.75)",
   },
@@ -124,10 +124,10 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(122, 83, 255, 0.15)",
+    backgroundColor: "rgba(10, 132, 255, 0.15)",
     borderWidth: 1,
-    borderColor: "rgba(122, 83, 255, 0.3)",
-    shadowColor: "#7A53FF",
+    borderColor: "rgba(10, 132, 255, 0.3)",
+    shadowColor: "#0A84FF",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 20,

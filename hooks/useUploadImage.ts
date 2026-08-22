@@ -26,6 +26,10 @@ export function useUploadImage() {
           const fileName = `dump-${Date.now()}-${index}-${Math.random().toString(36).substring(7)}.jpg`;
 
           // 3. Base64 formatını Supabase'in kabul ettiği formata (ArrayBuffer) çevirip yüklüyoruz
+          if (!supabase) {
+            console.warn("[Supabase] Yapılandırma eksik, görsel yükleme atlandı.");
+            return null;
+          }
           const { data, error } = await supabase.storage
             .from('captions')
             .upload(fileName, decode(base64), {
