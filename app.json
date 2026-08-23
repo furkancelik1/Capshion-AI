@@ -3,7 +3,7 @@
     "name": "Capshion",
     "slug": "capshion",
     "sdkVersion": "57.0.0",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "capshion",
@@ -23,7 +23,7 @@
       "googleServicesFile": "./google-services.json",
       "backgroundColor": "#0A0A0F",
       "package": "com.furkan.capshion",
-      "versionCode": 9,
+      "versionCode": 10,
       "adaptiveIcon": {
         "backgroundColor": "#0A0A0F",
         "foregroundImage": "./assets/images/logo.png",
