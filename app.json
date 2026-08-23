@@ -3,16 +3,16 @@
     "name": "Capshion",
     "slug": "capshion",
     "sdkVersion": "57.0.0",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "capshion",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "backgroundColor": "#0A0A0F",
+      "backgroundColor": "#F2F2F7",
       "bundleIdentifier": "com.furkan.capshion",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
         "NSCameraUsageDescription": "Capshion requires camera access to analyze your photos and generate premium, tailored social media captions.",
         "NSPhotoLibraryUsageDescription": "Capshion requires photo library access to let you select images for professional caption generation.",
@@ -21,11 +21,11 @@
     },
     "android": {
       "googleServicesFile": "./google-services.json",
-      "backgroundColor": "#0A0A0F",
+      "backgroundColor": "#F2F2F7",
       "package": "com.furkan.capshion",
-      "versionCode": 10,
+      "versionCode": 11,
       "adaptiveIcon": {
-        "backgroundColor": "#0A0A0F",
+        "backgroundColor": "#F2F2F7",
         "foregroundImage": "./assets/images/logo.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -44,10 +44,9 @@
         {
           "image": "./assets/images/splash.png",
           "resizeMode": "contain",
-          "backgroundColor": "#0A0A0F"
+          "backgroundColor": "#F2F2F7"
         }
       ],
-
       [
         "@stripe/stripe-react-native",
         {
