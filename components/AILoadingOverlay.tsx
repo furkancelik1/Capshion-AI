@@ -108,7 +108,7 @@ export default function AILoadingOverlay({ visible }: AILoadingOverlayProps) {
       <View style={styles.container}>
         <BlurView
           intensity={60}
-          tint="systemThinMaterialDark"
+          tint="systemThinMaterialLight"
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.content}>
@@ -141,14 +141,14 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: "rgba(10, 132, 255, 0.15)",
+    backgroundColor: "rgba(52, 199, 89, 0.15)",
   },
   glowInner: {
     position: "absolute",
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: "rgba(10, 132, 255, 0.25)",
+    backgroundColor: "rgba(52, 199, 89, 0.25)",
   },
   coreDot: {
     width: 40,
@@ -157,9 +157,9 @@ const styles = StyleSheet.create({
     backgroundColor: GlassTheme.primary,
     shadowColor: GlassTheme.primary,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 4,
   },
   loadingText: {
     fontSize: 16,

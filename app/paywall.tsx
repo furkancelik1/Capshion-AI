@@ -133,7 +133,7 @@ export default function PaywallScreen() {
         >
           <View style={styles.hero}>
             <View style={styles.heroIconWrapper}>
-              <Ionicons name="diamond" size={32} color="#0A84FF" />
+              <Ionicons name="diamond" size={32} color="#34C759" />
             </View>
             <Text style={styles.heroTitle}>Premium'a Geç</Text>
             <Text style={styles.heroSubtitle}>
@@ -143,12 +143,12 @@ export default function PaywallScreen() {
 
           {loadingOfferings ? (
             <View style={styles.loadingBox}>
-              <ActivityIndicator size="large" color="#0A84FF" />
+              <ActivityIndicator size="large" color="#34C759" />
               <Text style={styles.loadingText}>Paketler yükleniyor...</Text>
             </View>
           ) : packages.length === 0 ? (
             <View style={styles.loadingBox}>
-              <Ionicons name="pricetag-outline" size={32} color="rgba(255,255,255,0.3)" />
+              <Ionicons name="pricetag-outline" size={32} color="#C7C7CC" />
               <Text style={styles.loadingText}>
                 Şu anda satın alınabilecek paket bulunamadı.
               </Text>
@@ -170,7 +170,7 @@ export default function PaywallScreen() {
                   >
                     <BlurView
                       intensity={GlassTheme.blurIntensity}
-                      tint="systemThinMaterialDark"
+                      tint="systemThinMaterialLight"
                       style={[
                         styles.packageCard,
                         isSelected && styles.packageCardSelected,
@@ -293,12 +293,12 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: "rgba(10, 132, 255, 0.12)",
+    backgroundColor: "rgba(52, 199, 89, 0.12)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "rgba(10, 132, 255, 0.3)",
+    borderColor: "rgba(52, 199, 89, 0.3)",
   },
   heroTitle: {
     fontSize: 26,
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.25)",
+    borderColor: "rgba(0,0,0,0.15)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
   },
   disclaimer: {
     fontSize: 12,
-    color: "rgba(255,255,255,0.3)",
+    color: "#8E8E93",
     textAlign: "center",
     marginTop: 24,
     lineHeight: 18,

@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     backgroundColor: GlassTheme.background,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.08)",
+    borderBottomColor: "rgba(0,0,0,0.08)",
   },
   closeBtn: {
     width: 40,

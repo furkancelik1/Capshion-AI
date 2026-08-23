@@ -13,7 +13,7 @@ export default function GlassHeader() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <BlurView
         intensity={70}
-        tint="systemThinMaterialDark"
+        tint="systemThinMaterialLight"
         style={StyleSheet.absoluteFill}
       />
       <View style={styles.inner}>
@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 100,
     borderBottomWidth: 0.5,
-    borderBottomColor: "rgba(255,255,255,0.1)",
+    borderBottomColor: "rgba(0,0,0,0.06)",
   },
   inner: {
     flexDirection: "row",

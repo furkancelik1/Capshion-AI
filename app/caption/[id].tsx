@@ -88,7 +88,7 @@ function PerImageCard({
         <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut}>
           <BlurView
             intensity={GlassTheme.blurIntensity}
-            tint="systemThinMaterialDark"
+            tint="systemThinMaterialLight"
             style={styles.cardBlur}
           >
             <View style={styles.cardInner}>
@@ -158,7 +158,7 @@ function GlassCard({
         <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut}>
           <BlurView
             intensity={GlassTheme.blurIntensity}
-            tint="systemThinMaterialDark"
+            tint="systemThinMaterialLight"
             style={styles.cardBlur}
           >
             <View style={styles.cardInner}>
@@ -554,9 +554,9 @@ export default function CaptionDetailScreen() {
                   style={{
                     width: 120,
                     height: 120,
-                    borderRadius: 24,
+                    borderRadius: 16,
                     borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.1)'
+                    borderColor: 'rgba(0,0,0,0.06)'
                   }}
                   contentFit="cover"
                   cachePolicy="memory-disk"
@@ -566,14 +566,14 @@ export default function CaptionDetailScreen() {
                 <View style={{
                   width: 120,
                   height: 120,
-                  borderRadius: 24,
-                  backgroundColor: 'rgba(255,255,255,0.05)',
+                  borderRadius: 16,
+                  backgroundColor: '#F2F2F7',
                   justifyContent: 'center',
                   alignItems: 'center',
                   borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.1)'
+                  borderColor: 'rgba(0,0,0,0.06)'
                 }}>
-                  <Ionicons name="image-outline" size={32} color="rgba(255,255,255,0.3)" />
+                  <Ionicons name="image-outline" size={32} color="#C7C7CC" />
                 </View>
               );
             })()}
@@ -591,7 +591,7 @@ export default function CaptionDetailScreen() {
           <Reanimated.View entering={FadeInUp.delay(300).springify().damping(14)}>
             <BlurView
               intensity={GlassTheme.blurIntensity}
-              tint="systemThinMaterialDark"
+              tint="systemThinMaterialLight"
               style={styles.emptyCard}
             >
               <Text style={styles.emptyText}>
@@ -675,13 +675,13 @@ export default function CaptionDetailScreen() {
         <View style={styles.modalOverlay}>
           <BlurView
             intensity={30}
-            tint="systemThinMaterialDark"
+            tint="systemThinMaterialLight"
             style={StyleSheet.absoluteFill}
           />
 
           <View style={styles.creditModalCard}>
             <View style={styles.creditIconWrapper}>
-              <Ionicons name="battery-dead" size={32} color="#0A84FF" />
+              <Ionicons name="battery-dead" size={32} color="#34C759" />
             </View>
             <Text style={styles.creditModalTitle}>
               {t("outOfCredits.title")}
@@ -752,7 +752,7 @@ export default function CaptionDetailScreen() {
               renderLoading={() => (
                 <ActivityIndicator
                   size="large"
-                  color="#0A84FF"
+                  color="#34C759"
                   style={{
                     position: "absolute",
                     top: "50%",
@@ -828,7 +828,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   imageBlurWrapper: {
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: "hidden",
     borderWidth: 1.5,
     borderColor: GlassTheme.vibrantBorder,
@@ -836,7 +836,7 @@ const styles = StyleSheet.create({
   previewImage: {
     width: 120,
     height: 120,
-    borderRadius: 18,
+    borderRadius: 16,
     margin: 2,
     backgroundColor: GlassTheme.panelStrong,
   },
@@ -976,50 +976,50 @@ const styles = StyleSheet.create({
   shareButtonText: {
     fontSize: 16,
     fontWeight: "700",
-    color: GlassTheme.textMain,
+    color: "#FFFFFF",
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
   creditModalCard: {
-    backgroundColor: "rgba(25, 25, 25, 0.95)",
-    borderRadius: 24,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
     padding: 28,
     width: "100%",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(10, 132, 255, 0.2)",
-    shadowColor: "#0A84FF",
+    borderColor: "rgba(52, 199, 89, 0.2)",
+    shadowColor: "#000000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 10,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   creditIconWrapper: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "rgba(10, 132, 255, 0.1)",
+    backgroundColor: "rgba(52, 199, 89, 0.1)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "rgba(10, 132, 255, 0.3)",
+    borderColor: "rgba(52, 199, 89, 0.3)",
   },
   creditModalTitle: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: "#1C1C1E",
     marginBottom: 12,
     textAlign: "center",
   },
   creditModalDesc: {
     fontSize: 14,
-    color: "#A1A1AA",
+    color: "#8E8E93",
     textAlign: "center",
     marginBottom: 24,
     lineHeight: 22,
@@ -1045,7 +1045,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   laterButtonText: {
-    color: "#A1A1AA",
+    color: "#8E8E93",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -1056,15 +1056,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.1)",
+    borderBottomColor: "rgba(0,0,0,0.06)",
   },
   webviewCancelText: {
-    color: "#0A84FF",
+    color: "#34C759",
     fontSize: 16,
     fontWeight: "500",
   },
   webviewTitle: {
-    color: "#FFF",
+    color: "#1C1C1E",
     fontSize: 16,
     fontWeight: "bold",
   },
@@ -1083,12 +1083,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 1.5,
-    color: "rgba(255,255,255,0.45)",
+    color: "#8E8E93",
     marginBottom: 12,
   },
   imageFallback: {
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    backgroundColor: "#F2F2F7",
   },
 });

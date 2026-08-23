@@ -65,7 +65,7 @@ function RowItem({
       <View
         style={[
           styles.iconWrap,
-          { backgroundColor: tint || "rgba(10,132,255,0.2)" },
+          { backgroundColor: tint || "rgba(52,199,89,0.15)" },
         ]}
       >
         <Ionicons name={icon} size={18} color={GlassTheme.primary} />
@@ -78,7 +78,7 @@ function RowItem({
         <Ionicons
           name="chevron-forward"
           size={16}
-          color="rgba(255,255,255,0.2)"
+          color="#C7C7CC"
         />
       )}
     </Container>
@@ -212,7 +212,7 @@ export default function ProfileScreen() {
         {/* ── Premium Durumu ── */}
         <BlurView
           intensity={50}
-          tint="systemThinMaterialDark"
+          tint="systemThinMaterialLight"
           style={styles.premiumCard}
         >
           {isPremium ? (
@@ -244,7 +244,7 @@ export default function ProfileScreen() {
 
         <BlurView
           intensity={50}
-          tint="systemThinMaterialDark"
+          tint="systemThinMaterialLight"
           style={styles.section}
         >
           {loadingProfile ? (
@@ -347,14 +347,14 @@ export default function ProfileScreen() {
 
         <BlurView
           intensity={50}
-          tint="systemThinMaterialDark"
+          tint="systemThinMaterialLight"
           style={styles.section}
         >
           <View style={styles.langRowItem}>
             <View
               style={[
                 styles.iconWrap,
-                { backgroundColor: "rgba(10,132,255,0.2)" },
+                { backgroundColor: "rgba(52,199,89,0.15)" },
               ]}
             >
               <Ionicons
@@ -413,7 +413,7 @@ export default function ProfileScreen() {
         <View style={styles.signOutSection}>
           <BlurView
             intensity={50}
-            tint="systemThinMaterialDark"
+            tint="systemThinMaterialLight"
             style={styles.section}
           >
             <HapticButton style={styles.signOutRow} onPress={handleSignOut}>
@@ -459,13 +459,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,
-    backgroundColor: "rgba(10,132,255,0.15)",
+    backgroundColor: "rgba(52,199,89,0.12)",
   },
   avatarInner: {
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -484,10 +484,10 @@ const styles = StyleSheet.create({
 
   /* ── Premium ── */
   premiumCard: {
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: "hidden",
     borderWidth: 0.5,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(0,0,0,0.06)",
     padding: 14,
     marginTop: 4,
   },
@@ -538,14 +538,14 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   section: {
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: "hidden",
     borderWidth: 0.5,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(0,0,0,0.06)",
   },
   separator: {
     height: 0.5,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(0,0,0,0.06)",
     marginLeft: 52,
   },
 
@@ -573,14 +573,14 @@ const styles = StyleSheet.create({
   rowValue: {
     fontSize: 14,
     fontWeight: "400",
-    color: "rgba(255,255,255,0.4)",
+    color: "#8E8E93",
   },
 
   /* ── Age Edit Panel ── */
   agePanel: {
     padding: 16,
     gap: 12,
-    borderRadius: 20,
+    borderRadius: 16,
     marginTop: 12,
   },
   ageActions: {
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 999,
     borderWidth: 0.5,
-    borderColor: "rgba(255,255,255,0.15)",
+    borderColor: "rgba(0,0,0,0.08)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -623,10 +623,10 @@ const styles = StyleSheet.create({
   },
   packageCard: {
     width: 120,
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 0.5,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(0,0,0,0.06)",
+    backgroundColor: "#FFFFFF",
     paddingVertical: 18,
     paddingHorizontal: 14,
     alignItems: "center",
@@ -650,7 +650,7 @@ const styles = StyleSheet.create({
   packageDivider: {
     width: 28,
     height: 1,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(0,0,0,0.08)",
     marginVertical: 4,
   },
   packagePrice: {
@@ -677,12 +677,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 0.5,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(0,0,0,0.08)",
+    backgroundColor: "#FFFFFF",
   },
   langChipActive: {
     borderColor: GlassTheme.primary,
-    backgroundColor: "rgba(10,132,255,0.15)",
+    backgroundColor: "rgba(52,199,89,0.12)",
   },
   langChipText: {
     fontSize: 12,
@@ -697,10 +697,10 @@ const styles = StyleSheet.create({
   /* ── Sign Out ── */
   signOutSection: {
     marginTop: 28,
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: "hidden",
     borderWidth: 0.5,
-    borderColor: "rgba(255,35,48,0.3)",
+    borderColor: "rgba(255,59,48,0.3)",
   },
   signOutRow: {
     flexDirection: "row",

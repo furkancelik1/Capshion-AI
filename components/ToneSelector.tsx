@@ -50,8 +50,8 @@ export default function ToneSelector({ selectedTone, onToneSelect, isPremium, on
             {
               backgroundColor: isSelected
                 ? GlassTheme.panelStrong
-                : 'rgba(255,255,255,0.04)',
-              borderColor: isSelected ? GlassTheme.border : 'rgba(255,255,255,0.08)',
+                : '#FFFFFF',
+              borderColor: isSelected ? GlassTheme.primary : 'rgba(0,0,0,0.08)',
             },
             isSelected && { borderWidth: 1.5 },
             locked && styles.cardLocked,
@@ -123,11 +123,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(0,0,0,0.03)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   iconWrapLocked: {
     backgroundColor: 'rgba(251,191,36,0.08)',
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   nameLocked: {
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(28,28,30,0.35)',
   },
   prompt: {
     fontSize: 10,
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     lineHeight: 13,
   },
   promptLocked: {
-    color: 'rgba(255,255,255,0.25)',
+    color: 'rgba(28,28,30,0.25)',
   },
   lockBadge: {
     marginTop: 2,
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   lockBadgeText: {
     fontSize: 8,
     fontWeight: '800',
-    color: '#FBBF24',
+    color: '#B45309',
     letterSpacing: 0.5,
   },
 });

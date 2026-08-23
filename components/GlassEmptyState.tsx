@@ -45,8 +45,8 @@ export default function GlassEmptyState({
 
   return (
     <View style={styles.container}>
-      <BlurView intensity={50} tint="systemThinMaterialDark" style={styles.card}>
-        <Ionicons name={iconName} size={64} color="rgba(255,255,255,0.2)" />
+      <BlurView intensity={50} tint="systemThinMaterialLight" style={styles.card}>
+        <Ionicons name={iconName} size={64} color="rgba(0,0,0,0.15)" />
 
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.description}>{description}</Text>
@@ -77,9 +77,9 @@ const styles = StyleSheet.create({
   card: {
     alignItems: "center",
     padding: 32,
-    borderRadius: 32,
+    borderRadius: 16,
     borderWidth: 0.5,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(0,0,0,0.06)",
     overflow: "hidden",
     width: "100%",
     maxWidth: 340,
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   description: {
     marginTop: 8,
     fontSize: 14,
-    color: "rgba(255,255,255,0.6)",
+    color: GlassTheme.textMuted,
     textAlign: "center",
     lineHeight: 20,
   },
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#0A84FF",
+    backgroundColor: GlassTheme.primary,
     borderRadius: 999,
     paddingVertical: 14,
     paddingHorizontal: 28,

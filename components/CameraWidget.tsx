@@ -159,15 +159,15 @@ const styles = StyleSheet.create({
   },
   imageBlur: {
     width: "100%",
-    borderRadius: 32,
+    borderRadius: 16,
     borderWidth: 0.5,
-    borderColor: "rgba(255,255,255,0.15)",
+    borderColor: "rgba(0,0,0,0.08)",
     overflow: "hidden",
     alignItems: "center",
     paddingTop: 16,
     paddingBottom: 8,
     paddingHorizontal: 8,
-    backgroundColor: "rgba(0,0,0,0.2)",
+    backgroundColor: "#FFFFFF",
     ...GlassTheme.cardShadow,
   },
   carouselContainer: {
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
     borderColor: GlassTheme.border,
     borderRadius: GlassTheme.radiusMd,
-    backgroundColor: "rgba(255,255,255,0.03)",
+    backgroundColor: "rgba(0,0,0,0.02)",
     gap: 12,
   },
   emptyText: {
@@ -230,8 +230,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     borderRadius: 999,
     borderWidth: 0.5,
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(0,0,0,0.08)",
+    backgroundColor: "#FFFFFF",
     ...GlassTheme.cardShadow,
   },
   actionLabel: {

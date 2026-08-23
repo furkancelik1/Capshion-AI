@@ -8,7 +8,7 @@ export default function NotFoundScreen() {
     <>
       <Stack.Screen options={{ title: 'Oops!' }} />
       <View style={styles.container}>
-        <BlurView intensity={GlassTheme.blurIntensity} tint="systemThinMaterialDark" style={styles.card}>
+        <BlurView intensity={GlassTheme.blurIntensity} tint="systemThinMaterialLight" style={styles.card}>
           <Text style={styles.title}>Bu sayfa bulunamadı.</Text>
           <Link href="/(tabs)" style={styles.link}>
             <Text style={styles.linkText}>Ana sayfaya dön</Text>

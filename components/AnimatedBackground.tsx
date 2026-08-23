@@ -81,7 +81,7 @@ export default function AnimatedBackground() {
     <View style={styles.container} pointerEvents="none">
       <DriftCircle
         size={380}
-        color="rgba(10,132,255,0.35)"
+        color="rgba(52,199,89,0.08)"
         initialX={width * -0.15}
         initialY={height * -0.1}
         driftX={width * 0.35}
@@ -91,7 +91,7 @@ export default function AnimatedBackground() {
       />
       <DriftCircle
         size={320}
-        color="rgba(100,210,255,0.3)"
+        color="rgba(255,149,0,0.06)"
         initialX={width * 0.6}
         initialY={height * 0.5}
         driftX={width * 0.3}
@@ -101,7 +101,7 @@ export default function AnimatedBackground() {
       />
       <DriftCircle
         size={260}
-        color="rgba(226,232,240,0.25)"
+        color="rgba(0,0,0,0.03)"
         initialX={width * 0.75}
         initialY={height * 0.85}
         driftX={width * -0.4}
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "#0A0A0F",
+    backgroundColor: "#F2F2F7",
   },
   circle: {
     position: "absolute",

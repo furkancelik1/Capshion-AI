@@ -70,9 +70,8 @@ function RootLayoutNav() {
   console.log("RootLayout: usePushNotifications tetiklendi...");
   const { expoPushToken } = usePushNotifications();
   console.log("RootLayout: Token Değeri:", expoPushToken);
-  const rawScheme = useColorScheme();
-  const colorScheme: "light" | "dark" =
-    rawScheme === "light" ? "light" : "dark";
+  useColorScheme();
+  const colorScheme: "light" | "dark" = "light";
   const { user, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
@@ -155,7 +154,7 @@ function RootLayoutNav() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#0A0A0F" }}>
+    <View style={{ flex: 1, backgroundColor: "#F2F2F7" }}>
       <AnimatedBackground />
       {!splashDone ? (
         <AnimatedSplashScreen onAnimationFinish={() => setSplashDone(true)} />
@@ -190,7 +189,7 @@ function RootLayoutNav() {
               />
             </Stack>
           </ThemeProvider>
-          <StatusBar style="light" />
+          <StatusBar style="dark" />
         </>
       )}
     </View>

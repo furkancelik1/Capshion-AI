@@ -44,12 +44,12 @@ export default function HowItWorksModal({
           <View style={styles.card}>
             <BlurView
               intensity={90}
-              tint="systemThinMaterialDark"
+              tint="systemThinMaterialLight"
               style={StyleSheet.absoluteFill}
             />
             <View style={styles.cardInner}>
             <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-              <Ionicons name="close" size={16} color="#FFFFFF" />
+              <Ionicons name="close" size={16} color="#1C1C1E" />
             </TouchableOpacity>
 
             <Text style={styles.title}>{t("howItWorks.title")}</Text>
@@ -76,7 +76,7 @@ export default function HowItWorksModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
   },
   container: {
     flex: 1,
@@ -87,11 +87,11 @@ const styles = StyleSheet.create({
   card: {
     width: "85%",
     maxWidth: 360,
-    borderRadius: 24,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
+    borderColor: "rgba(0, 0, 0, 0.06)",
     overflow: "hidden",
-    backgroundColor: "rgba(15, 15, 20, 0.75)",
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
   },
   cardInner: {
     paddingVertical: 32,
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(0,0,0,0.06)",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 10,
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#1C1C1E",
     textAlign: "center",
     marginTop: 4,
     letterSpacing: 1.5,

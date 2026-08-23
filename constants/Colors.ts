@@ -1,26 +1,26 @@
-const tintColorLight = "#007AFF"; // iOS Blue
-const tintColorDark = "#F43F5E"; // Rose-500
+const tintColorLight = "#34C759"; // iOS Green (primary action)
+const tintColorDark = "#34C759";
 
 const Colors = {
   light: {
-    text: "#1F2937",
-    background: "#FFFFFF",
+    text: "#1C1C1E",
+    background: "#F2F2F7",
     tint: tintColorLight,
-    icon: "#6B7280",
-    tabIconDefault: "#9CA3AF",
+    icon: "#8E8E93",
+    tabIconDefault: "#8E8E93",
     tabIconSelected: tintColorLight,
-    card: "#F3F4F6",
-    border: "#E5E7EB",
+    card: "#FFFFFF",
+    border: "rgba(0, 0, 0, 0.06)",
   },
   dark: {
-    text: "#F9FAFB",
-    background: "#09090B", // Zinc-950
+    text: "#1C1C1E",
+    background: "#F2F2F7",
     tint: tintColorDark,
-    icon: "#9CA3AF",
-    tabIconDefault: "#4B5563",
+    icon: "#8E8E93",
+    tabIconDefault: "#8E8E93",
     tabIconSelected: tintColorDark,
-    card: "#18181B", // Zinc-900
-    border: "#27272A", // Zinc-800
+    card: "#FFFFFF",
+    border: "rgba(0, 0, 0, 0.06)",
   },
 };
 

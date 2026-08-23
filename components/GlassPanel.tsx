@@ -12,7 +12,7 @@ export default function GlassPanel({
   return (
     <BlurView
       intensity={50}
-      tint="systemThinMaterialDark"
+      tint="systemThinMaterialLight"
       style={[styles.panel, style]}
     >
       {children}
@@ -24,7 +24,7 @@ const styles = StyleSheet.create({
   panel: {
     borderWidth: 1,
     borderColor: GlassTheme.glassBorder,
-    borderRadius: 24,
+    borderRadius: 16,
     overflow: "hidden",
     backgroundColor: GlassTheme.glassCardBg,
   },

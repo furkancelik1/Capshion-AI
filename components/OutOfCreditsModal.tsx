@@ -30,16 +30,16 @@ export default function OutOfCreditsModal({
         <View style={styles.card}>
           <BlurView
             intensity={90}
-            tint="systemThinMaterialDark"
+            tint="systemThinMaterialLight"
             style={StyleSheet.absoluteFill}
           />
           <View style={styles.cardInner}>
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Ionicons name="close" size={16} color="#FFFFFF" />
+            <Ionicons name="close" size={16} color="#1C1C1E" />
           </TouchableOpacity>
 
           <View style={styles.iconWrap}>
-            <Ionicons name="flash" size={36} color="#5AC8FA" />
+            <Ionicons name="flash" size={36} color="#FF9500" />
           </View>
 
           <Text style={styles.title}>{t("outOfCredits.title")}</Text>
@@ -54,7 +54,7 @@ export default function OutOfCreditsModal({
             activeOpacity={0.85}
           >
             <LinearGradient
-              colors={["#0A84FF", "#64D2FF"]}
+              colors={["#34C759", "#30D158"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.buyGradient}
@@ -89,16 +89,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
   },
   card: {
     width: "100%",
     maxWidth: 340,
-    borderRadius: 24,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(10, 132, 255, 0.2)",
+    borderColor: "rgba(52, 199, 89, 0.2)",
     overflow: "hidden",
-    backgroundColor: "rgba(15, 15, 20, 0.75)",
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
   },
   cardInner: {
     paddingVertical: 36,
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(0,0,0,0.06)",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 10,
@@ -124,19 +124,19 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(10, 132, 255, 0.15)",
+    backgroundColor: "rgba(255, 149, 0, 0.12)",
     borderWidth: 1,
-    borderColor: "rgba(10, 132, 255, 0.3)",
-    shadowColor: "#0A84FF",
+    borderColor: "rgba(255, 149, 0, 0.3)",
+    shadowColor: "#FF9500",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
   },
   title: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#1C1C1E",
     textAlign: "center",
     lineHeight: 28,
   },

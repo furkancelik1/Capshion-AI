@@ -12,34 +12,34 @@ export default function AmbientGlow() {
     >
       <Defs>
         <RadialGradient id="purpleGlow" cx="50%" cy="50%" r="50%">
-          <Stop offset="0%" stopColor="#0A84FF" stopOpacity="0.3" />
-          <Stop offset="50%" stopColor="#0A84FF" stopOpacity="0.1" />
-          <Stop offset="100%" stopColor="#0A84FF" stopOpacity="0" />
+          <Stop offset="0%" stopColor="#34C759" stopOpacity="0.1" />
+          <Stop offset="50%" stopColor="#34C759" stopOpacity="0.04" />
+          <Stop offset="100%" stopColor="#34C759" stopOpacity="0" />
         </RadialGradient>
         <RadialGradient id="blueGlow" cx="50%" cy="50%" r="50%">
-          <Stop offset="0%" stopColor="#64D2FF" stopOpacity="0.25" />
-          <Stop offset="50%" stopColor="#64D2FF" stopOpacity="0.08" />
-          <Stop offset="100%" stopColor="#64D2FF" stopOpacity="0" />
+          <Stop offset="0%" stopColor="#FF9500" stopOpacity="0.08" />
+          <Stop offset="50%" stopColor="#FF9500" stopOpacity="0.03" />
+          <Stop offset="100%" stopColor="#FF9500" stopOpacity="0" />
         </RadialGradient>
         <RadialGradient id="neonGlow" cx="50%" cy="50%" r="50%">
-          <Stop offset="0%" stopColor="#E2E8F0" stopOpacity="0.12" />
-          <Stop offset="60%" stopColor="#E2E8F0" stopOpacity="0.04" />
-          <Stop offset="100%" stopColor="#E2E8F0" stopOpacity="0" />
+          <Stop offset="0%" stopColor="#8E8E93" stopOpacity="0.05" />
+          <Stop offset="60%" stopColor="#8E8E93" stopOpacity="0.02" />
+          <Stop offset="100%" stopColor="#8E8E93" stopOpacity="0" />
         </RadialGradient>
       </Defs>
 
-      {/* Deep purple orb — top-left */}
+      {/* Soft green orb — top-left */}
       <Circle cx={width * 0.08} cy={height * 0.12} r={160} fill="url(#purpleGlow)" />
-      <Circle cx={width * 0.08} cy={height * 0.12} r={80} fill="#0A84FF" opacity={0.08} />
+      <Circle cx={width * 0.08} cy={height * 0.12} r={80} fill="#34C759" opacity={0.03} />
 
-      {/* Neon platinum orb — mid-right */}
+      {/* Neutral orb — mid-right */}
       <Circle cx={width * 0.82} cy={height * 0.35} r={140} fill="url(#neonGlow)" />
 
-      {/* Electric blue orb — bottom-center */}
+      {/* Soft orange orb — bottom-center */}
       <Circle cx={width * 0.5} cy={height * 0.78} r={200} fill="url(#blueGlow)" />
-      <Circle cx={width * 0.5} cy={height * 0.78} r={100} fill="#64D2FF" opacity={0.05} />
+      <Circle cx={width * 0.5} cy={height * 0.78} r={100} fill="#FF9500" opacity={0.02} />
 
-      {/* Midnight purple orb — bottom-left */}
+      {/* Soft green orb — bottom-left */}
       <Circle cx={width * 0.15} cy={height * 0.88} r={120} fill="url(#purpleGlow)" />
 
       {/* Micro accent — top-right corner */}

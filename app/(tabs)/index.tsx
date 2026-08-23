@@ -451,7 +451,7 @@ export default function HomeScreen() {
 
       {/* ── Fine-Tuning Panel ── */}
       {selectedImages.length > 0 && (
-        <BlurView intensity={50} tint="systemThinMaterialDark" style={styles.tuningCard}>
+        <BlurView intensity={50} tint="systemThinMaterialLight" style={styles.tuningCard}>
           <Text style={styles.tuningTitle}>{t("settings.title")}</Text>
 
           <View style={styles.lengthRow}>
@@ -533,7 +533,7 @@ export default function HomeScreen() {
               <Ionicons
                 name="happy-outline"
                 size={18}
-                color="rgba(255,255,255,0.6)"
+                color={GlassTheme.textMuted}
               />
               <Text style={styles.switchText}>{t("settings.emojis")}</Text>
             </View>
@@ -543,7 +543,7 @@ export default function HomeScreen() {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setUseEmojis(v);
               }}
-              trackColor={{ false: "rgba(255,255,255,0.1)", true: "#0A84FF" }}
+              trackColor={{ false: "rgba(0,0,0,0.1)", true: "#34C759" }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -553,7 +553,7 @@ export default function HomeScreen() {
               <Ionicons
                 name="pricetags-outline"
                 size={18}
-                color="rgba(255,255,255,0.6)"
+                color={GlassTheme.textMuted}
               />
               <Text style={styles.switchText}>{t("settings.hashtags")}</Text>
             </View>
@@ -563,7 +563,7 @@ export default function HomeScreen() {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setUseHashtags(v);
               }}
-              trackColor={{ false: "rgba(255,255,255,0.1)", true: "#0A84FF" }}
+              trackColor={{ false: "rgba(0,0,0,0.1)", true: "#34C759" }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -573,7 +573,7 @@ export default function HomeScreen() {
               <Ionicons
                 name="images-outline"
                 size={18}
-                color="rgba(255,255,255,0.6)"
+                color={GlassTheme.textMuted}
               />
               <Text style={styles.switchText}>{t("settings.carouselMode")}</Text>
             </View>
@@ -588,7 +588,7 @@ export default function HomeScreen() {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setCarouselMode(v);
               }}
-              trackColor={{ false: "rgba(255,255,255,0.1)", true: "#0A84FF" }}
+              trackColor={{ false: "rgba(0,0,0,0.1)", true: "#34C759" }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -603,7 +603,7 @@ export default function HomeScreen() {
             value={isPremium ? customPrompt : ""}
             onChangeText={isPremium ? setCustomPrompt : undefined}
             placeholder={isPremium ? t("settings.customPromptPlaceholder") : "👑  " + t("settings.customPromptPremiumOnly")}
-            placeholderTextColor="rgba(255,255,255,0.3)"
+            placeholderTextColor={GlassTheme.textPlaceholder}
             multiline
             numberOfLines={3}
             textAlignVertical="top"
@@ -664,18 +664,18 @@ export default function HomeScreen() {
         onRequestClose={() => setShowProModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <BlurView intensity={90} tint="systemThinMaterialDark" style={styles.modalCard}>
+          <BlurView intensity={90} tint="systemThinMaterialLight" style={styles.modalCard}>
             <TouchableOpacity
               style={styles.modalCloseBtn}
               onPress={() => setShowProModal(false)}
             >
-              <Ionicons name="close" size={22} color="rgba(255,255,255,0.5)" />
+              <Ionicons name="close" size={22} color={GlassTheme.textMuted} />
             </TouchableOpacity>
 
             <Ionicons
               name="diamond"
               size={64}
-              color="#0A84FF"
+              color="#34C759"
               style={styles.modalIcon}
             />
 
@@ -852,7 +852,7 @@ const styles = StyleSheet.create({
     width: 9,
     height: 9,
     borderRadius: 5,
-    backgroundColor: "#6cff8c",
+    backgroundColor: GlassTheme.primary,
   },
   previewPrompt: {
     fontSize: 12,
@@ -863,9 +863,9 @@ const styles = StyleSheet.create({
   previewOutput: {
     borderRadius: 14,
     padding: 11,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "#F2F2F7",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
+    borderColor: "rgba(0,0,0,0.06)",
   },
   previewOutputText: {
     fontSize: 13,
@@ -892,8 +892,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 999,
     borderWidth: 0.5,
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(0,0,0,0.08)",
+    backgroundColor: "#FFFFFF",
   },
   toneSheetButtonText: {
     fontSize: 12,
@@ -904,22 +904,22 @@ const styles = StyleSheet.create({
 
   /* ── Fine-Tuning Panel ── */
   tuningCard: {
-    borderRadius: 24,
+    borderRadius: 16,
     padding: 16,
     borderWidth: 0.5,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(0,0,0,0.06)",
     overflow: "hidden",
     gap: 16,
   },
   tuningTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "rgba(255,255,255,0.6)",
+    color: GlassTheme.textMuted,
   },
   tuningSubtitle: {
     fontSize: 12,
     fontWeight: "600",
-    color: "rgba(255,255,255,0.5)",
+    color: GlassTheme.textMuted,
     marginBottom: 8,
   },
   lengthRow: {
@@ -930,17 +930,17 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "#F2F2F7",
     alignItems: "center",
     justifyContent: "center",
   },
   lengthChipActive: {
-    backgroundColor: "#0A84FF",
+    backgroundColor: "#34C759",
   },
   lengthChipText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "rgba(255,255,255,0.5)",
+    color: "#8E8E93",
   },
   lengthChipTextActive: {
     color: "#FFFFFF",
@@ -958,7 +958,7 @@ const styles = StyleSheet.create({
   switchText: {
     fontSize: 14,
     fontWeight: "500",
-    color: "rgba(255,255,255,0.8)",
+    color: "#1C1C1E",
   },
 
   /* ── Features Carousel ── */
@@ -979,9 +979,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(10,132,255,0.2)",
+    backgroundColor: "rgba(52,199,89,0.15)",
     borderWidth: 1,
-    borderColor: "rgba(10,132,255,0.3)",
+    borderColor: "rgba(52,199,89,0.3)",
   },
   featureTitle: {
     fontSize: 16,
@@ -999,7 +999,7 @@ const styles = StyleSheet.create({
   /* ── Premium Modal ── */
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
+    backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
@@ -1007,9 +1007,9 @@ const styles = StyleSheet.create({
   modalCard: {
     width: "100%",
     maxWidth: 360,
-    borderRadius: 32,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(10, 132, 255, 0.5)",
+    borderColor: "rgba(52, 199, 89, 0.3)",
     padding: 32,
     alignItems: "center",
     overflow: "hidden",
@@ -1027,14 +1027,14 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#1C1C1E",
     textAlign: "center",
     marginBottom: 12,
   },
   modalDesc: {
     fontSize: 14,
     fontWeight: "500",
-    color: "rgba(255,255,255,0.6)",
+    color: "#8E8E93",
     textAlign: "center",
     lineHeight: 20,
     marginBottom: 28,
@@ -1043,7 +1043,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#0A84FF",
+    backgroundColor: "#34C759",
     borderRadius: 999,
     paddingVertical: 14,
     paddingHorizontal: 32,
@@ -1060,7 +1060,7 @@ const styles = StyleSheet.create({
   modalSkip: {
     fontSize: 13,
     fontWeight: "500",
-    color: "rgba(255,255,255,0.4)",
+    color: "#8E8E93",
     textDecorationLine: "underline",
   },
 
@@ -1086,12 +1086,12 @@ const styles = StyleSheet.create({
   },
 
   customPromptInput: {
-    backgroundColor: "rgba(255,255,255,0.05)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 0.5,
-    borderColor: "rgba(255,255,255,0.15)",
+    borderColor: "rgba(0,0,0,0.1)",
     borderRadius: 14,
     padding: 14,
-    color: "#FFFFFF",
+    color: "#1C1C1E",
     fontSize: 14,
     fontWeight: "500",
     lineHeight: 20,
@@ -1099,7 +1099,7 @@ const styles = StyleSheet.create({
   },
   customPromptInputLocked: {
     opacity: 0.5,
-    borderColor: "rgba(251,191,36,0.25)",
+    borderColor: "rgba(255,149,0,0.25)",
   },
 
 });

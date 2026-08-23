@@ -7,8 +7,8 @@ export function ToneIcon({ size = 24 }: { size?: number }) {
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Defs>
         <LinearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0%" stopColor="#0A84FF" />
-          <Stop offset="100%" stopColor="#64D2FF" />
+          <Stop offset="0%" stopColor="#34C759" />
+          <Stop offset="100%" stopColor="#30D158" />
         </LinearGradient>
       </Defs>
       <Path
@@ -24,8 +24,8 @@ export function HashtagIcon({ size = 24 }: { size?: number }) {
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Defs>
         <LinearGradient id={`${gradientId}2`} x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0%" stopColor="#0A84FF" />
-          <Stop offset="100%" stopColor="#64D2FF" />
+          <Stop offset="0%" stopColor="#34C759" />
+          <Stop offset="100%" stopColor="#30D158" />
         </LinearGradient>
       </Defs>
       <Path
@@ -41,8 +41,8 @@ export function FeedIcon({ size = 24 }: { size?: number }) {
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Defs>
         <LinearGradient id={`${gradientId}3`} x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0%" stopColor="#0A84FF" />
-          <Stop offset="100%" stopColor="#64D2FF" />
+          <Stop offset="0%" stopColor="#34C759" />
+          <Stop offset="100%" stopColor="#30D158" />
         </LinearGradient>
       </Defs>
       <Path
@@ -58,8 +58,8 @@ export function PersonIcon({ size = 24 }: { size?: number }) {
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Defs>
         <LinearGradient id={`${gradientId}5`} x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0%" stopColor="#0A84FF" />
-          <Stop offset="100%" stopColor="#64D2FF" />
+          <Stop offset="0%" stopColor="#34C759" />
+          <Stop offset="100%" stopColor="#30D158" />
         </LinearGradient>
       </Defs>
       <Path
@@ -75,7 +75,7 @@ export function LogOutIcon({ size = 24 }: { size?: number }) {
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Defs>
         <LinearGradient id={`${gradientId}6`} x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0%" stopColor="#FF4B4B" />
+          <Stop offset="0%" stopColor="#FF3B30" />
           <Stop offset="100%" stopColor="#FF6B6B" />
         </LinearGradient>
       </Defs>
@@ -92,8 +92,8 @@ export function ClockIcon({ size = 24 }: { size?: number }) {
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Defs>
         <LinearGradient id={`${gradientId}7`} x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0%" stopColor="#0A84FF" />
-          <Stop offset="100%" stopColor="#64D2FF" />
+          <Stop offset="0%" stopColor="#34C759" />
+          <Stop offset="100%" stopColor="#30D158" />
         </LinearGradient>
       </Defs>
       <Path
@@ -109,8 +109,8 @@ export function SparkleIcon({ size = 24 }: { size?: number }) {
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Defs>
         <LinearGradient id={`${gradientId}4`} x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0%" stopColor="#0A84FF" />
-          <Stop offset="100%" stopColor="#64D2FF" />
+          <Stop offset="0%" stopColor="#FF9500" />
+          <Stop offset="100%" stopColor="#FFB340" />
         </LinearGradient>
       </Defs>
       <Path

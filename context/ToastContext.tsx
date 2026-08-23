@@ -78,7 +78,7 @@ function GlassToast({ message, type, onHide }: { message: string; type: ToastTyp
         animatedStyle,
       ]}
     >
-      <BlurView intensity={80} tint="systemThinMaterialDark" style={styles.blur}>
+      <BlurView intensity={80} tint="systemThinMaterialLight" style={styles.blur}>
         <Ionicons name={config.icon} size={20} color={config.color} />
         <Text style={styles.message}>{message}</Text>
       </BlurView>
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     overflow: "hidden",
     borderWidth: 0.5,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: "rgba(0,0,0,0.08)",
     maxWidth: "85%",
   },
   blur: {
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   message: {
     fontSize: 14,
     fontWeight: "500",
-    color: GlassTheme.neonPlatinum,
+    color: GlassTheme.textMain,
     flexShrink: 1,
   },
 });

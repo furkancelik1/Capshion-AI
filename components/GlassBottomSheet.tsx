@@ -61,7 +61,7 @@ export default function GlassBottomSheet({
       <BottomSheetView style={styles.content}>
         <BlurView
           intensity={70}
-          tint="systemThinMaterialDark"
+          tint="systemThinMaterialLight"
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.inner}>
@@ -125,15 +125,15 @@ const styles = StyleSheet.create({
     width: 40,
     height: 5,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.3)",
+    backgroundColor: "rgba(0,0,0,0.15)",
   },
   content: {
     flex: 1,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     overflow: "hidden",
     borderWidth: 0.5,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(0,0,0,0.06)",
   },
   inner: {
     flex: 1,
@@ -159,13 +159,13 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(0,0,0,0.06)",
   },
   rowSelected: {
     borderColor: GlassTheme.primary,
-    backgroundColor: "rgba(10, 132, 255, 0.1)",
+    backgroundColor: "rgba(52, 199, 89, 0.08)",
   },
   rowLocked: {
     opacity: 0.6,
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   rowNameLocked: {
-    color: "rgba(255,255,255,0.4)",
+    color: "rgba(0,0,0,0.35)",
   },
   rowPrompt: {
     fontSize: 12,
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     color: GlassTheme.textMuted,
   },
   rowPromptLocked: {
-    color: "rgba(255,255,255,0.25)",
+    color: "rgba(0,0,0,0.25)",
   },
   proBadge: {
     paddingHorizontal: 6,
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   proBadgeText: {
     fontSize: 9,
     fontWeight: "800",
-    color: "#FBBF24",
+    color: "#B45309",
     letterSpacing: 0.5,
   },
 });

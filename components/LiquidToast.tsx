@@ -44,7 +44,7 @@ export default function LiquidToast({
     <Animated.View style={[styles.container, animatedStyle]}>
       <BlurView
         intensity={GlassTheme.blurIntensity}
-        tint="systemThinMaterialDark"
+        tint="systemThinMaterialLight"
         style={styles.blur}
       >
         <Text style={styles.text}>Kopyalandı! 📋</Text>
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   blur: {
     paddingHorizontal: 24,
     paddingVertical: 14,
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: GlassTheme.glassBorder,
   },

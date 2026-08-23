@@ -209,7 +209,7 @@ export default function LoginScreen() {
               onPress={handleAppleLogin}
               activeOpacity={0.7}
             >
-              <Ionicons name="logo-apple" size={20} color="#FFFFFF" />
+              <Ionicons name="logo-apple" size={20} color={GlassTheme.textMain} />
               <Text style={styles.socialBtnText}>Apple ile Giriş Yap</Text>
             </TouchableOpacity>
           )}
@@ -218,7 +218,7 @@ export default function LoginScreen() {
             onPress={handleGoogleLogin}
             activeOpacity={0.7}
           >
-            <Ionicons name="logo-google" size={20} color="#FFFFFF" />
+            <Ionicons name="logo-google" size={20} color={GlassTheme.textMain} />
             <Text style={styles.socialBtnText}>Google ile Giriş Yap</Text>
           </TouchableOpacity>
         </View>
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   inputOuter: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(0,0,0,0.08)',
     backgroundColor: 'transparent',
     overflow: 'hidden',
   },
@@ -338,12 +338,12 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 0.5,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.08)',
   },
   dividerText: {
     fontSize: 13,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.4)',
+    color: GlassTheme.textMuted,
   },
   socialRow: {
     gap: 12,
@@ -357,13 +357,13 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 999,
     borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.1)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(0,0,0,0.08)',
+    backgroundColor: '#FFFFFF',
   },
   socialBtnText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: GlassTheme.textMain,
     letterSpacing: 0.3,
   },
   footer: {

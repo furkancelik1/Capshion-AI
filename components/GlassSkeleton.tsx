@@ -85,12 +85,12 @@ export function HistoryCardSkeleton() {
 
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "#E5E5EA",
   },
   cardWrap: {
     padding: 16,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
     gap: 8,
   },
   cardRow: {
