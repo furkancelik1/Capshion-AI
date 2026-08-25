@@ -18,18 +18,17 @@ import { usePostHog } from "posthog-react-native";
 import AmbientGlow from "@/components/AmbientGlow";
 import HapticButton from "@/components/HapticButton";
 import { GlassTheme } from "@/constants/LiquidGlass";
+import { hasPremiumEntitlement } from "@/utils/revenueCat";
 
 const PACKAGE_TYPE_LABELS: Record<string, string> = {
-  ANNUAL: "Yıllık",
-  SIX_MONTH: "6 Ay",
-  THREE_MONTH: "3 Ay",
-  TWO_MONTH: "2 Ay",
-  MONTHLY: "Aylık",
-  WEEKLY: "Haftalık",
+  ANNUAL: "Yıllık Plan",
+  MONTHLY: "Aylık Plan",
+  WEEKLY: "Haftalık Plan",
+  LIFETIME: "Ömür Boyu Erişim",
 };
 
 function packageLabel(pkg: PurchasesPackage): string {
-  return PACKAGE_TYPE_LABELS[pkg.packageType] ?? "Paket";
+  return PACKAGE_TYPE_LABELS[pkg.packageType] ?? "Premium Paket";
 }
 
 function packagePeriod(pkg: PurchasesPackage): string {
@@ -72,7 +71,8 @@ export default function PaywallScreen() {
     try {
       setPurchasing(true);
       const { customerInfo } = await Purchases.purchasePackage(selectedPackage);
-      if (typeof customerInfo.entitlements.active["premium"] !== "undefined") {
+      console.log("[RevenueCat] Aktif Yetkiler:", Object.keys(customerInfo.entitlements.active));
+      if (hasPremiumEntitlement(customerInfo)) {
         posthog?.capture("premium_satin_alindi", {
           paket_tipi: selectedPackage.product.identifier,
           fiyat: selectedPackage.product.priceString,
@@ -95,7 +95,8 @@ export default function PaywallScreen() {
     try {
       setRestoring(true);
       const customerInfo = await Purchases.restorePurchases();
-      if (typeof customerInfo.entitlements.active["premium"] !== "undefined") {
+      console.log("[RevenueCat] Aktif Yetkiler:", Object.keys(customerInfo.entitlements.active));
+      if (hasPremiumEntitlement(customerInfo)) {
         router.back();
       } else {
         Alert.alert(

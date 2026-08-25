@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
+import Purchases from 'react-native-purchases';
 import { api, setToken } from '../services/api';
 
 interface AuthUser {
@@ -28,6 +29,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (result && result.user && result.token) {
         setToken(result.token);
         setUser(result.user);
+        try {
+          await Purchases.logIn(result.user.id);
+        } catch (rcErr: unknown) {
+          console.error(
+            '[RevenueCat] logIn hatası:',
+            rcErr instanceof Error ? rcErr.message : String(rcErr),
+          );
+        }
         return { error: null };
       }
       return { error: 'Token veya kullanıcı bilgisi alınamadı.' };
@@ -46,6 +55,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (result && result.user && result.token) {
         setToken(result.token);
         setUser(result.user);
+        try {
+          await Purchases.logIn(result.user.id);
+        } catch (rcErr: unknown) {
+          console.error(
+            '[RevenueCat] logIn hatası:',
+            rcErr instanceof Error ? rcErr.message : String(rcErr),
+          );
+        }
         return { error: null };
       }
       return { error: 'Kayıt sonrası kullanıcı oluşturulamadı.' };
@@ -60,6 +77,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = () => {
     setToken(null);
     setUser(null);
+    Purchases.logOut().catch((rcErr: unknown) => {
+      console.error(
+        '[RevenueCat] logOut hatası:',
+        rcErr instanceof Error ? rcErr.message : String(rcErr),
+      );
+    });
   };
 
   return (

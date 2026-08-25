@@ -560,6 +560,69 @@ app.post("/api/payments/webhook", express.raw({ type: "application/json" }), asy
   res.json({ received: true });
 });
 
+const REVENUECAT_PREMIUM_GRANT_EVENTS = ["INITIAL_PURCHASE", "RENEWAL"];
+const REVENUECAT_PREMIUM_REVOKE_EVENTS = ["EXPIRATION", "CANCELLATION"];
+
+app.post("/api/webhooks/revenuecat", async (req, res) => {
+  const webhookSecret = process.env.REVENUECAT_WEBHOOK_SECRET;
+  if (webhookSecret) {
+    const authHeader = req.headers["authorization"];
+    if (authHeader !== `Bearer ${webhookSecret}`) {
+      console.warn("[RevenueCat Webhook] Yetkisiz istek reddedildi.");
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+  } else {
+    console.warn(
+      "[RevenueCat Webhook] REVENUECAT_WEBHOOK_SECRET tanımlı değil, istek doğrulanmadan işleniyor.",
+    );
+  }
+
+  const event = req.body?.event;
+  if (!event || !event.type || !event.app_user_id) {
+    console.warn("[RevenueCat Webhook] Geçersiz payload:", JSON.stringify(req.body));
+    return res.status(400).json({ error: "Geçersiz webhook payload." });
+  }
+
+  console.log(
+    `[RevenueCat Webhook] Event alındı: ${event.type}, app_user_id: ${event.app_user_id}`,
+  );
+
+  try {
+    if (REVENUECAT_PREMIUM_GRANT_EVENTS.includes(event.type)) {
+      const updateResult = await pool.query(
+        "UPDATE profiles SET is_premium = true WHERE id = $1 RETURNING id",
+        [event.app_user_id],
+      );
+      if (updateResult.rows.length === 0) {
+        console.warn(`[RevenueCat Webhook] Kullanıcı bulunamadı: ${event.app_user_id}`);
+      } else {
+        console.log(
+          `[RevenueCat Webhook] Kullanıcı ${event.app_user_id} Premium yapıldı (${event.type}).`,
+        );
+      }
+    } else if (REVENUECAT_PREMIUM_REVOKE_EVENTS.includes(event.type)) {
+      const updateResult = await pool.query(
+        "UPDATE profiles SET is_premium = false WHERE id = $1 RETURNING id",
+        [event.app_user_id],
+      );
+      if (updateResult.rows.length === 0) {
+        console.warn(`[RevenueCat Webhook] Kullanıcı bulunamadı: ${event.app_user_id}`);
+      } else {
+        console.log(
+          `[RevenueCat Webhook] Kullanıcı ${event.app_user_id} Premium'dan çıkarıldı (${event.type}).`,
+        );
+      }
+    } else {
+      console.log(`[RevenueCat Webhook] İşlenmeyen event tipi: ${event.type}`);
+    }
+  } catch (dbErr) {
+    console.error("[RevenueCat Webhook] Veritabanı güncelleme hatası:", dbErr.message);
+    return res.status(500).json({ error: "Veritabanı güncellenemedi." });
+  }
+
+  res.json({ received: true });
+});
+
 app.post("/api/payments/create-payment-intent", authenticateToken, async (req, res) => {
   try {
     if (!stripe) {

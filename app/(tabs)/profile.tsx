@@ -7,6 +7,7 @@ import HapticButton from "@/components/HapticButton";
 import { GlassTheme } from "@/constants/LiquidGlass";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/services/api";
+import { hasPremiumEntitlement } from "@/utils/revenueCat";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
@@ -106,9 +107,7 @@ export default function ProfileScreen() {
         // 1. Kullanıcı premium mu kontrolü
         const customerInfo = await Purchases.getCustomerInfo();
         if (mounted) {
-          setIsPremium(
-            typeof customerInfo.entitlements.active["premium"] !== "undefined",
-          );
+          setIsPremium(hasPremiumEntitlement(customerInfo));
         }
 
         // 2. Kredi paketlerini (default teklifini) çekme

@@ -6,12 +6,12 @@ import { usePostHog } from 'posthog-react-native';
 import Purchases from 'react-native-purchases';
 import { api, setCachedImageUris } from '../services/api';
 import { useToast } from '../context/ToastContext';
+import { hasPremiumEntitlement } from '../utils/revenueCat';
 
 async function requirePremium(): Promise<boolean> {
   try {
     const customerInfo = await Purchases.getCustomerInfo();
-    const hasPremium =
-      typeof customerInfo.entitlements.active['premium'] !== "undefined";
+    const hasPremium = hasPremiumEntitlement(customerInfo);
     if (!hasPremium) {
       router.push('/paywall');
       return false;
