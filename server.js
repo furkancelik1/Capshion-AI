@@ -51,6 +51,7 @@ const upload = multer({
 if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(helmet());
 app.use(compression());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
@@ -560,7 +561,7 @@ app.post("/api/payments/webhook", express.raw({ type: "application/json" }), asy
   res.json({ received: true });
 });
 
-const REVENUECAT_PREMIUM_GRANT_EVENTS = ["INITIAL_PURCHASE", "RENEWAL"];
+const REVENUECAT_PREMIUM_GRANT_EVENTS = ["INITIAL_PURCHASE", "RENEWAL", "NON_RENEWING_PURCHASE"];
 const REVENUECAT_PREMIUM_REVOKE_EVENTS = ["EXPIRATION", "CANCELLATION"];
 
 app.post("/api/webhooks/revenuecat", async (req, res) => {
