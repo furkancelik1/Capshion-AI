@@ -3,7 +3,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "node --env-file=.env server.js",
+    "startCommand": "node server.js",
     "healthcheckPath": "/health",
     "restartPolicyType": "ON_FAILURE"
   }
