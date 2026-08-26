@@ -30,7 +30,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(result.token);
         setUser(result.user);
         try {
-          const { customerInfo } = await Purchases.logIn(result.user.id);
+          console.log(
+            '[RevenueCat] logIn öncesi user:',
+            JSON.stringify(result.user),
+            'id tipi:',
+            typeof result.user.id,
+          );
+          const { customerInfo } = await Purchases.logIn(String(result.user.id));
           console.log(
             '[RevenueCat] logIn başarılı, aktif appUserID:',
             customerInfo.originalAppUserId,
@@ -60,7 +66,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(result.token);
         setUser(result.user);
         try {
-          const { customerInfo } = await Purchases.logIn(result.user.id);
+          console.log(
+            '[RevenueCat] logIn öncesi user:',
+            JSON.stringify(result.user),
+            'id tipi:',
+            typeof result.user.id,
+          );
+          const { customerInfo } = await Purchases.logIn(String(result.user.id));
           console.log(
             '[RevenueCat] logIn başarılı, aktif appUserID:',
             customerInfo.originalAppUserId,
