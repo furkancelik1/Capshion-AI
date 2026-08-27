@@ -588,10 +588,10 @@ app.post("/api/webhooks/revenuecat", async (req, res) => {
     `[RevenueCat Webhook] Event alındı: ${event.type}, app_user_id: ${event.app_user_id}`,
   );
 
-  const VALID_USER_ID_REGEX = /^\d+$/;
-  if (!VALID_USER_ID_REGEX.test(event.app_user_id)) {
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_REGEX.test(event.app_user_id)) {
     console.warn(
-      `[RevenueCat Webhook] app_user_id geçerli bir kullanıcı id'si değil (muhtemelen anonim RevenueCat ID'si), atlanıyor: ${event.app_user_id}`,
+      `[RevenueCat Webhook] app_user_id geçerli bir kullanıcı UUID'si değil (muhtemelen anonim RevenueCat ID'si), atlanıyor: ${event.app_user_id}`,
     );
     return res.json({ received: true, skipped: "non_uuid_app_user_id" });
   }
