@@ -42,3 +42,6 @@ yarn-error.*
 /android
 
 OmniRoute-release-v3.8.50/
+.tmp_bundletool/
+*.aab
+*.apks

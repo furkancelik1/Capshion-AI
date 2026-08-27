@@ -2,6 +2,7 @@
   "expo": {
     "name": "Capshion",
     "slug": "capshion",
+    "owner": "furkan1010",
     "sdkVersion": "57.0.0",
     "version": "1.0.4",
     "orientation": "portrait",
@@ -30,7 +31,11 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "READ_MEDIA_IMAGES"],
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -59,7 +64,9 @@
         {
           "icon": "./assets/images/icon.png",
           "color": "#0A84FF",
-          "sounds": ["./assets/sounds/capshion_sound.wav"]
+          "sounds": [
+            "./assets/sounds/capshion_sound.wav"
+          ]
         }
       ],
       "expo-image",
@@ -71,7 +78,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "1ccd1617-9d62-4273-a533-f71e2ec93728"
+        "projectId": "1cf6210e-3a3c-4895-9850-8933aa9458c4"
       }
     }
   }
