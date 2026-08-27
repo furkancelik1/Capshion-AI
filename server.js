@@ -35,7 +35,7 @@ const authLimiter = rateLimit({
   legacyHeaders: false, 
   message: { error: "Çok fazla istek. Lütfen daha sonra tekrar deneyin." } 
 });
-const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false });
+const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false }); // TODO: Üretim (Production) öncesi tekrar 60 yapmayı unutma!
 
 const upload = multer({
   storage,
