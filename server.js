@@ -1104,6 +1104,26 @@ app.get("/health", async (req, res) => {
   res.status(dbOk ? 200 : 503).json({ status: dbOk ? "ok" : "degraded", timestamp: new Date().toISOString() });
 });
 
+app.get("/debug-db", async (req, res) => {
+  try {
+    const info = await pool.query(
+      "SELECT current_database() AS db, current_user AS usr, inet_server_addr()::text AS server_ip, inet_server_port() AS server_port",
+    );
+    const count = await pool.query("SELECT count(*) FROM profiles");
+    const recent = await pool.query(
+      "SELECT id, email, created_at FROM profiles ORDER BY created_at DESC NULLS LAST LIMIT 5",
+    );
+    res.json({
+      connection: info.rows[0],
+      profilesCount: count.rows[0].count,
+      recentRows: recent.rows,
+      DATABASE_URL_host: (process.env.DATABASE_URL || "").split("@")[1] || null,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.use((err, req, res, next) => {
   console.error("[Unhandled Error]", err);
   res.status(500).json({ error: "Sunucu hatası." });
