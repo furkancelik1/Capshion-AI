@@ -1130,7 +1130,7 @@ app.get("/debug-db", async (req, res) => {
     );
     const count = await pool.query("SELECT count(*) FROM profiles");
     const recent = await pool.query(
-      "SELECT id, email, created_at FROM profiles ORDER BY created_at DESC NULLS LAST LIMIT 5",
+      "SELECT id, email, credits, is_premium, created_at FROM profiles ORDER BY created_at DESC NULLS LAST LIMIT 5",
     );
     res.json({
       connection: info.rows[0],
