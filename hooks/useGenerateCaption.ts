@@ -1,27 +1,9 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import i18next from 'i18next';
-import { router } from 'expo-router';
 import { useState } from 'react';
 import { usePostHog } from 'posthog-react-native';
-import Purchases from 'react-native-purchases';
 import { api, setCachedImageUris } from '../services/api';
 import { useToast } from '../context/ToastContext';
-import { hasPremiumEntitlement } from '../utils/revenueCat';
-
-async function requirePremium(): Promise<boolean> {
-  try {
-    const customerInfo = await Purchases.getCustomerInfo();
-    const hasPremium = hasPremiumEntitlement(customerInfo);
-    if (!hasPremium) {
-      router.push('/paywall');
-      return false;
-    }
-    return true;
-  } catch (err: any) {
-    console.error("[RevenueCat] Abonelik kontrolü yapılamadı:", err?.message ?? err);
-    return true;
-  }
-}
 
 function mimeFromUri(uri: string): string {
   const ext = uri.split('.').pop()?.toLowerCase();
@@ -59,8 +41,6 @@ export function useGenerateCaption() {
   const posthog = usePostHog();
 
   const generate = async (localUris: any[], tone: any, gender?: any, ageRange?: any, settings?: { length: string; useEmojis: boolean; useHashtags: boolean; customPrompt?: string; carouselMode?: boolean }) => {
-    if (!(await requirePremium())) return;
-
     setGenerating(true);
     setError(null);
 
@@ -110,8 +90,6 @@ export function useGenerateCaption() {
   };
 
   const generatePerImage = async (localUris: any[], tone: any, gender?: any, ageRange?: any, settings?: { length: string; useEmojis: boolean; useHashtags: boolean; customPrompt?: string; carouselMode?: boolean }) => {
-    if (!(await requirePremium())) return;
-
     setGenerating(true);
     setError(null);
 

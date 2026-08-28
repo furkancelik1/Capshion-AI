@@ -585,7 +585,7 @@ app.post("/api/webhooks/revenuecat", async (req, res) => {
   }
 
   console.log(
-    `[RevenueCat Webhook] Event alındı: ${event.type}, app_user_id: ${event.app_user_id}`,
+    `[RevenueCat Webhook] Event alındı: ${event.type}, app_user_id: ${event.app_user_id}, product_id: ${event.product_id}`,
   );
 
   const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -596,8 +596,27 @@ app.post("/api/webhooks/revenuecat", async (req, res) => {
     return res.json({ received: true, skipped: "non_uuid_app_user_id" });
   }
 
+  const creditMatch = (event.product_id || "").match(/^(\d+)_credits$/);
+
   try {
-    if (REVENUECAT_PREMIUM_GRANT_EVENTS.includes(event.type)) {
+    if (creditMatch) {
+      const creditsToAdd = parseInt(creditMatch[1], 10);
+      if (REVENUECAT_PREMIUM_GRANT_EVENTS.includes(event.type)) {
+        const updateResult = await pool.query(
+          "UPDATE profiles SET credits = credits + $1 WHERE id = $2 RETURNING id, credits",
+          [creditsToAdd, event.app_user_id],
+        );
+        if (updateResult.rows.length === 0) {
+          console.warn(`[RevenueCat Webhook] Kullanıcı bulunamadı: ${event.app_user_id}`);
+        } else {
+          console.log(
+            `[RevenueCat Webhook] Kullanıcı ${event.app_user_id} hesabına ${creditsToAdd} kredi eklendi (${event.type}), yeni bakiye: ${updateResult.rows[0].credits}.`,
+          );
+        }
+      } else {
+        console.log(`[RevenueCat Webhook] Kredi ürünü için işlenmeyen event tipi: ${event.type}`);
+      }
+    } else if (REVENUECAT_PREMIUM_GRANT_EVENTS.includes(event.type)) {
       const updateResult = await pool.query(
         "UPDATE profiles SET is_premium = true WHERE id = $1 RETURNING id",
         [event.app_user_id],
