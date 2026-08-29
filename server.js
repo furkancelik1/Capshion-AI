@@ -26,14 +26,14 @@ const storage = multer.diskStorage({
 
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN || "http://localhost:8081,http://localhost:19006").split(",");
 
-const authLimiter = rateLimit({ 
-  windowMs: 15 * 60 * 1000, 
-  max: 100, // TODO: Üretim (Production) öncesi tekrar 20 yapmayı unutma!
-  standardHeaders: true, 
-  legacyHeaders: false, 
-  message: { error: "Çok fazla istek. Lütfen daha sonra tekrar deneyin." } 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Çok fazla istek. Lütfen daha sonra tekrar deneyin." }
 });
-const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false }); // TODO: Üretim (Production) öncesi tekrar 60 yapmayı unutma!
+const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false });
 
 const upload = multer({
   storage,
@@ -331,16 +331,14 @@ const REVENUECAT_PREMIUM_REVOKE_EVENTS = ["EXPIRATION", "CANCELLATION"];
 
 app.post("/api/webhooks/revenuecat", async (req, res) => {
   const webhookSecret = process.env.REVENUECAT_WEBHOOK_SECRET;
-  if (webhookSecret) {
-    const authHeader = req.headers["authorization"];
-    if (authHeader !== `Bearer ${webhookSecret}`) {
-      console.warn("[RevenueCat Webhook] Yetkisiz istek reddedildi.");
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-  } else {
-    console.warn(
-      "[RevenueCat Webhook] REVENUECAT_WEBHOOK_SECRET tanımlı değil, istek doğrulanmadan işleniyor.",
-    );
+  if (!webhookSecret) {
+    console.error("[RevenueCat Webhook] REVENUECAT_WEBHOOK_SECRET tanımlı değil, istek reddedildi.");
+    return res.status(500).json({ error: "Webhook yapılandırılmamış." });
+  }
+  const authHeader = req.headers["authorization"];
+  if (authHeader !== `Bearer ${webhookSecret}`) {
+    console.warn("[RevenueCat Webhook] Yetkisiz istek reddedildi.");
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
   const event = req.body?.event;
@@ -867,26 +865,6 @@ En az 2, en fazla 4 caption üret.`;
 app.get("/health", async (req, res) => {
   const dbOk = await dbHealthCheck();
   res.status(dbOk ? 200 : 503).json({ status: dbOk ? "ok" : "degraded", timestamp: new Date().toISOString() });
-});
-
-app.get("/debug-db", async (req, res) => {
-  try {
-    const info = await pool.query(
-      "SELECT current_database() AS db, current_user AS usr, inet_server_addr()::text AS server_ip, inet_server_port() AS server_port",
-    );
-    const count = await pool.query("SELECT count(*) FROM profiles");
-    const recent = await pool.query(
-      "SELECT id, email, credits, is_premium, created_at FROM profiles ORDER BY created_at DESC NULLS LAST LIMIT 5",
-    );
-    res.json({
-      connection: info.rows[0],
-      profilesCount: count.rows[0].count,
-      recentRows: recent.rows,
-      DATABASE_URL_host: (process.env.DATABASE_URL || "").split("@")[1] || null,
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
 });
 
 app.use((err, req, res, next) => {
