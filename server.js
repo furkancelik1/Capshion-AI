@@ -1001,8 +1001,8 @@ En az 2, en fazla 4 caption üret.`;
       ? "Caption'ları KESİNLİKLE birinci tekil şahıs (Ben) ağzından yaz. Boş yanıt verme. Soru cümlesi kullanma."
       : "Write captions from FIRST-PERSON (I/me/my) perspective. Do not return empty. Do NOT use question sentences.";
     const fallbackPrompt = langName === "Türkçe"
-      ? `Fotoğraf için "Ben" ağzından kısa, doğal bir Instagram altyazısı yaz. JSON formatında yanıt ver. ${retryMsg}`
-      : `Write a short, first-person Instagram caption for the image. Respond in JSON format. ${retryMsg}`;
+      ? `Fotoğraf için "Ben" ağzından kısa, doğal bir Instagram altyazısı yaz. Sadece şu JSON formatında yanıt ver: {"captions": [{"caption_text": "...", "hashtags": ["#tag1"]}]}. ${retryMsg}`
+      : `Write a short, first-person Instagram caption for the image. Respond ONLY in this exact JSON format: {"captions": [{"caption_text": "...", "hashtags": ["#tag1"]}]}. ${retryMsg}`;
 
     let attempts = 0;
     let aiCaptions = [];
