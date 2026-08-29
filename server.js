@@ -991,7 +991,11 @@ En az 2, en fazla 4 caption üret.`;
 
     let completion = await callOpenAI();
     let raw = completion.choices[0]?.message?.content || "";
-    console.log("[Generate-JSON] AI yanıtı alındı" + (raw ? "" : " (bos)"));
+    console.log(
+      "[Generate-JSON] AI yanıtı alındı" + (raw ? "" : " (bos)") +
+      `, finish_reason=${completion.choices[0]?.finish_reason}` +
+      `, refusal=${completion.choices[0]?.message?.refusal || "yok"}`,
+    );
 
     const retryMsg = langName === "Türkçe"
       ? "Caption'ları KESİNLİKLE birinci tekil şahıs (Ben) ağzından yaz. Boş yanıt verme. Soru cümlesi kullanma."
@@ -1010,6 +1014,11 @@ En az 2, en fazla 4 caption üret.`;
         const p = attempts === 2 ? prompt + "\n\n" + retryMsg : fallbackPrompt;
         completion = await callOpenAI(p);
         raw = completion.choices[0]?.message?.content || "";
+        console.log(
+          "[Generate-JSON] AI yanıtı alındı" + (raw ? "" : " (bos)") +
+          `, finish_reason=${completion.choices[0]?.finish_reason}` +
+          `, refusal=${completion.choices[0]?.message?.refusal || "yok"}`,
+        );
       }
 
       if (!raw) continue;
