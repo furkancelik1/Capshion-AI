@@ -63,7 +63,8 @@
         }
       ],
       "expo-image",
-      "./plugins/withCleartextTraffic.js"
+      "./plugins/withCleartextTraffic.js",
+      "@react-native-firebase/app"
     ],
     "experiments": {
       "typedRoutes": true

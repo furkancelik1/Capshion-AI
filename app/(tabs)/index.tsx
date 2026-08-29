@@ -41,6 +41,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useGenerateCaption } from "../../hooks/useGenerateCaption";
 import { api, lastNavigationTimestamp } from "../../services/api";
 import { useToast } from "../../context/ToastContext";
+import { logAppEvent } from "../../utils/analytics";
 
 function renderFeatureIcon(icon: string) {
   switch (icon) {
@@ -156,6 +157,7 @@ export default function HomeScreen() {
 
   const captionCountRef = useRef(0);
   const hasNavigatedRef = useRef(false);
+  const pendingBackgroundGenerationRef = useRef(false);
   const rootNavigationState = useRootNavigationState();
   const isNavigationReady = rootNavigationState?.key != null;
 
@@ -164,7 +166,7 @@ export default function HomeScreen() {
     let safetyTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const subscription = AppState.addEventListener("change", async (nextAppState: AppStateStatus) => {
-      if (nextAppState === "active" && isGenerating) {
+      if (nextAppState === "active" && (isGenerating || pendingBackgroundGenerationRef.current)) {
         console.log("[AppState] Uygulama ön plana geldi, veri kontrol ediliyor...");
 
         const checkData = async () => {
@@ -180,6 +182,7 @@ export default function HomeScreen() {
               captionCountRef.current = captions.length;
               if (pollInterval) clearInterval(pollInterval);
               if (safetyTimeout) clearTimeout(safetyTimeout);
+              pendingBackgroundGenerationRef.current = false;
               setIsGenerating(false);
               if (isNavigationReady && Date.now() - lastNavigationTimestamp > 3000) {
                 const targetId = captions[0].post_id;
@@ -215,6 +218,7 @@ export default function HomeScreen() {
 
         safetyTimeout = setTimeout(() => {
           if (pollInterval) clearInterval(pollInterval);
+          pendingBackgroundGenerationRef.current = false;
           if (isGenerating) {
             setIsGenerating(false);
           }
@@ -247,6 +251,7 @@ export default function HomeScreen() {
     }
 
     if (!isPremium && credits !== null && credits <= 0) {
+      logAppEvent("out_of_credits", { source: "pre_check" });
       setShowCreditModal(true);
       return;
     }
@@ -258,6 +263,7 @@ export default function HomeScreen() {
       return;
     }
 
+    logAppEvent("ai_generation_started", { tone: String(selectedTone), mode: captionMode });
     setIsGenerating(true);
     showToast?.("Üretim başladı. Arka plana alabilirsiniz, hazır olduğunda bildirim göndereceğiz. ✨", "info");
 
@@ -288,7 +294,6 @@ export default function HomeScreen() {
         setSelectedImages([]);
         setSelectedTone(null);
       }
-      setIsGenerating(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       const isNetworkError =
@@ -299,26 +304,31 @@ export default function HomeScreen() {
         (err as any)?.name === "AbortError" ||
         (err as any)?.status === 0 ||
         (err as any)?.status === 408;
-      if (isNetworkError) {
+      // Uygulama gerçekten arka plandaysa istek muhtemelen OS tarafından iptal edildi,
+      // sunucu üretime devam ediyor olabilir — bu durumda kullanıcıyı korkutmayız.
+      const isBackgrounded = AppState.currentState !== "active";
+      // Backend yetersiz kredi durumunda 402/403 döner; mesaj metnini de eşleştirerek
+      // bu durumu oturum hatalarından (aynı zamanda 403 dönebilen) ayırt ediyoruz.
+      const status = (err as any)?.status;
+      const isInsufficientCredit =
+        (status === 402 || status === 403) && msg.toLowerCase().includes("kredi");
+
+      if (isInsufficientCredit) {
+        console.log("[Generate] Backend yetersiz kredi bildirdi, paywall'a yönlendiriliyor.");
+        logAppEvent("out_of_credits", { source: "backend_check" });
+        setShowCreditModal(true);
+      } else if (isNetworkError && isBackgrounded) {
         console.log("Fetch işlemi arka plana geçiş sebebiyle iptal edildi, sunucu işlemi devraldı.");
         showToast?.("İşlem arka planda devam ediyor, hazır olunca bildirim alacaksın. ⏳", "info");
-        return;
-      }
-      if (msg.toLowerCase().includes("kredi")) {
-        Alert.alert(
-          t("outOfCredits.title"),
-          t("outOfCredits.descriptionCaption"),
-          [
-            { text: t("common.later"), style: "cancel" },
-            {
-              text: t("outOfCredits.buyButton"),
-              onPress: () => setShowCreditModal(true),
-            },
-          ],
-        );
+        pendingBackgroundGenerationRef.current = true;
+      } else if (isNetworkError) {
+        Alert.alert(t("outOfCredits.connectionError"), t("outOfCredits.connectionErrorDesc"));
       } else {
         Alert.alert(t("home.alertError"), msg);
       }
+    } finally {
+      // Overlay'in kilitli kalmaması için isGenerating KESİNLİKLE burada kapatılır.
+      // Arka planda devam eden üretim, pendingBackgroundGenerationRef üzerinden ayrıca takip edilir.
       setIsGenerating(false);
     }
   };
@@ -358,11 +368,12 @@ export default function HomeScreen() {
             <HapticButton
               style={[
                 styles.primaryButton,
-                !canGenerate && styles.primaryButtonMuted,
+                (!canGenerate || isGenerating) && styles.primaryButtonMuted,
               ]}
               onPress={handleGenerate}
               activeOpacity={0.85}
-              disabled={!canGenerate}
+              disabled={!canGenerate || isGenerating}
+              pointerEvents={isGenerating ? "none" : "auto"}
             >
               <Text style={styles.primaryButtonText}>
                 {t("home.generateText")}
@@ -642,11 +653,12 @@ export default function HomeScreen() {
           <HapticButton
             style={[
               styles.primaryButton,
-              !canGenerate && styles.primaryButtonMuted,
+              (!canGenerate || isGenerating) && styles.primaryButtonMuted,
             ]}
             onPress={handleGenerate}
             activeOpacity={0.85}
-            disabled={!canGenerate}
+            disabled={!canGenerate || isGenerating}
+            pointerEvents={isGenerating ? "none" : "auto"}
           >
             <Text style={styles.primaryButtonText}>
               {t("common.freeTrial")}

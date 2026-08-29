@@ -8,9 +8,10 @@ interface HapticButtonProps {
   onPress?: (e: any) => void;
   disabled?: boolean;
   activeOpacity?: number;
+  pointerEvents?: 'auto' | 'none' | 'box-none' | 'box-only';
 }
 
-export default function HapticButton({ onPress, style, children, activeOpacity = 0.8, disabled }: HapticButtonProps) {
+export default function HapticButton({ onPress, style, children, activeOpacity = 0.8, disabled, pointerEvents }: HapticButtonProps) {
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -28,9 +29,8 @@ export default function HapticButton({ onPress, style, children, activeOpacity =
   };
 
   const handlePress = (e: any) => {
-    if (!disabled) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
+    if (disabled) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onPress?.(e);
   };
 
@@ -40,6 +40,7 @@ export default function HapticButton({ onPress, style, children, activeOpacity =
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled}
+      pointerEvents={pointerEvents}
       style={style}
     >
       <Animated.View style={animatedStyle}>

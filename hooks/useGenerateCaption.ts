@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { usePostHog } from 'posthog-react-native';
 import { api, setCachedImageUris } from '../services/api';
 import { useToast } from '../context/ToastContext';
+import { compressImage } from '../utils/compressImage';
 
 function mimeFromUri(uri: string): string {
   const ext = uri.split('.').pop()?.toLowerCase();
@@ -16,17 +17,18 @@ function mimeFromUri(uri: string): string {
 }
 
 async function safeReadBase64(uri: string, toast: ReturnType<typeof useToast>['showToast']): Promise<string | null> {
+  const compressedUri = await compressImage(uri);
   try {
-    const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
-    return `data:${mimeFromUri(uri)};base64,${base64}`;
+    const base64 = await FileSystem.readAsStringAsync(compressedUri, { encoding: 'base64' });
+    return `data:${mimeFromUri(compressedUri)};base64,${base64}`;
   } catch {
     try {
-      const ext = uri.split('.').pop()?.split('?')[0] || 'jpg';
+      const ext = compressedUri.split('.').pop()?.split('?')[0] || 'jpg';
       const dest = FileSystem.cacheDirectory + 'capshion_' + Date.now() + '_' + Math.random().toString(36).slice(2) + '.' + ext;
-      await FileSystem.copyAsync({ from: uri, to: dest });
+      await FileSystem.copyAsync({ from: compressedUri, to: dest });
       const base64 = await FileSystem.readAsStringAsync(dest, { encoding: 'base64' });
       await FileSystem.deleteAsync(dest);
-      return `data:${mimeFromUri(uri)};base64,${base64}`;
+      return `data:${mimeFromUri(compressedUri)};base64,${base64}`;
     } catch {
       toast?.("Görsel yüklenemedi, lütfen tekrar seçin.", "error");
       return null;

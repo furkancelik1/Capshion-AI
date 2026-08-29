@@ -19,6 +19,7 @@ import AmbientGlow from "@/components/AmbientGlow";
 import HapticButton from "@/components/HapticButton";
 import { GlassTheme } from "@/constants/LiquidGlass";
 import { hasPremiumEntitlement } from "@/utils/revenueCat";
+import { logAppEvent } from "@/utils/analytics";
 
 const PACKAGE_TYPE_LABELS: Record<string, string> = {
   ANNUAL: "Yıllık Plan",
@@ -45,6 +46,10 @@ export default function PaywallScreen() {
   const [loadingOfferings, setLoadingOfferings] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
+
+  useEffect(() => {
+    logAppEvent("paywall_viewed");
+  }, []);
 
   useEffect(() => {
     const loadOfferings = async () => {
