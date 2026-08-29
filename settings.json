@@ -1,4 +1,8 @@
 {
   "deno.enable": true,
-  "deno.enablePaths": ["supabase/functions"]
+  "deno.enablePaths": ["supabase/functions"],
+  "terminal.integrated.env.windows": {
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:4000",
+    "ANTHROPIC_API_KEY": "sk-ant-omniroute"
+  }
 }
