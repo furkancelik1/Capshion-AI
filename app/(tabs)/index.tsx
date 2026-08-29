@@ -1,7 +1,7 @@
 import * as Haptics from "expo-haptics";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
-import { router, useRootNavigationState } from "expo-router";
+import { router, useFocusEffect, useRootNavigationState } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -149,6 +149,13 @@ export default function HomeScreen() {
     if (!user) return;
     refreshProfile();
   }, [user, refreshProfile]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
+      refreshProfile();
+    }, [user, refreshProfile]),
+  );
 
   const captionCountRef = useRef(0);
   const hasNavigatedRef = useRef(false);
