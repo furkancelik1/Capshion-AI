@@ -10,7 +10,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCachedImageUris, api } from "../../services/api";
-import { supabase } from "@/services/supabase";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../../context/ToastContext";
 import {
@@ -37,7 +36,6 @@ import Reanimated, {
   withSpring,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { WebView } from "react-native-webview";
 
 interface CaptionItem {
   text?: string;
@@ -248,11 +246,8 @@ export default function CaptionDetailScreen() {
     });
   }, []);
 
-  // Modal ve WebView State'leri
+  // Kredi Modalı State'i
   const [showCreditModal, setShowCreditModal] = useState(false);
-  const [showWebView, setShowWebView] = useState(false);
-  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   const { showToast } = useToast();
 
@@ -408,62 +403,20 @@ export default function CaptionDetailScreen() {
     );
   }, [t]);
 
-  // Canlı URL'ye İstek Atarak iyzico'yu Başlatma
-  const initiateIyzicoPayment = async () => {
-    setIsProcessingPayment(true);
-    try {
-      if (!supabase) {
-        return;
-      }
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const response = await fetch(
-        "https://rkacxgouberhvygsefqu.supabase.co/functions/v1/iyzico-payment",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.access_token}`,
-          },
-          body: JSON.stringify({
-            userId: session?.user?.id,
-            packageId: "premium_10_credits",
-          }),
-        },
-      );
-
-      const result = await response.json();
-
-      if (result?.paymentUrl) {
-        setPaymentUrl(result.paymentUrl);
-        setShowCreditModal(false);
-        setShowWebView(true);
-      } else {
-        Alert.alert(t("home.alertError"), result?.error || t("outOfCredits.paymentLinkError"));
-      }
-    } catch (error) {
-      Alert.alert(t("outOfCredits.connectionError"), t("outOfCredits.connectionErrorDesc"));
-    } finally {
-      setIsProcessingPayment(false);
-    }
+  // Kredi satın almak için RevenueCat paywall'a yönlendirme
+  const goToPaywall = () => {
+    setShowCreditModal(false);
+    router.push("/paywall");
   };
 
-  // WebView içerisindeki URL değişimlerini yakalama
-  const handleWebViewNavigation = (navState: any) => {
-    const { url } = navState;
-    if (url.includes("payment-success")) {
-      setShowWebView(false);
-      Alert.alert(t("outOfCredits.paymentSuccessTitle"), t("outOfCredits.paymentSuccessDesc"));
-      if (creditsRemaining !== null) {
-        setCreditsRemaining(creditsRemaining + 10);
-      }
-    } else if (url.includes("payment-failure")) {
-      setShowWebView(false);
-      Alert.alert(t("outOfCredits.paymentFailureTitle"), t("outOfCredits.paymentFailureDesc"));
-    }
-  };
+  // Paywall'dan dönüşte güncel kredi bilgisini çek
+  useFocusEffect(
+    useCallback(() => {
+      api.getProfile().then((data) => {
+        if (data?.credits_remaining !== undefined) setCreditsRemaining(data.credits_remaining);
+      }).catch(() => {});
+    }, []),
+  );
 
   console.log("[Caption] imageUrls.length:", imageUrls.length);
   console.log("[Caption] first imageUri (50 chars):", imageUrls[0]?.substring(0, 50));
@@ -692,8 +645,7 @@ export default function CaptionDetailScreen() {
 
             <TouchableOpacity
               style={styles.purchaseButton}
-              onPress={initiateIyzicoPayment}
-              disabled={isProcessingPayment}
+              onPress={goToPaywall}
             >
               <LinearGradient
                 colors={[...GlassTheme.gradient]}
@@ -701,11 +653,7 @@ export default function CaptionDetailScreen() {
                 end={{ x: 1, y: 0 }}
                 style={styles.purchaseGradient}
               >
-                {isProcessingPayment ? (
-                  <ActivityIndicator color="#FFF" />
-                ) : (
-                  <Text style={styles.purchaseButtonText}>{t("outOfCredits.buyButton")}</Text>
-                )}
+                <Text style={styles.purchaseButtonText}>{t("outOfCredits.buyButton")}</Text>
               </LinearGradient>
             </TouchableOpacity>
 
@@ -719,53 +667,6 @@ export default function CaptionDetailScreen() {
         </View>
       </Modal>
 
-      {/* IYZICO WEBVIEW MODALI */}
-      <Modal
-        visible={showWebView}
-        animationType="slide"
-        presentationStyle="pageSheet" // iOS'ta şık bir aşağı çekilebilir kart olarak açılır
-      >
-        <SafeAreaView
-          style={{ flex: 1, backgroundColor: GlassTheme.background }}
-        >
-          <View style={styles.webviewHeader}>
-            <TouchableOpacity onPress={() => setShowWebView(false)}>
-              <Text style={styles.webviewCancelText}>İptal</Text>
-            </TouchableOpacity>
-            <Text style={styles.webviewTitle}>Güvenli Ödeme</Text>
-            <View style={{ width: 40 }} />
-          </View>
-
-          {paymentUrl && (
-            <WebView
-              source={{ uri: paymentUrl }}
-              originWhitelist={['*']}
-              javaScriptEnabled={true}
-              domStorageEnabled={true}
-              sharedCookiesEnabled={true}
-              thirdPartyCookiesEnabled={true}
-              mixedContentMode="always"
-              cacheEnabled={false}
-              setSupportMultipleWindows={false}
-              onNavigationStateChange={handleWebViewNavigation}
-              startInLoadingState={true}
-              renderLoading={() => (
-                <ActivityIndicator
-                  size="large"
-                  color="#34C759"
-                  style={{
-                    position: "absolute",
-                    top: "50%",
-                    left: "50%",
-                    marginLeft: -18,
-                    marginTop: -18,
-                  }}
-                />
-              )}
-            />
-          )}
-        </SafeAreaView>
-      </Modal>
     </View>
   );
 }
@@ -1048,25 +949,6 @@ const styles = StyleSheet.create({
     color: "#8E8E93",
     fontSize: 14,
     fontWeight: "600",
-  },
-  webviewHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.06)",
-  },
-  webviewCancelText: {
-    color: "#34C759",
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  webviewTitle: {
-    color: "#1C1C1E",
-    fontSize: 16,
-    fontWeight: "bold",
   },
   perImageCard: {
     marginBottom: 24,

@@ -35,12 +35,10 @@ import GlassPanel from "../../components/GlassPanel";
 import HapticButton from "../../components/HapticButton";
 import HowItWorksModal from "../../components/HowItWorksModal";
 import OutOfCreditsModal from "../../components/OutOfCreditsModal";
-import PaymentWebViewModal from "../../components/PaymentWebViewModal";
 import ToneSelector from "../../components/ToneSelector";
 import { GlassTheme } from "../../constants/LiquidGlass";
 import { useAuth } from "../../hooks/useAuth";
 import { useGenerateCaption } from "../../hooks/useGenerateCaption";
-import { usePayment } from "../../hooks/usePayment";
 import { api, lastNavigationTimestamp } from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 
@@ -83,7 +81,7 @@ function PulseDot() {
 }
 
 export default function HomeScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const STATS_DATA = [
     { value: "12K+", label: t("home.statsContent") },
@@ -125,6 +123,7 @@ export default function HomeScreen() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
+  const [showCreditModal, setShowCreditModal] = useState(false);
   const [ageRange, setAgeRange] = useState<string | null>(null);
   const [customPrompt, setCustomPrompt] = useState("");
   const customPromptRef = useRef<TextInput>(null);
@@ -142,8 +141,6 @@ export default function HomeScreen() {
       if (data?.is_premium !== undefined) setIsPremium(data.is_premium);
     });
   }, []);
-
-  const pay = usePayment(refreshProfile);
 
   useEffect(() => {
     if (!user) return;
@@ -250,7 +247,7 @@ export default function HomeScreen() {
     }
 
     if (!isPremium && credits !== null && credits <= 0) {
-      pay.setShowCreditModal(true);
+      setShowCreditModal(true);
       return;
     }
 
@@ -315,7 +312,7 @@ export default function HomeScreen() {
             { text: t("common.later"), style: "cancel" },
             {
               text: t("outOfCredits.buyButton"),
-              onPress: () => pay.setShowCreditModal(true),
+              onPress: () => setShowCreditModal(true),
             },
           ],
         );
@@ -330,15 +327,9 @@ export default function HomeScreen() {
     setShowHowItWorks(true);
   };
 
-  const handleBuyCredits = async () => {
-    const isTr = i18n.language?.startsWith("tr");
-    const price = isTr ? "50.0" : "2.99";
-    const currency = isTr ? "TRY" : "USD";
-    try {
-      await pay.initiatePayment(price, 10, currency);
-    } catch {
-      Alert.alert(t("common.error"), t("outOfCredits.paymentFailureDesc"));
-    }
+  const goToPaywall = () => {
+    setShowCreditModal(false);
+    router.push("/paywall");
   };
 
   const canGenerate =
@@ -713,19 +704,10 @@ export default function HomeScreen() {
         onClose={() => setShowHowItWorks(false)}
       />
       <OutOfCreditsModal
-        visible={pay.showCreditModal}
-        onClose={() => pay.setShowCreditModal(false)}
-        onBuy={handleBuyCredits}
+        visible={showCreditModal}
+        onClose={() => setShowCreditModal(false)}
+        onBuy={goToPaywall}
       />
-      {pay.paymentUrl && (
-        <PaymentWebViewModal
-          visible={pay.showWebView}
-          paymentUrl={pay.paymentUrl}
-          onSuccess={pay.handlePaymentSuccess}
-          onFailure={pay.handlePaymentFailure}
-          onClose={pay.closeWebView}
-        />
-      )}
     </View>
   );
 }

@@ -1,5 +1,4 @@
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
-import { StripeProvider } from "@stripe/stripe-react-native";
 import * as Notifications from "expo-notifications";
 import {
   DarkTheme,
@@ -231,11 +230,9 @@ export default function RootLayout() {
       >
         <BottomSheetModalProvider>
           <ToastProvider>
-            <StripeProvider publishableKey="pk_test_51Tx5gVIdWpTyLlw8RFhrsFNpzbKPzLzLFfP0h56w9wgcpTZzWjfimyoHzK253wN6UYBl1dYB9eS6D4cFemHvUe7G00a1eJrPlg">
-              <AuthProvider>
-                <RootLayoutNav />
-              </AuthProvider>
-            </StripeProvider>
+            <AuthProvider>
+              <RootLayoutNav />
+            </AuthProvider>
           </ToastProvider>
         </BottomSheetModalProvider>
       </PostHogProvider>
