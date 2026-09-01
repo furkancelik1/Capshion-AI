@@ -316,6 +316,9 @@ export default function HomeScreen() {
       if (isInsufficientCredit) {
         console.log("[Generate] Backend yetersiz kredi bildirdi, paywall'a yönlendiriliyor.");
         logAppEvent("out_of_credits", { source: "backend_check" });
+        // Backend krediyi tükenmiş bildirdiğine göre UI state'i beklemeden
+        // 0'a çekiyoruz; aksi halde kullanıcı stale bir kredi sayısı görmeye devam eder.
+        setCredits(0);
         setShowCreditModal(true);
       } else if (isNetworkError && isBackgrounded) {
         console.log("Fetch işlemi arka plana geçiş sebebiyle iptal edildi, sunucu işlemi devraldı.");

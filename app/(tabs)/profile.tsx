@@ -11,7 +11,7 @@ import { hasPremiumEntitlement } from "@/utils/revenueCat";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -133,10 +133,10 @@ export default function ProfileScreen() {
     };
   }, []);
 
-  const fetchProfile = useCallback(async () => {
+  const fetchProfile = useCallback(async (opts?: { silent?: boolean }) => {
     try {
       if (!user) return;
-      setLoadingProfile(true);
+      if (!opts?.silent) setLoadingProfile(true);
       const data = await api.getProfile();
       if (data) {
         setProfile(data);
@@ -145,13 +145,23 @@ export default function ProfileScreen() {
     } catch {
       console.log("Profil yüklenirken hata");
     } finally {
-      setLoadingProfile(false);
+      if (!opts?.silent) setLoadingProfile(false);
     }
   }, [user]);
 
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
+
+  // Ekrana her geri dönüldüğünde kredi/premium bilgisini sessizce (loading
+  // göstermeden) arka planda günceller — RevenueCat satın alması Paywall'da
+  // yapılıp buraya geri dönüldüğünde bakiyenin güncel görünmesini sağlar.
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
+      fetchProfile({ silent: true });
+    }, [user, fetchProfile]),
+  );
 
   const handleSaveAgeRange = async () => {
     if (!user || !ageRange) return;
@@ -183,8 +193,12 @@ export default function ProfileScreen() {
         "Satın alma işlemi tamamlandı, kredilerin yükleniyor.",
       );
 
-      // 3. Backend'den güncel kredi miktarını çekmek için profili yenile
-      fetchProfile();
+      // 3. RevenueCat webhook'un backend'de krediyi işlemesi için kısa bir
+      // gecikmeyle profili yeniden çek (aksi halde webhook henüz işlemeden
+      // gelen istek eski kredi miktarını döner).
+      setTimeout(() => {
+        fetchProfile();
+      }, 1500);
     } catch (e: any) {
       // Kullanıcı kendi isteğiyle pencereyi kapatmadıysa hatayı göster
       if (!e.userCancelled) {

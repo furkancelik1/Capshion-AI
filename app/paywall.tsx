@@ -158,6 +158,11 @@ export default function PaywallScreen() {
           paket_tipi: subscriptionPkg.product.identifier,
           fiyat: subscriptionPkg.product.priceString,
         });
+        // RevenueCat webhook'un backend'de is_premium/krediyi işlemesi için
+        // kısa bir gecikmeyle güncel profili yeniden çek.
+        setTimeout(() => {
+          refreshCredits();
+        }, 1500);
         router.back();
       }
     } catch (err: any) {
@@ -170,7 +175,7 @@ export default function PaywallScreen() {
     } finally {
       setPurchasingId(null);
     }
-  }, [subscriptionPkg, purchasingId, posthog]);
+  }, [subscriptionPkg, purchasingId, posthog, refreshCredits]);
 
   const handleBuyCredits = useCallback(async (pkg: PurchasesPackage) => {
     if (purchasingId) return;
@@ -183,7 +188,11 @@ export default function PaywallScreen() {
         paket: pkg.product.identifier,
         fiyat: pkg.product.priceString,
       });
-      refreshCredits();
+      // RevenueCat webhook'un backend'de krediyi işlemesi için kısa bir
+      // gecikmeyle güncel kredi bilgisini yeniden çek.
+      setTimeout(() => {
+        refreshCredits();
+      }, 1500);
       Alert.alert("Başarılı!", "Krediler hesabına tanımlandı.");
     } catch (err: any) {
       if (!err?.userCancelled) {
