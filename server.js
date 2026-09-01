@@ -416,18 +416,18 @@ app.post("/api/webhooks/revenuecat", async (req, res) => {
 
 // ─── MASTER SYSTEM PROMPT BUILDER ───────────────────────────────────────────
 function buildSystemPrompt({ gender, tone, length, useEmojis, useHashtags, ageRange, customPrompt, isPremium, carouselMode, isPerImage, imageCount, langName }) {
-  const bannedWords = "'Unleash', 'elevate', 'transformative', 'journey', 'delve', 'embrace', 'captivating', 'unlock', 'unlock the potential', 'world of', 'Dive into', 'Elevate your', 'Discover the magic', \"Let's delve\", 'Find your', \"It's time to\", 'Get ready to', 'Let your', 'Radiate confidence', 'Step into', 'Your inner', 'Channel your', 'The ultimate guide to'";
+  const bannedWords = "'Unleash', 'elevate', 'transformative', 'journey', 'delve', 'embrace', 'captivating', 'unlock', 'unlock the potential', 'world of', 'Dive into', 'Elevate your', 'Discover the magic', \"Let's delve\", 'Find your', \"It's time to\", 'Get ready to', 'Let your', 'Radiate confidence', 'Step into', 'Your inner', 'Channel your', 'The ultimate guide to', 'Gelin hep beraber', 'Unutmayın ki'";
 
   // 1. TEMEL PERSONA VE KURALLAR
-  let prompt = `Sen Instagram ve TikTok için çalışan seçkin, trendleri belirleyen ve viral içerikler üreten bir Sosyal Medya Metin Yazarısın.
-Amacın, verilen görseli analiz ederek en yüksek etkileşimi (beğeni, yorum, kaydetme) alacak açıklamalar (caption) yazmaktır.
+  let prompt = `Sen birinci sınıf bir Instagram sosyal medya yöneticisi ve metin yazarısın. Görevin, verilen görseller veya konular için etkileşimi (like, save, share) maksimize edecek, doğal, akıcı ve trendlere uygun Instagram caption'ları (açıklamaları) üretmektir.
 
 KESİN KURALLAR (BUNLARA UYMAZSAN SİSTEM ÇÖKER):
 1. BİRİNCİ TEKİL ŞAHIS (POV): Metni her zaman fotoğrafı/videoyu paylaşan kişinin (veya markanın) ağzından yaz. Kendinden bahseden, kendi hislerini anlatan, doğal bir dil kullan. Asla dışarıdan bir gözlemci gibi betimleme yapma.
-2. KANCA (HOOK): İlk cümle kesinlikle vurucu, merak uyandırıcı, iddialı veya okuyucuyu durduracak (scroll-stopping) bir kanca olmalıdır.
-3. OKUNABİLİRLİK: Metni tek bir blok halinde YAZMA. Cümleler arasında ve paragraflar arasında mutlaka boşluklar bırak (Visual pacing). Instagram'da okunabilirlik her şeydir.
-4. YASAKLI KELİMELER: ${bannedWords} gibi yapay zeka klişesi olan yavan kelimeleri KESİNLİKLE kullanma.
-5. DOĞALLIK: Sanki yakın bir arkadaşına veya çok havalı bir topluluğa yazıyormuşsun gibi samimi, modern ve akıcı ol.`;
+2. YAPI (HOOK → GÖVDE → CTA): Metni vizyoner bir kanca (hook) ile başlat — ilk cümle kesinlikle vurucu, merak uyandırıcı, iddialı veya okuyucuyu durduracak (scroll-stopping) olmalı. Ardından değer sunan bir gövde ile devam et. Metni güçlü bir Harekete Geçirici Mesaj (CTA) ile bitir.
+3. CÜMLE STİLİ: Cümleler kısa, vurucu ve Z kuşağı / Y kuşağı dinamiklerine uygun olsun.
+4. OKUNABİLİRLİK: Metni tek bir blok halinde YAZMA. Cümleler arasında ve paragraflar arasında mutlaka boşluklar bırak (Visual pacing). Instagram'da okunabilirlik her şeydir.
+5. YASAKLI KELİMELER: "Yapay zeka gibi" konuşma. ${bannedWords} gibi yapay zeka klişesi olan yavan kelimeleri KESİNLİKLE kullanma.
+6. DOĞALLIK: Sanki yakın bir arkadaşına veya çok havalı bir topluluğa yazıyormuşsun gibi samimi, modern ve akıcı ol.`;
 
   // 2. CİNSİYET / ÖZNE DİNAMİĞİ
   if (gender === 'female') {
@@ -442,9 +442,9 @@ KESİN KURALLAR (BUNLARA UYMAZSAN SİSTEM ÇÖKER):
   if (tone === 'viral') {
     prompt += `\n\nTON: VIRAL & KANCA ODAKLI. İnsanları yorum yapmaya veya postu arkadaşlarına göndermeye (share) zorlayacak tartışmalı veya çok merak uyandıran bir dil kullan.`;
   } else if (tone === 'luxury') {
-    prompt += `\n\nTON: ULTRA LÜKS & MİNİMAL. Çok az kelime kullan. 'Old money' tarzında, gizemli, fazlasıyla özgüvenli ve ulaşılmaz bir ton. Asla açıklama yapma, sadece hissettir.`;
+    prompt += `\n\nTON: ULTRA LÜKS & MİNİMAL. Metni minimalist, seçkin ve premium bir dille yaz. Çok az emoji kullan. Mesafeli ama etkileyici bir gizem yarat.`;
   } else if (tone === 'storyteller') {
-    prompt += `\n\nTON: HİKAYE ANLATICI. Bu karenin arkasındaki duyguyu, anıyı veya perde arkasını samimi ve sürükleyici bir dille anlat. Duygusal bağ kur.`;
+    prompt += `\n\nTON: HİKAYE ANLATICI. Metni samimi bir anı veya tecrübe paylaşıyormuş gibi kurgula. Okuyucuyla duygusal bir bağ kur.`;
   } else if (tone === 'cool') {
     prompt += `\n\nTON: TRENDY & COOL. Modern argo kullan, zahmetsizce şık ve stil sahibi bir dil.`;
   } else if (tone === 'humorous') {
@@ -458,8 +458,8 @@ KESİN KURALLAR (BUNLARA UYMAZSAN SİSTEM ÇÖKER):
   // 4. UZUNLUK, EMOJİ VE HASHTAG
   const lengthDesc = length === 'short' ? 'çok kısa ve öz (1-2 cümle)' : length === 'long' ? 'uzun, detaylı ve blog tarzı' : 'orta uzunlukta, dengeli';
   prompt += `\n\nUZUNLUK: Metin ${lengthDesc} olmalı.`;
-  prompt += `\nEMOJİ: ${useEmojis !== false ? 'Metnin tonuna uygun, göze batmayan estetik emojiler kullan.' : 'KESİNLİKLE HİÇ EMOJİ KULLANMA.'}`;
-  prompt += `\nHASHTAG: ${useHashtags !== false ? 'Metnin en sonuna, keşfete düşmeyi sağlayacak 3-5 adet popüler ve niş hashtag ekle.' : 'KESİNLİKLE HİÇ HASHTAG YAZMA.'}`;
+  prompt += `\nEMOJİ: ${useEmojis !== false ? 'Emojileri metnin içine boğmadan, stratejik ve estetik olarak kullan.' : 'KESİNLİKLE HİÇ EMOJİ KULLANMA.'}`;
+  prompt += `\nHASHTAG: ${useHashtags !== false ? 'Metnin en sonuna, keşfete düşmeyi sağlayacak niş ve popüler 5-7 adet hashtag ekle.' : 'KESİNLİKLE HİÇ HASHTAG YAZMA.'}`;
   prompt += `\nYAŞ ARALIĞI: ${ageRange || 'Genel / Tüm yaş grupları'}`;
 
   // 5. KULLANICI ÖZEL İSTEĞİ (varsa ve premium ise)
@@ -549,6 +549,9 @@ En az 2, en fazla 4 caption üret.`;
       messages: [{ role: "user", content: [{ type: "text", text: prompt }, ...base64Images.map((img) => ({ type: "image_url", image_url: { url: img } }))] }],
       response_format: { type: "json_object" },
       max_tokens: 3000,
+      temperature: 0.75,
+      presence_penalty: 0.4,
+      frequency_penalty: 0.3,
     });
 
     const raw = completion.choices[0]?.message?.content || "";
@@ -719,6 +722,9 @@ En az 2, en fazla 4 caption üret.`;
         messages: [{ role: "user", content: [{ type: "text", text: msg }, ...images.map((img) => ({ type: "image_url", image_url: { url: img } }))] }],
         response_format: { type: "json_object" },
         max_tokens: 3000,
+        temperature: 0.75,
+        presence_penalty: 0.4,
+        frequency_penalty: 0.3,
       });
     };
 
