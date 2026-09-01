@@ -23,7 +23,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Purchases from "react-native-purchases";
+import Purchases, { PRODUCT_CATEGORY } from "react-native-purchases";
 
 interface UserProfile {
   email: string;
@@ -113,8 +113,12 @@ export default function ProfileScreen() {
         // 2. Kredi paketlerini (default teklifini) çekme
         const offerings = await Purchases.getOfferings();
         if (mounted && offerings.current !== null) {
-          // default içindeki paketleri arayüze basmak için state'e atıyoruz
-          setRcPackages(offerings.current.availablePackages);
+          // Aylık abonelik paketi kredi paketi değildir; "Kredi Takviyesi"
+          // listesine karışmaması için burada ayıklanır (satın alma Paywall'da yapılır).
+          const creditsOnly = offerings.current.availablePackages.filter(
+            (pkg) => pkg.product?.productCategory !== PRODUCT_CATEGORY.SUBSCRIPTION,
+          );
+          setRcPackages(creditsOnly);
         }
       } catch (err: any) {
         console.error(
