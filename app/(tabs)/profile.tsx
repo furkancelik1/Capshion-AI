@@ -257,11 +257,7 @@ export default function ProfileScreen() {
               <RowItem
                 icon="wallet-outline"
                 label={t("profile.credits")}
-                value={
-                  profile?.is_premium
-                    ? "♾️"
-                    : `${profile?.credits_remaining ?? 0}`
-                }
+                value={`${profile?.credits_remaining ?? 0}`}
               />
               <Separator />
               <RowItem

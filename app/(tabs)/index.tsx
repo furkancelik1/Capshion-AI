@@ -250,7 +250,7 @@ export default function HomeScreen() {
       return;
     }
 
-    if (!isPremium && credits !== null && credits <= 0) {
+    if (credits !== null && credits <= 0) {
       logAppEvent("out_of_credits", { source: "pre_check" });
       setShowCreditModal(true);
       return;
@@ -278,7 +278,7 @@ export default function HomeScreen() {
       );
 
       if (result) {
-        setCredits(result.remainingCredits === -1 ? (isPremium ? -1 : 0) : result.remainingCredits);
+        setCredits(result.remainingCredits);
         hasNavigatedRef.current = true;
         router.push({
           pathname: "/caption/[id]",

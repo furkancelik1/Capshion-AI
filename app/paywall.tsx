@@ -1,8 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -12,54 +11,118 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Purchases, { PurchasesPackage } from "react-native-purchases";
+import Purchases, { PACKAGE_TYPE, PRODUCT_CATEGORY, PurchasesPackage } from "react-native-purchases";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { usePostHog } from "posthog-react-native";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import AmbientGlow from "@/components/AmbientGlow";
 import HapticButton from "@/components/HapticButton";
 import { GlassTheme } from "@/constants/LiquidGlass";
 import { hasPremiumEntitlement } from "@/utils/revenueCat";
 import { logAppEvent } from "@/utils/analytics";
+import { api } from "@/services/api";
 
-const PACKAGE_TYPE_LABELS: Record<string, string> = {
-  ANNUAL: "Yıllık Plan",
-  MONTHLY: "Aylık Plan",
-  WEEKLY: "Haftalık Plan",
-  LIFETIME: "Ömür Boyu Erişim",
+// Uygulamanın geri kalanıyla (login/profile) aynı açık iOS temasını kullanır —
+// GlassTheme üzerine paywall'a özel birkaç tint eklenir.
+const Luxe = {
+  bg: GlassTheme.background,
+  panel: GlassTheme.cardBackground,
+  panelBorder: GlassTheme.border,
+  accent: GlassTheme.primary,
+  accentTint: "rgba(52, 199, 89, 0.1)",
+  accentGradient: GlassTheme.primaryGradient,
+  textMain: GlassTheme.textMain,
+  textMuted: GlassTheme.textMuted,
+  textFaint: "#C7C7CC",
 };
 
-function packageLabel(pkg: PurchasesPackage): string {
-  return PACKAGE_TYPE_LABELS[pkg.packageType] ?? "Premium Paket";
+const PRO_FEATURES = [
+  "Aylık 50 kredi otomatik yüklenir",
+  "Tüm premium tonlar (Viral, Lüks, Hikaye Anlatıcı)",
+  "Serbest metin (custom prompt) ile üretim",
+  "Karusel modu ve öncelikli işlem hızı",
+];
+
+function creditsInPackage(pkg: PurchasesPackage): number {
+  const match = pkg.product.identifier.match(/\d+/);
+  return match ? parseInt(match[0], 10) : 0;
 }
 
-function packagePeriod(pkg: PurchasesPackage): string {
-  const pt = pkg.packageType;
-  if (pt === "ANNUAL") return "12 ay boyunca sınırsız içerik üretimi";
-  if (pt === "MONTHLY") return "Aylık sınırsız içerik üretimi";
-  return "Sınırsız içerik üretimi";
+// Kredi paketleri de RevenueCat panelinde CUSTOM packageType ile
+// tanımlı olduğundan, packageType tek başına abonelik ile krediyi
+// ayırt etmeye yetmiyor — eğer "Monthly" paketi panelde özel bir
+// identifier ile tanımlandıysa o da CUSTOM görünür. Bunun yerine
+// product.productCategory (SUBSCRIPTION vs NON_SUBSCRIPTION) esas
+// alınır; bu alan App Store/Play Store'dan gelir ve paket adlandırma
+// hatalarından etkilenmez.
+function isSubscriptionPackage(pkg: PurchasesPackage): boolean {
+  return pkg.product?.productCategory === PRODUCT_CATEGORY.SUBSCRIPTION;
+}
+
+// RevenueCat panelinde "Monthly" paketi farklı şekillerde tanımlanmış
+// olabilir (standart packageType, ya da özel identifier). Sırayla dene:
+// 1) packageType === MONTHLY (RC'nin standart aylık paket tipi)
+// 2) identifier tam olarak "Monthly" (panelde özel/custom tanımlanmışsa)
+// 3) abonelik ürünü olan (productCategory === SUBSCRIPTION) ilk paket (son çare)
+function findMonthlySubscription(packages: PurchasesPackage[]): PurchasesPackage | null {
+  const byType = packages.find((pkg) => pkg.packageType === PACKAGE_TYPE.MONTHLY);
+  if (byType) return byType;
+
+  const byIdentifier = packages.find(
+    (pkg) => pkg.identifier.toLowerCase() === "monthly",
+  );
+  if (byIdentifier) return byIdentifier;
+
+  return packages.find(isSubscriptionPackage) ?? null;
 }
 
 export default function PaywallScreen() {
   const posthog = usePostHog();
-  const [packages, setPackages] = useState<PurchasesPackage[]>([]);
-  const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null);
+  const [subscriptionPkg, setSubscriptionPkg] = useState<PurchasesPackage | null>(null);
+  const [creditPkgs, setCreditPkgs] = useState<PurchasesPackage[]>([]);
+  const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
   const [loadingOfferings, setLoadingOfferings] = useState(true);
-  const [purchasing, setPurchasing] = useState(false);
+  const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
 
   useEffect(() => {
     logAppEvent("paywall_viewed");
   }, []);
 
+  const refreshCredits = useCallback(() => {
+    api.getProfile().then((data) => {
+      if (data?.credits_remaining !== undefined) setCreditsRemaining(data.credits_remaining);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    refreshCredits();
+  }, [refreshCredits]);
+
   useEffect(() => {
     const loadOfferings = async () => {
       try {
         const offerings = await Purchases.getOfferings();
         const available = offerings.current?.availablePackages ?? [];
-        setPackages(available);
-        if (available.length > 0) {
-          setSelectedPackage(available[0]);
+
+        const subscription = findMonthlySubscription(available);
+        const credits = available
+          .filter((pkg) => !isSubscriptionPackage(pkg) && pkg.identifier !== subscription?.identifier)
+          .sort((a, b) => creditsInPackage(a) - creditsInPackage(b));
+
+        if (!subscription) {
+          console.warn(
+            "[Paywall] Aylık abonelik paketi bulunamadı. RevenueCat panelinde 'current' offering içinde packageType=MONTHLY veya identifier='Monthly' olan bir paket olduğundan emin olun.",
+          );
+        } else if (!subscription.product?.priceString) {
+          console.warn(
+            "[Paywall] Aylık paket bulundu ama fiyat bilgisi (priceString) eksik:",
+            subscription.identifier,
+          );
         }
+
+        setSubscriptionPkg(subscription);
+        setCreditPkgs(credits);
       } catch (err: any) {
         console.error("[Paywall] Teklifler alınamadı:", err?.message ?? err);
       } finally {
@@ -70,17 +133,16 @@ export default function PaywallScreen() {
     loadOfferings();
   }, []);
 
-  const handlePurchase = useCallback(async () => {
-    if (!selectedPackage || purchasing) return;
+  const handleSubscribe = useCallback(async () => {
+    if (!subscriptionPkg || purchasingId) return;
 
     try {
-      setPurchasing(true);
-      const { customerInfo } = await Purchases.purchasePackage(selectedPackage);
-      console.log("[RevenueCat] Aktif Yetkiler:", Object.keys(customerInfo.entitlements.active));
+      setPurchasingId(subscriptionPkg.identifier);
+      const { customerInfo } = await Purchases.purchasePackage(subscriptionPkg);
       if (hasPremiumEntitlement(customerInfo)) {
         posthog?.capture("premium_satin_alindi", {
-          paket_tipi: selectedPackage.product.identifier,
-          fiyat: selectedPackage.product.priceString,
+          paket_tipi: subscriptionPkg.product.identifier,
+          fiyat: subscriptionPkg.product.priceString,
         });
         router.back();
       }
@@ -92,15 +154,39 @@ export default function PaywallScreen() {
         );
       }
     } finally {
-      setPurchasing(false);
+      setPurchasingId(null);
     }
-  }, [selectedPackage, purchasing]);
+  }, [subscriptionPkg, purchasingId, posthog]);
+
+  const handleBuyCredits = useCallback(async (pkg: PurchasesPackage) => {
+    if (purchasingId) return;
+
+    try {
+      setPurchasingId(pkg.identifier);
+      const { customerInfo } = await Purchases.purchasePackage(pkg);
+      void customerInfo;
+      posthog?.capture("kredi_satin_alindi", {
+        paket: pkg.product.identifier,
+        fiyat: pkg.product.priceString,
+      });
+      refreshCredits();
+      Alert.alert("Başarılı!", "Krediler hesabına tanımlandı.");
+    } catch (err: any) {
+      if (!err?.userCancelled) {
+        Alert.alert(
+          "Satın Alma Başarısız",
+          err?.message || "Satın alma işlemi tamamlanamadı, lütfen tekrar deneyin.",
+        );
+      }
+    } finally {
+      setPurchasingId(null);
+    }
+  }, [purchasingId, posthog, refreshCredits]);
 
   const handleRestore = useCallback(async () => {
     try {
       setRestoring(true);
       const customerInfo = await Purchases.restorePurchases();
-      console.log("[RevenueCat] Aktif Yetkiler:", Object.keys(customerInfo.entitlements.active));
       if (hasPremiumEntitlement(customerInfo)) {
         router.back();
       } else {
@@ -119,6 +205,11 @@ export default function PaywallScreen() {
     }
   }, []);
 
+  const subscriptionPriceLabel = useMemo(
+    () => subscriptionPkg?.product?.priceString ?? "—",
+    [subscriptionPkg],
+  );
+
   return (
     <View style={styles.container}>
       <AmbientGlow />
@@ -126,10 +217,14 @@ export default function PaywallScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
-            <Ionicons name="close" size={24} color={GlassTheme.textMain} />
+            <Ionicons name="close" size={24} color={Luxe.textMain} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Premium</Text>
-          <View style={styles.headerBtn} />
+          <View style={styles.headerCreditPill}>
+            <Ionicons name="flash" size={13} color={Luxe.accent} />
+            <Text style={styles.headerCreditText}>
+              {creditsRemaining === null ? "—" : creditsRemaining}
+            </Text>
+          </View>
         </View>
 
         <ScrollView
@@ -137,97 +232,118 @@ export default function PaywallScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.hero}>
-            <View style={styles.heroIconWrapper}>
-              <Ionicons name="diamond" size={32} color="#34C759" />
+          <Animated.View entering={FadeIn.duration(400)} style={styles.hero}>
+            <Text style={styles.heroEyebrow}>CAPSHION PRO</Text>
+            <Text style={styles.heroTitle}>Daha fazla üretim,{"\n"}daha az beklemek</Text>
+          </Animated.View>
+
+          {/* ── Ana Odak: Capshion Pro Aboneliği ── */}
+          <Animated.View entering={FadeInDown.duration(450).delay(60)} style={styles.proCard}>
+            <View style={styles.proBadge}>
+              <Ionicons name="diamond" size={13} color={Luxe.accent} />
+              <Text style={styles.proBadgeText}>EN AVANTAJLI</Text>
             </View>
-            <Text style={styles.heroTitle}>Premium'a Geç</Text>
-            <Text style={styles.heroSubtitle}>
-              Sınırsız AI içerik üretimi, tüm tonlar ve öncelikli hız.
-            </Text>
-          </View>
+
+            <Text style={styles.proTitle}>Capshion Pro</Text>
+            <View style={styles.proPriceRow}>
+              <Text style={styles.proPrice}>
+                {loadingOfferings ? "…" : subscriptionPriceLabel}
+              </Text>
+              <Text style={styles.proPricePeriod}>/ ay</Text>
+            </View>
+
+            <View style={styles.proFeatureList}>
+              {PRO_FEATURES.map((feature) => (
+                <View key={feature} style={styles.proFeatureRow}>
+                  <Ionicons name="checkmark-circle" size={16} color={Luxe.accent} />
+                  <Text style={styles.proFeatureText}>{feature}</Text>
+                </View>
+              ))}
+            </View>
+
+            <HapticButton
+              style={styles.proButton}
+              onPress={handleSubscribe}
+              activeOpacity={0.9}
+              disabled={!subscriptionPkg || purchasingId !== null || loadingOfferings}
+            >
+              <LinearGradient
+                colors={Luxe.accentGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.proButtonGradient}
+              >
+                {purchasingId === subscriptionPkg?.identifier ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="sparkles" size={17} color="#FFFFFF" />
+                    <Text style={styles.proButtonText}>Pro'ya Geç</Text>
+                  </>
+                )}
+              </LinearGradient>
+            </HapticButton>
+          </Animated.View>
+
+          {/* ── Kredi Takviyesi ── */}
+          <Text style={styles.sectionLabel}>Kredi Takviyesi</Text>
+          <Text style={styles.sectionSubLabel}>
+            Abonelik olmadan tek seferlik kredi satın al.
+          </Text>
 
           {loadingOfferings ? (
             <View style={styles.loadingBox}>
-              <ActivityIndicator size="large" color="#34C759" />
-              <Text style={styles.loadingText}>Paketler yükleniyor...</Text>
+              <ActivityIndicator size="small" color={Luxe.textMuted} />
             </View>
-          ) : packages.length === 0 ? (
+          ) : creditPkgs.length === 0 ? (
             <View style={styles.loadingBox}>
-              <Ionicons name="pricetag-outline" size={32} color="#C7C7CC" />
-              <Text style={styles.loadingText}>
-                Şu anda satın alınabilecek paket bulunamadı.
-              </Text>
+              <Text style={styles.loadingText}>Şu anda kredi paketi bulunamadı.</Text>
             </View>
           ) : (
-            <View style={styles.packageList}>
-              {packages.map((pkg, index) => {
-                const isSelected = selectedPackage?.identifier === pkg.identifier;
-                const price = pkg.product?.priceString ?? "—";
+            <View style={styles.creditRow}>
+              {creditPkgs.map((pkg, index) => {
+                const credits = creditsInPackage(pkg);
+                const isPopular = index === Math.floor(creditPkgs.length / 2);
+                const isBusy = purchasingId === pkg.identifier;
+
                 return (
-                  <TouchableOpacity
+                  <Animated.View
                     key={pkg.identifier}
-                    activeOpacity={0.85}
-                    onPress={() => setSelectedPackage(pkg)}
-                    style={[
-                      styles.packageCardWrap,
-                      index < packages.length - 1 && styles.packageCardSpacing,
-                    ]}
+                    entering={FadeInDown.duration(350).delay(120 + index * 60)}
+                    style={styles.creditCardWrap}
                   >
-                    <BlurView
-                      intensity={GlassTheme.blurIntensity}
-                      tint="systemThinMaterialLight"
+                    <HapticButton
                       style={[
-                        styles.packageCard,
-                        isSelected && styles.packageCardSelected,
+                        styles.creditCard,
+                        isPopular && styles.creditCardPopular,
                       ]}
+                      onPress={() => handleBuyCredits(pkg)}
+                      disabled={purchasingId !== null}
+                      activeOpacity={0.9}
                     >
-                      <View style={styles.packageInfo}>
-                        <Text style={styles.packageLabel}>{packageLabel(pkg)}</Text>
-                        <Text style={styles.packagePeriod}>{packagePeriod(pkg)}</Text>
-                      </View>
-                      <View style={styles.packagePriceWrap}>
-                        <Text style={styles.packagePrice}>{price}</Text>
-                        <View
-                          style={[
-                            styles.radio,
-                            isSelected && styles.radioSelected,
-                          ]}
-                        >
-                          {isSelected && <View style={styles.radioDot} />}
+                      {isPopular && (
+                        <View style={styles.creditPopularTag}>
+                          <Text style={styles.creditPopularTagText}>POPÜLER</Text>
                         </View>
-                      </View>
-                    </BlurView>
-                  </TouchableOpacity>
+                      )}
+                      {isBusy ? (
+                        <ActivityIndicator color={Luxe.textMain} />
+                      ) : (
+                        <>
+                          <Text style={styles.creditCardAmount}>{credits}</Text>
+                          <Text style={styles.creditCardUnit}>kredi</Text>
+                          <View style={styles.creditCardDivider} />
+                          <Text style={styles.creditCardPrice}>
+                            {pkg.product?.priceString ?? "—"}
+                          </Text>
+                        </>
+                      )}
+                    </HapticButton>
+                  </Animated.View>
                 );
               })}
             </View>
           )}
-
-          <HapticButton
-            style={styles.buyButton}
-            onPress={handlePurchase}
-            activeOpacity={0.85}
-            disabled={purchasing || !selectedPackage || loadingOfferings}
-          >
-            <LinearGradient
-              colors={[...GlassTheme.gradient]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.buyGradient}
-            >
-              {purchasing ? (
-                <ActivityIndicator color="#FFF" />
-              ) : (
-                <>
-                  <Ionicons name="sparkles" size={18} color="#FFF" />
-                  <Text style={styles.buyButtonText}>
-                    {selectedPackage ? `Premium'a Geç` : "Satın Al"}
-                  </Text>
-                </>
-              )}
-            </LinearGradient>
-          </HapticButton>
 
           <HapticButton
             style={styles.restoreButton}
@@ -236,15 +352,15 @@ export default function PaywallScreen() {
             disabled={restoring}
           >
             {restoring ? (
-              <ActivityIndicator size="small" color={GlassTheme.textMuted} />
+              <ActivityIndicator size="small" color={Luxe.textMuted} />
             ) : (
               <Text style={styles.restoreButtonText}>Satın Almayı Geri Yükle</Text>
             )}
           </HapticButton>
 
           <Text style={styles.disclaimer}>
-            Ödeme, hesabınıza tanımlanır ve abonelik iptal edilene kadar otomatik
-            yenilenir.
+            Abonelik, iptal edilene kadar otomatik yenilenir. Kredi paketleri tek
+            seferliktir ve süresi dolmaz.
           </Text>
         </ScrollView>
       </SafeAreaView>
@@ -255,7 +371,7 @@ export default function PaywallScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: GlassTheme.background,
+    backgroundColor: Luxe.bg,
   },
   safeArea: {
     flex: 1,
@@ -267,7 +383,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 10,
-    height: 60,
+    height: 56,
   },
   headerBtn: {
     width: 40,
@@ -275,163 +391,220 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  headerTitle: {
-    flex: 1,
-    fontSize: 18,
+  headerCreditPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: Luxe.panel,
+    borderWidth: 1,
+    borderColor: Luxe.panelBorder,
+  },
+  headerCreditText: {
+    fontSize: 13,
     fontWeight: "700",
-    color: GlassTheme.textMain,
-    textAlign: "center",
-    letterSpacing: 1.5,
-    textTransform: "uppercase",
+    color: Luxe.textMain,
   },
   scroll: {
     flex: 1,
   },
   content: {
-    padding: 24,
+    padding: 20,
     paddingBottom: 48,
   },
   hero: {
-    alignItems: "center",
-    marginBottom: 32,
+    marginBottom: 24,
   },
-  heroIconWrapper: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: "rgba(52, 199, 89, 0.12)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "rgba(52, 199, 89, 0.3)",
+  heroEyebrow: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: Luxe.accent,
+    letterSpacing: 2.5,
+    marginBottom: 10,
   },
   heroTitle: {
     fontSize: 26,
     fontWeight: "800",
-    color: GlassTheme.textMain,
-    marginBottom: 8,
+    color: Luxe.textMain,
+    lineHeight: 32,
   },
-  heroSubtitle: {
-    fontSize: 14,
-    color: GlassTheme.textMuted,
-    textAlign: "center",
-    lineHeight: 21,
-    paddingHorizontal: 12,
-  },
-  loadingBox: {
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 48,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: GlassTheme.textMuted,
-    textAlign: "center",
-  },
-  packageList: {
-    marginBottom: 8,
-  },
-  packageCardWrap: {
-    borderRadius: GlassTheme.cardBorderRadius,
+  proCard: {
+    borderRadius: 24,
+    backgroundColor: Luxe.panel,
+    padding: 22,
     ...GlassTheme.cardShadow,
   },
-  packageCardSpacing: {
+  proBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: Luxe.accentTint,
     marginBottom: 14,
   },
-  packageCard: {
+  proBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: Luxe.accent,
+    letterSpacing: 1,
+  },
+  proTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: Luxe.textMain,
+    marginBottom: 6,
+  },
+  proPriceRow: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 20,
-    borderRadius: GlassTheme.cardBorderRadius,
-    overflow: "hidden",
-    borderWidth: 1.5,
-    borderColor: GlassTheme.glassBorder,
+    alignItems: "flex-end",
+    gap: 5,
+    marginBottom: 18,
   },
-  packageCardSelected: {
-    borderColor: GlassTheme.selectedBorder,
-    borderWidth: 1.5,
+  proPrice: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: Luxe.textMain,
   },
-  packageInfo: {
-    flex: 1,
-    paddingRight: 12,
-  },
-  packageLabel: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: GlassTheme.textMain,
+  proPricePeriod: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Luxe.textMuted,
     marginBottom: 4,
   },
-  packagePeriod: {
-    fontSize: 13,
-    color: GlassTheme.textMuted,
+  proFeatureList: {
+    gap: 11,
+    marginBottom: 22,
   },
-  packagePriceWrap: {
+  proFeatureRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
   },
-  packagePrice: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: GlassTheme.textMain,
+  proFeatureText: {
+    flex: 1,
+    fontSize: 13.5,
+    color: Luxe.textMuted,
+    lineHeight: 19,
   },
-  radio: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: "rgba(0,0,0,0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  radioSelected: {
-    borderColor: GlassTheme.primary,
-  },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: GlassTheme.primary,
-  },
-  buyButton: {
+  proButton: {
     borderRadius: 16,
     overflow: "hidden",
-    marginTop: 20,
-    ...GlassTheme.cardShadow,
   },
-  buyGradient: {
+  proButtonGradient: {
     paddingVertical: 17,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 8,
   },
-  buyButtonText: {
+  proButtonText: {
     fontSize: 16,
     fontWeight: "800",
     color: "#FFFFFF",
+    letterSpacing: 0.3,
+  },
+  sectionLabel: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: Luxe.textMain,
+    marginTop: 30,
+    marginBottom: 4,
+  },
+  sectionSubLabel: {
+    fontSize: 12.5,
+    color: Luxe.textMuted,
+    marginBottom: 14,
+  },
+  loadingBox: {
+    alignItems: "center",
+    paddingVertical: 24,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: Luxe.textMuted,
+  },
+  creditRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  creditCardWrap: {
+    flex: 1,
+  },
+  creditCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Luxe.panelBorder,
+    backgroundColor: Luxe.panel,
+    paddingVertical: 18,
+    paddingHorizontal: 8,
+    alignItems: "center",
+    minHeight: 108,
+    justifyContent: "center",
+    ...GlassTheme.cardShadow,
+    shadowOpacity: 0.05,
+  },
+  creditCardPopular: {
+    borderColor: Luxe.accent,
+    borderWidth: 1.5,
+  },
+  creditPopularTag: {
+    position: "absolute",
+    top: -9,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: Luxe.accent,
+  },
+  creditPopularTagText: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: "#FFFFFF",
     letterSpacing: 0.5,
-    textTransform: "uppercase",
+  },
+  creditCardAmount: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: Luxe.textMain,
+  },
+  creditCardUnit: {
+    fontSize: 11,
+    color: Luxe.textMuted,
+    marginTop: 1,
+    marginBottom: 10,
+  },
+  creditCardDivider: {
+    width: 24,
+    height: 1,
+    backgroundColor: Luxe.panelBorder,
+    marginBottom: 10,
+  },
+  creditCardPrice: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: Luxe.textMuted,
   },
   restoreButton: {
     paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
+    marginTop: 28,
   },
   restoreButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
-    color: GlassTheme.textMuted,
+    color: Luxe.textMuted,
     textDecorationLine: "underline",
   },
   disclaimer: {
-    fontSize: 12,
-    color: "#8E8E93",
+    fontSize: 11.5,
+    color: Luxe.textFaint,
     textAlign: "center",
-    marginTop: 24,
-    lineHeight: 18,
+    marginTop: 16,
+    lineHeight: 17,
   },
 });

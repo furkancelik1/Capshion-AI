@@ -470,8 +470,8 @@ export default function CaptionDetailScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             {creditsRemaining !== null && (
               <TouchableOpacity onPress={() => setShowCreditModal(true)} activeOpacity={0.7}>
-                <Text style={[styles.creditBadgeHeader, creditsRemaining === -1 && styles.creditBadgePremium]}>
-                  {creditsRemaining === -1 ? "♾️" : `🔋${creditsRemaining}`}
+                <Text style={styles.creditBadgeHeader}>
+                  {`🔋${creditsRemaining}`}
                 </Text>
               </TouchableOpacity>
             )}

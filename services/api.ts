@@ -102,6 +102,10 @@ async function request<T>(
 
     clearTimeout(timeout);
 
+    if (endpoint === '/auth/login') {
+      console.log(`[API] ADIM 2a: ${endpoint} → HTTP ${res.status} (res.ok=${res.ok})`);
+    }
+
     if (res.status === 204 || res.status === 304) {
       return {} as T;
     }
@@ -112,6 +116,10 @@ async function request<T>(
       body = text ? JSON.parse(text) : {};
     } catch {
       throw new ApiError(`Beklenmeyen yanıt: ${text.slice(0, 100)}`, res.status);
+    }
+
+    if (endpoint === '/auth/login') {
+      console.log(`[API] ADIM 2b: ${endpoint} body:`, JSON.stringify(body));
     }
 
     if (!res.ok) {

@@ -506,7 +506,7 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
       return res.status(404).json({ error: "Kullanıcı bulunamadı." });
     }
 
-    if (!userRow.is_premium && userRow.credits < 1) {
+    if (userRow.credits < 1) {
       console.log("[Generate] Yetersiz kredi, userId:", req.userId);
       return res.status(403).json({ error: "Yetersiz kredi. Lütfen kredi yükleyin." });
     }
@@ -592,17 +592,15 @@ En az 2, en fazla 4 caption üret.`;
         );
       }
 
-      if (!userRow.is_premium) {
-        await client.query(
-          "UPDATE profiles SET credits = credits - 1 WHERE id = $1",
-          [req.userId],
-        );
-      }
+      await client.query(
+        "UPDATE profiles SET credits = credits - 1 WHERE id = $1",
+        [req.userId],
+      );
 
       await client.query("COMMIT");
 
-      const remainingResult = await pool.query("SELECT credits, is_premium FROM profiles WHERE id = $1", [req.userId]);
-      const remainingCredits = remainingResult.rows[0].is_premium ? -1 : remainingResult.rows[0].credits;
+      const remainingResult = await pool.query("SELECT credits FROM profiles WHERE id = $1", [req.userId]);
+      const remainingCredits = remainingResult.rows[0].credits;
 
       const captions = aiCaptions.map((c) => ({ text: c.caption_text, hashtags: c.hashtags }));
 
@@ -663,7 +661,7 @@ app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
 
     const requiredCredits = isPerImage ? images.length : 1;
 
-    if (!userRow.is_premium && userRow.credits < requiredCredits) {
+    if (userRow.credits < requiredCredits) {
       return res.status(403).json({ error: `Yetersiz kredi. Gerekli: ${requiredCredits}, Mevcut: ${userRow.credits}` });
     }
 
@@ -810,20 +808,18 @@ En az 2, en fazla 4 caption üret.`;
         );
       }
 
-      if (!userRow.is_premium) {
-        await client.query(
-          "UPDATE profiles SET credits = credits - $1 WHERE id = $2",
-          [requiredCredits, req.userId],
-        );
-      }
+      await client.query(
+        "UPDATE profiles SET credits = credits - $1 WHERE id = $2",
+        [requiredCredits, req.userId],
+      );
 
       await client.query("COMMIT");
 
       const remainingResult = await pool.query(
-        "SELECT credits, is_premium FROM profiles WHERE id = $1",
+        "SELECT credits FROM profiles WHERE id = $1",
         [req.userId],
       );
-      const remainingCredits = remainingResult.rows[0].is_premium ? -1 : remainingResult.rows[0].credits;
+      const remainingCredits = remainingResult.rows[0].credits;
 
       const captions = aiCaptions.map((c) => ({
         text: c.caption_text,

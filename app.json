@@ -11,7 +11,7 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "backgroundColor": "#F2F2F7",
+      "backgroundColor": "#000000",
       "bundleIdentifier": "com.furkan.capshion",
       "buildNumber": "2",
       "infoPlist": {
@@ -22,7 +22,7 @@
     },
     "android": {
       "googleServicesFile": "./google-services.json",
-      "backgroundColor": "#F2F2F7",
+      "backgroundColor": "#000000",
       "package": "com.furkan.capshion",
       "versionCode": 11,
       "adaptiveIcon": {
@@ -49,7 +49,10 @@
         {
           "image": "./assets/images/splash.png",
           "resizeMode": "contain",
-          "backgroundColor": "#F2F2F7"
+          "backgroundColor": "#000000",
+          "dark": {
+            "backgroundColor": "#000000"
+          }
         }
       ],
       [
@@ -64,7 +67,8 @@
       ],
       "expo-image",
       "./plugins/withCleartextTraffic.js",
-      "@react-native-firebase/app"
+      "@react-native-firebase/app",
+      "@react-native-firebase/analytics"
     ],
     "experiments": {
       "typedRoutes": true

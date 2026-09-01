@@ -91,13 +91,16 @@ export default function LoginScreen() {
       return;
     }
 
+    console.log('[Login] ADIM 0: handleLogin tetiklendi, buton basıldı →', email.trim());
     const { error } = await signInWithEmail(email.trim(), password);
 
     if (error) {
+      console.log('[Login] ADIM 5: handleLogin error aldı, Alert basılıyor →', error);
       Alert.alert('Giriş Başarısız', error);
       return;
     }
 
+    console.log('[Login] ADIM 5: handleLogin başarılı, (tabs)a yönlendiriliyor');
     posthog?.capture('kullanici_giris_yapti', { method: 'email' });
     router.replace('/(tabs)');
   };
