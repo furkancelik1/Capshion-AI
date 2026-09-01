@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -105,7 +105,21 @@ export default function PaywallScreen() {
         const offerings = await Purchases.getOfferings();
         const available = offerings.current?.availablePackages ?? [];
 
-        const subscription = findMonthlySubscription(available);
+        let subscription = findMonthlySubscription(available);
+
+        // "current" offering'de aylık paket yoksa (yanlış offering "current"
+        // olarak işaretlenmiş olabilir), RevenueCat panelindeki TÜM offering'leri
+        // tarayarak fiyatı olan bir abonelik paketi ara.
+        if (!subscription || !subscription.product?.priceString) {
+          for (const off of Object.values(offerings.all)) {
+            const candidate = findMonthlySubscription(off.availablePackages);
+            if (candidate?.product?.priceString) {
+              subscription = candidate;
+              break;
+            }
+          }
+        }
+
         const credits = available
           .filter((pkg) => !isSubscriptionPackage(pkg) && pkg.identifier !== subscription?.identifier)
           .sort((a, b) => creditsInPackage(a) - creditsInPackage(b));
@@ -116,7 +130,7 @@ export default function PaywallScreen() {
           );
         } else if (!subscription.product?.priceString) {
           console.warn(
-            "[Paywall] Aylık paket bulundu ama fiyat bilgisi (priceString) eksik:",
+            "[Paywall] Aylık paket bulundu ama fiyat bilgisi (priceString) eksik — Google Play Console'da bu aboneliğin fiyatı/base plan'ı aktif olmayabilir:",
             subscription.identifier,
           );
         }
@@ -205,10 +219,8 @@ export default function PaywallScreen() {
     }
   }, []);
 
-  const subscriptionPriceLabel = useMemo(
-    () => subscriptionPkg?.product?.priceString ?? "—",
-    [subscriptionPkg],
-  );
+  const subscriptionPriceLabel = subscriptionPkg?.product?.priceString ?? null;
+  const subscriptionUnavailable = !loadingOfferings && !subscriptionPriceLabel;
 
   return (
     <View style={styles.container}>
@@ -246,10 +258,16 @@ export default function PaywallScreen() {
 
             <Text style={styles.proTitle}>Capshion Pro</Text>
             <View style={styles.proPriceRow}>
-              <Text style={styles.proPrice}>
-                {loadingOfferings ? "…" : subscriptionPriceLabel}
-              </Text>
-              <Text style={styles.proPricePeriod}>/ ay</Text>
+              {loadingOfferings ? (
+                <ActivityIndicator size="small" color={Luxe.textMuted} />
+              ) : (
+                <Text style={styles.proPrice}>
+                  {subscriptionPriceLabel ?? "Şu anda uygun değil"}
+                </Text>
+              )}
+              {!loadingOfferings && subscriptionPriceLabel && (
+                <Text style={styles.proPricePeriod}>/ ay</Text>
+              )}
             </View>
 
             <View style={styles.proFeatureList}>
@@ -265,10 +283,10 @@ export default function PaywallScreen() {
               style={styles.proButton}
               onPress={handleSubscribe}
               activeOpacity={0.9}
-              disabled={!subscriptionPkg || purchasingId !== null || loadingOfferings}
+              disabled={!subscriptionPkg || subscriptionUnavailable || purchasingId !== null || loadingOfferings}
             >
               <LinearGradient
-                colors={Luxe.accentGradient}
+                colors={subscriptionUnavailable ? [Luxe.textFaint, Luxe.textFaint] : Luxe.accentGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.proButtonGradient}
@@ -278,7 +296,9 @@ export default function PaywallScreen() {
                 ) : (
                   <>
                     <Ionicons name="sparkles" size={17} color="#FFFFFF" />
-                    <Text style={styles.proButtonText}>Pro'ya Geç</Text>
+                    <Text style={styles.proButtonText}>
+                      {subscriptionUnavailable ? "Şu Anda Kullanılamıyor" : "Pro'ya Geç"}
+                    </Text>
                   </>
                 )}
               </LinearGradient>
