@@ -336,7 +336,21 @@ app.post("/api/webhooks/revenuecat", async (req, res) => {
     return res.status(500).json({ error: "Webhook yapılandırılmamış." });
   }
   const authHeader = req.headers["authorization"];
-  if (authHeader !== `Bearer ${webhookSecret}`) {
+  const expectedAuthHeader = `Bearer ${webhookSecret}`;
+  if (authHeader !== expectedAuthHeader) {
+    // TODO(debug): geçici tanılama logu - kök neden bulununca kaldırılacak
+    console.warn("[RevenueCat Webhook][DEBUG] Auth header eşleşmedi.", {
+      receivedLength: authHeader ? authHeader.length : 0,
+      expectedLength: expectedAuthHeader.length,
+      receivedTrimmedLength: authHeader ? authHeader.trim().length : 0,
+      expectedTrimmedLength: expectedAuthHeader.trim().length,
+      receivedPrefix: authHeader ? authHeader.slice(0, 12) : null,
+      receivedSuffix: authHeader ? authHeader.slice(-6) : null,
+      expectedPrefix: expectedAuthHeader.slice(0, 12),
+      expectedSuffix: expectedAuthHeader.slice(-6),
+      secretLength: webhookSecret.length,
+      secretTrimmedLength: webhookSecret.trim().length,
+    });
     console.warn("[RevenueCat Webhook] Yetkisiz istek reddedildi.");
     return res.status(401).json({ error: "Unauthorized" });
   }
