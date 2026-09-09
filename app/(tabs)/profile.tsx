@@ -4,6 +4,7 @@ import FeedbackModal from "@/components/FeedbackModal";
 import { LogOutIcon } from "@/components/GlassIcons";
 import GlassPanel from "@/components/GlassPanel";
 import HapticButton from "@/components/HapticButton";
+import PremiumBadge from "@/components/PremiumBadge";
 import { GlassTheme } from "@/constants/LiquidGlass";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/services/api";
@@ -88,7 +89,7 @@ function RowItem({
 
 export default function ProfileScreen() {
   const { t, i18n } = useTranslation();
-  const { user, signOut } = useAuth();
+  const { user, signOut, setPremiumStatus } = useAuth();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -141,6 +142,7 @@ export default function ProfileScreen() {
       if (data) {
         setProfile(data);
         setAgeRange(data.age_range);
+        setPremiumStatus(!!data.is_premium);
       }
     } catch {
       console.log("Profil yüklenirken hata");
@@ -216,7 +218,12 @@ export default function ProfileScreen() {
       >
         {/* ── Header ── */}
         <View style={styles.header}>
-          <View style={styles.avatarRing}>
+          <View
+            style={[
+              styles.avatarRing,
+              profile?.is_premium && styles.avatarRingPremium,
+            ]}
+          >
             <View style={styles.avatarInner}>
               <Text style={styles.avatarText}>
                 {profile?.email ? profile.email[0].toUpperCase() : "C"}
@@ -224,6 +231,9 @@ export default function ProfileScreen() {
             </View>
           </View>
           <Text style={styles.emailText}>{profile?.email || user?.email}</Text>
+          <View style={styles.badgeWrap}>
+            <PremiumBadge isPremium={!!profile?.is_premium} />
+          </View>
         </View>
 
         {/* ── Premium Durumu ── */}
@@ -482,6 +492,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  avatarRingPremium: {
+    borderWidth: 3,
+    borderColor: "#D4AF37",
+    backgroundColor: "rgba(212,175,55,0.12)",
+  },
   avatarText: {
     color: GlassTheme.textMain,
     fontSize: 28,
@@ -493,6 +508,9 @@ const styles = StyleSheet.create({
     color: GlassTheme.neonPlatinum,
     letterSpacing: 1.5,
     textTransform: "uppercase",
+  },
+  badgeWrap: {
+    marginTop: 10,
   },
 
   /* ── Premium ── */

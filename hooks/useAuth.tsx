@@ -5,6 +5,7 @@ import { api, setToken } from '../services/api';
 interface AuthUser {
   id: string;
   email: string;
+  is_premium: boolean;
 }
 
 interface AuthContextType {
@@ -13,6 +14,8 @@ interface AuthContextType {
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
   signUpWithEmail: (email: string, password: string, ageRange?: string | null) => Promise<{ error: string | null }>;
   signOut: () => void;
+  refreshPremiumStatus: () => Promise<void>;
+  setPremiumStatus: (isPremium: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -41,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (authUser?.id && token) {
         setToken(token);
-        setUser({ id: authUser.id, email: authUser.email ?? email });
+        setUser({ id: authUser.id, email: authUser.email ?? email, is_premium: false });
         try {
           console.log(
             '[RevenueCat] logIn öncesi user:',
@@ -62,6 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             rcErr instanceof Error ? rcErr.message : String(rcErr),
           );
         }
+        refreshPremiumStatus();
         return { error: null };
       }
 
@@ -89,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (authUser?.id && token) {
         setToken(token);
-        setUser({ id: authUser.id, email: authUser.email ?? email });
+        setUser({ id: authUser.id, email: authUser.email ?? email, is_premium: false });
         try {
           console.log(
             '[RevenueCat] logIn öncesi user:',
@@ -108,6 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             rcErr instanceof Error ? rcErr.message : String(rcErr),
           );
         }
+        refreshPremiumStatus();
         return { error: null };
       }
 
@@ -133,8 +138,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const setPremiumStatus = (isPremium: boolean) => {
+    // Değer değişmediyse aynı referansı koru — aksi halde her profil
+    // fetch'i user objesini yeniler ve buna bağlı useCallback/useEffect'lerde
+    // (örn. profile.tsx fetchProfile) sonsuz döngüye yol açar.
+    setUser((prev) => (prev && prev.is_premium !== isPremium ? { ...prev, is_premium: isPremium } : prev));
+  };
+
+  const refreshPremiumStatus = async () => {
+    try {
+      const data: any = await api.getProfile();
+      setPremiumStatus(!!data?.is_premium);
+    } catch (err: unknown) {
+      console.error(
+        '[Auth] Premium durumu güncellenemedi:',
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithEmail, signUpWithEmail, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        signInWithEmail,
+        signUpWithEmail,
+        signOut,
+        refreshPremiumStatus,
+        setPremiumStatus,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
