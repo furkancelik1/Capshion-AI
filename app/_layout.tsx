@@ -36,7 +36,11 @@ Notifications.setNotificationHandler({
 
 SplashScreen.preventAutoHideAsync();
 
-LogBox.ignoreLogs(["Failed to ready ui_config before getOfferings"]);
+LogBox.ignoreLogs([
+  "Failed to ready ui_config before getOfferings",
+  "PurchaseCancelledError",
+  "BillingWrapper purchases failed to update",
+]);
 
 function installUnhandledRejectionGuard() {
   try {
