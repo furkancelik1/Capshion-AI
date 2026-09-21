@@ -104,7 +104,10 @@ app.use("/api/auth", authLimiter);
 app.use("/api", apiLimiter);
 
 app.post("/api/auth/register", async (req, res) => {
-  console.log("[Register] İstek alındı, body:", JSON.stringify(req.body));
+  console.log(
+    "[Register] İstek alındı, body:",
+    JSON.stringify({ ...req.body, password: "***" }),
+  );
 
   try {
     const { email, password, ageRange } = req.body;
