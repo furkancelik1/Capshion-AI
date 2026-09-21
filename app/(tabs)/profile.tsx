@@ -101,6 +101,9 @@ export default function ProfileScreen() {
   const [isPremium, setIsPremium] = useState(false);
   const [rcPackages, setRcPackages] = useState<any[]>([]);
 
+  // Backend (is_premium) veya RevenueCat entitlement'ından biri premium diyorsa premium say.
+  const isUserPremium = isPremium || !!profile?.is_premium;
+
   useEffect(() => {
     let mounted = true;
     const initRevenueCat = async () => {
@@ -221,7 +224,7 @@ export default function ProfileScreen() {
           <View
             style={[
               styles.avatarRing,
-              profile?.is_premium && styles.avatarRingPremium,
+              isUserPremium && styles.avatarRingPremium,
             ]}
           >
             <View style={styles.avatarInner}>
@@ -232,22 +235,17 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.emailText}>{profile?.email || user?.email}</Text>
           <View style={styles.badgeWrap}>
-            <PremiumBadge isPremium={!!profile?.is_premium} />
+            <PremiumBadge isPremium={isUserPremium} />
           </View>
         </View>
 
-        {/* ── Premium Durumu ── */}
-        <BlurView
-          intensity={50}
-          tint="systemThinMaterialLight"
-          style={styles.premiumCard}
-        >
-          {isPremium ? (
-            <View style={styles.premiumBadgeRow}>
-              <Ionicons name="diamond" size={18} color="#FBBF24" />
-              <Text style={styles.premiumBadgeText}>👑 Premium Üye</Text>
-            </View>
-          ) : (
+        {/* ── Premium'a Yükselt (yalnızca premium olmayan kullanıcılara) ── */}
+        {!loadingProfile && !isUserPremium && (
+          <BlurView
+            intensity={50}
+            tint="systemThinMaterialLight"
+            style={styles.premiumCard}
+          >
             <HapticButton
               style={styles.upgradeButton}
               onPress={() => router.push("/paywall")}
@@ -263,8 +261,8 @@ export default function ProfileScreen() {
                 <Text style={styles.upgradeText}>Premium'a Yükselt</Text>
               </LinearGradient>
             </HapticButton>
-          )}
-        </BlurView>
+          </BlurView>
+        )}
 
         {/* ── Section: Hesap ── */}
         <SectionHeader title={t("profile.balance")} />
@@ -521,19 +519,6 @@ const styles = StyleSheet.create({
     borderColor: "rgba(0,0,0,0.06)",
     padding: 14,
     marginTop: 4,
-  },
-  premiumBadgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    paddingVertical: 10,
-  },
-  premiumBadgeText: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#FBBF24",
-    letterSpacing: 0.5,
   },
   upgradeButton: {
     borderRadius: 16,
