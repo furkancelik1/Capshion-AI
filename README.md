@@ -132,7 +132,3 @@ npx expo run:android
 
 ---
 
-## 👤 Geliştirici
-
-**Furkan Çelik**
-Bu proje, [Üniversite adı] bünyesinde akademik kod incelemesi (code review) amacıyla sunulmuştur.
