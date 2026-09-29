@@ -6,16 +6,14 @@
 
 ## 🔗 Live Test Environment (Canlı Test Ortamı)
 
-> Aşağıdaki bilgiler, projeyi lokal olarak derlemeden doğrudan test edebilmeniz için sağlanmıştır. Uygulama, üretim (production) ortamında canlı bir backend (Railway) ve canlı bir veritabanına (Supabase) bağlı olarak çalışmaktadır.
+> Uygulama, üretim (production) ortamında canlı bir backend (Railway) ve canlı bir veritabanına (Supabase) bağlı olarak çalışmaktadır. Projeyi lokal olarak derlemeden test etmek için Google Play dahili test kanalı kullanılabilir.
 
 | Alan | Değer |
 |---|---|
-| **Test Ortamı Linki** | [https://play.google.com/apps/internaltest/4701211965641282101](https://play.google.com/apps/internaltest/4701211965641282101) |
-| **Test E-postası** | [adurkaya@bandirma.edu.tr](mailto:adurkaya@bandirma.edu.tr) |
-| **Test Şifresi** | `Sifre1234` |
-| **Not** | Test hesabına önceden birkaç kredi tanımlanmıştır, ek bir satın alma işlemi yapmanıza gerek yoktur. |
+| **Test Ortamı Linki** | [Google Play Dahili Test](https://play.google.com/apps/internaltest/4701211965641282101) (erişim için Google hesabınızın test listesine eklenmesi gerekir) |
+| **Test Hesabı** | Güvenlik gereği kimlik bilgileri depoda tutulmaz; talep eden değerlendiriciye doğrudan iletilir. |
 
-> ⚠️ Test hesabı, gerçek bir satın alma denemesi durumunda **License Testing** kapsamındadır; herhangi bir gerçek ücret tahsil edilmez.
+> ⚠️ Test hesapları Google Play **License Testing** kapsamındadır; satın alma denemelerinde gerçek ücret tahsil edilmez.
 
 ---
 
@@ -78,13 +76,21 @@ Capshion-AI/
 
 1. **Ortam Değişkeni İzolasyonu:** Tüm API anahtarları (OpenAI, RevenueCat, PostHog), veritabanı bağlantı adresleri ve gizli anahtarlar (JWT secret, webhook secret) kod tabanına hardcoded olarak yazılmamış, `.env` dosyaları ve dağıtım platformlarının (Railway, EAS) çevresel değişken yönetim sistemleri üzerinden enjekte edilmektedir.
 
-2. **Hassas Veri Loglama Kontrolü:** Backend loglama mekanizması, kullanıcı şifrelerinin veya diğer hassas kimlik bilgilerinin açık metin (plaintext) olarak sunucu loglarına yazılmasını engelleyecek şekilde yapılandırılmıştır.
+2. **Hassas Veri Loglama Kontrolü:** Sunucu logları şifre, e-posta adresi, veritabanı bağlantı adresi veya ham webhook gövdesi içermez; kullanıcılar loglarda yalnızca UUID ile izlenir.
 
-3. **Modüler Klasör Yapısı:** Frontend tarafı `screens/components/hooks/services` ayrımı ile organize edilmiştir; bu, sorumlulukların ayrılması (separation of concerns) prensibini destekler.
+3. **Atomik Kredi Düşümü:** Kredi, `UPDATE ... WHERE credits >= n RETURNING` ile tek sorguda ve üretim kayıtlarıyla aynı transaction içinde düşülür. Böylece eşzamanlı istekler bakiyeyi eksiye düşüremez (race condition koruması).
 
-4. **Sunucu Taraflı Kredi/Abonelik Senkronizasyonu:** RevenueCat'ten gelen satın alma olayları, imzalı bir webhook (Bearer token doğrulamalı) aracılığıyla backend'e iletilir; backend bu olayı doğrulayıp Supabase (PostgreSQL) üzerindeki kullanıcı kredi bakiyesini veya premium durumunu günceller. Bu mimari, istemci tarafında kredi/premium durumunun manipüle edilmesini engeller.
+4. **Sunucu Taraflı Kredi/Abonelik Senkronizasyonu:** RevenueCat satın alma olayları, Bearer token ile doğrulanan (sabit zamanlı karşılaştırma) bir webhook üzerinden backend'e ulaşır ve Supabase'deki kredi/premium durumunu günceller. İstemci kendi bakiyesini değiştiremez.
 
-5. **Kapsamlı Hata Yönetimi:** Hem istemci (try-catch blokları, kullanıcıya yönelik zarif hata mesajları) hem backend (API hata kodları, loglama) tarafında hata yönetimi uygulanarak uygulamanın beklenmedik şekilde çökmesi engellenmiş, üçüncü parti servis (OpenAI, RevenueCat) kaynaklı hatalar kullanıcı deneyimini bozmadan yönetilmiştir.
+5. **İdempotent Webhook İşleme:** RevenueCat başarısız teslimatları yeniden gönderir. İşlenen her `event.id` kaydedilir; aynı olay tekrar geldiğinde kredi ikinci kez eklenmez.
+
+6. **Girdi Doğrulama ve Kaynak Sınırları:** Kimlik doğrulaması olmayan uçlarda gövde limiti 1 MB'tır; büyük base64 limiti yalnızca token doğrulandıktan sonra uygulanır. İstek başına en fazla 10 görsel kabul edilir ve yalnızca `data:image/...;base64` formatı geçerlidir (istemci OpenAI'ye rastgele URL gönderemez). Kullanıcı özel prompt'u 500 karakterle sınırlanır. Auth uçlarında rate limiting, tüm uçlarda Helmet başlıkları uygulanır.
+
+7. **Satır Düzeyi Güvenlik (RLS):** Supabase anon anahtarı mobil uygulamada gömülü olduğundan tüm tablolarda RLS açıktır; istemci yalnızca `feedbacks` tablosuna ekleme yapabilir (bkz. [`schema.sql`](./schema.sql)).
+
+8. **Modüler Klasör Yapısı:** Frontend tarafı `app/components/hooks/services` ayrımı ile organize edilmiştir (separation of concerns).
+
+9. **Kapsamlı Hata Yönetimi:** İstemci ve backend tarafında hata yönetimi uygulanır; body-parser hataları doğru HTTP kodlarıyla (400/413) döner, üçüncü parti servis (OpenAI, RevenueCat) hataları kullanıcı deneyimini bozmadan yönetilir.
 
 ---
 

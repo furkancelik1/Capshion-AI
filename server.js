@@ -16,10 +16,21 @@ const fs = require("fs");
 const OpenAI = require("openai");
 
 
+// İzin verilen görsel türleri. Kaydedilen dosyanın uzantısı kullanıcının gönderdiği
+// dosya adından değil, doğrulanmış MIME türünden türetilir (ör. "x.html" adıyla yüklenemez).
+const ALLOWED_IMAGE_MIME = {
+  "image/jpeg": ".jpg",
+  "image/jpg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/heic": ".heic",
+};
+const ALLOWED_IMAGE_EXT = /^\.(jpe?g|png|webp|heic)$/;
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"),
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+    const ext = ALLOWED_IMAGE_MIME[file.mimetype] || ".jpg";
     cb(null, `${crypto.randomUUID()}${ext}`);
   },
 });
@@ -39,10 +50,10 @@ const upload = multer({
   storage,
   limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE || "10485760"), files: parseInt(process.env.MAX_FILES || "5") },
   fileFilter: (req, file, cb) => {
-    const allowed = /jpeg|jpg|png|webp|heic/;
-    const extOk = allowed.test(path.extname(file.originalname).toLowerCase());
-    const mimeOk = allowed.test(file.mimetype.split("/")[1]);
-    cb(null, extOk || mimeOk);
+    const extOk = ALLOWED_IMAGE_EXT.test(path.extname(file.originalname).toLowerCase());
+    const mimeOk = Object.prototype.hasOwnProperty.call(ALLOWED_IMAGE_MIME, file.mimetype);
+    // İki kontrol de geçmeli; önceden biri yetiyordu (extOk || mimeOk).
+    cb(null, extOk && mimeOk);
   },
 });
 
@@ -54,13 +65,19 @@ app.use(helmet());
 app.use(compression());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(cors({ origin: ALLOWED_ORIGINS, methods: ["GET", "POST", "PUT", "DELETE"], credentials: true }));
-app.use(express.json({
-  limit: "50mb",
+// Varsayılan JSON limiti küçük tutulur; kimlik doğrulaması olmayan uçlara (register/login/webhook)
+// 50 MB'lık gövde göndererek bellek tüketme (DoS) saldırısını engeller.
+// Base64 görsel alan tek uç (/api/captions/generate-json) kendi büyük limitini, token doğrulamasından SONRA uygular.
+const GENERATE_JSON_PATH = "/api/captions/generate-json";
+const jsonDefault = express.json({
+  limit: "1mb",
   verify: (req, _res, buf) => {
     req.rawBody = buf;
   },
-}));
-app.use(express.urlencoded({ extended: true }));
+});
+const jsonLarge = express.json({ limit: "50mb" });
+app.use((req, res, next) => (req.path === GENERATE_JSON_PATH ? next() : jsonDefault(req, res, next)));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use("/uploads", authenticateToken, express.static("uploads"));
 
 if (!process.env.DATABASE_URL) {
@@ -91,11 +108,8 @@ async function dbHealthCheck() {
     console.log("[DB] PostgreSQL bağlantısı başarılı");
     return true;
   } catch (err) {
+    // DATABASE_URL veritabanı parolasını içerdiği için asla loglanmaz.
     console.error("[DB] PostgreSQL bağlantı HATASI:", err.message);
-    console.error(
-      "[DB] DATABASE_URL:",
-      process.env.DATABASE_URL || "(kullanılmıyor, fallback aktif)",
-    );
     return false;
   }
 }
@@ -104,10 +118,7 @@ app.use("/api/auth", authLimiter);
 app.use("/api", apiLimiter);
 
 app.post("/api/auth/register", async (req, res) => {
-  console.log(
-    "[Register] İstek alındı, body:",
-    JSON.stringify({ ...req.body, password: "***" }),
-  );
+  console.log("[Register] İstek alındı");
 
   try {
     const { email, password, ageRange } = req.body;
@@ -124,13 +135,12 @@ app.post("/api/auth/register", async (req, res) => {
         .json({ error: "Şifre en az 6 karakter olmalıdır." });
     }
 
-    console.log("[Register] Email kontrol ediliyor:", email);
     const existing = await pool.query(
       "SELECT id FROM profiles WHERE email = $1",
       [email],
     );
     if (existing.rows.length > 0) {
-      console.log("[Register] Bu e-posta zaten kayıtlı:", email);
+      console.log("[Register] E-posta zaten kayıtlı (409)");
       return res
         .status(409)
         .json({ error: "Bu e-posta adresi zaten kayıtlı." });
@@ -171,10 +181,7 @@ app.post("/api/auth/register", async (req, res) => {
 });
 
 app.post("/api/auth/login", async (req, res) => {
-  console.log(
-    "[Login] İstek alındı, body:",
-    JSON.stringify({ ...req.body, password: "***" }),
-  );
+  console.log("[Login] İstek alındı");
 
   try {
     const { email, password } = req.body;
@@ -184,7 +191,6 @@ app.post("/api/auth/login", async (req, res) => {
       return res.status(400).json({ error: "E-posta ve şifre zorunludur." });
     }
 
-    console.log("[Login] Kullanıcı aranıyor:", email);
     const result = await pool.query(
       "SELECT id, email, password_hash FROM profiles WHERE email = $1",
       [email],
@@ -192,14 +198,14 @@ app.post("/api/auth/login", async (req, res) => {
     const user = result.rows[0];
 
     if (!user) {
-      console.log("[Login] Kullanıcı bulunamadı:", email);
+      console.log("[Login] Başarısız giriş: kullanıcı yok");
       return res.status(401).json({ error: "E-posta veya şifre hatalı." });
     }
 
     console.log("[Login] Şifre doğrulanıyor...");
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
-      console.log("[Login] Yanlış şifre:", email);
+      console.log("[Login] Başarısız giriş: hatalı şifre, userId:", user.id);
       return res.status(401).json({ error: "E-posta veya şifre hatalı." });
     }
 
@@ -226,7 +232,7 @@ function authenticateToken(req, res, next) {
     return res.status(401).json({ error: "Session not found. Please sign in again." });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+  jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] }, (err, decoded) => {
     if (err) {
       console.log("[Auth] Geçersiz token:", err.message);
       return res.status(403).json({ error: "Session not found. Please sign in again." });
@@ -248,7 +254,6 @@ app.get("/api/auth/profile", authenticateToken, async (req, res) => {
     if (!result.rows[0]) {
       return res.status(404).json({ error: "Profil bulunamadı." });
     }
-    console.log("[Profile] Gönderiliyor:", JSON.stringify(result.rows[0]));
     res.json(result.rows[0]);
   } catch (err) {
     console.error("[Profile] Hata:", err.message);
@@ -329,6 +334,15 @@ app.delete("/api/captions/:id", authenticateToken, async (req, res) => {
   }
 });
 
+// Sabit zamanlı string karşılaştırması: "!==" ile karşılaştırma, gizli anahtarı
+// yanıt süresi farklarından tahmin etmeye (timing attack) açıktır.
+function safeEqual(a, b) {
+  const bufA = Buffer.from(String(a));
+  const bufB = Buffer.from(String(b));
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 const REVENUECAT_PREMIUM_GRANT_EVENTS = ["INITIAL_PURCHASE", "RENEWAL", "NON_RENEWING_PURCHASE"];
 const REVENUECAT_PREMIUM_REVOKE_EVENTS = ["EXPIRATION", "CANCELLATION"];
 
@@ -340,15 +354,15 @@ app.post("/api/webhooks/revenuecat", async (req, res) => {
   }
   // Railway değişkenine yanlışlıkla "Bearer " önekiyle birlikte girilmiş olabilir; her durumda tek "Bearer " ile karşılaştır.
   const webhookSecret = rawWebhookSecret.trim().replace(/^Bearer\s+/i, "");
-  const authHeader = req.headers["authorization"];
-  if (authHeader !== `Bearer ${webhookSecret}`) {
+  const authHeader = req.headers["authorization"] || "";
+  if (!safeEqual(authHeader, `Bearer ${webhookSecret}`)) {
     console.warn("[RevenueCat Webhook] Yetkisiz istek reddedildi.");
     return res.status(401).json({ error: "Unauthorized" });
   }
 
   const event = req.body?.event;
   if (!event || !event.type || !event.app_user_id) {
-    console.warn("[RevenueCat Webhook] Geçersiz payload:", JSON.stringify(req.body));
+    console.warn("[RevenueCat Webhook] Geçersiz payload (event/type/app_user_id eksik).");
     return res.status(400).json({ error: "Geçersiz webhook payload." });
   }
 
@@ -366,11 +380,28 @@ app.post("/api/webhooks/revenuecat", async (req, res) => {
 
   const creditMatch = (event.product_id || "").match(/^(\d+)_credits$/);
 
+  // RevenueCat, 2xx almadığı teslimatları yeniden gönderir. Aynı event.id ikinci kez
+  // gelirse kredi tekrar eklenmesin diye olaylar kaydedilir ve tek bir transaction içinde işlenir.
+  const db = await pool.connect();
   try {
+    await db.query("BEGIN");
+
+    if (event.id) {
+      const dedupe = await db.query(
+        "INSERT INTO processed_webhook_events (event_id, event_type) VALUES ($1, $2) ON CONFLICT (event_id) DO NOTHING RETURNING event_id",
+        [String(event.id), event.type],
+      );
+      if (dedupe.rows.length === 0) {
+        await db.query("ROLLBACK");
+        console.log(`[RevenueCat Webhook] Tekrarlanan event atlandı: ${event.id}`);
+        return res.json({ received: true, duplicate: true });
+      }
+    }
+
     if (creditMatch) {
       const creditsToAdd = parseInt(creditMatch[1], 10);
       if (REVENUECAT_PREMIUM_GRANT_EVENTS.includes(event.type)) {
-        const updateResult = await pool.query(
+        const updateResult = await db.query(
           "UPDATE profiles SET credits = credits + $1 WHERE id = $2 RETURNING id, credits",
           [creditsToAdd, event.app_user_id],
         );
@@ -385,7 +416,7 @@ app.post("/api/webhooks/revenuecat", async (req, res) => {
         console.log(`[RevenueCat Webhook] Kredi ürünü için işlenmeyen event tipi: ${event.type}`);
       }
     } else if (REVENUECAT_PREMIUM_GRANT_EVENTS.includes(event.type)) {
-      const updateResult = await pool.query(
+      const updateResult = await db.query(
         "UPDATE profiles SET is_premium = true WHERE id = $1 RETURNING id",
         [event.app_user_id],
       );
@@ -397,7 +428,7 @@ app.post("/api/webhooks/revenuecat", async (req, res) => {
         );
       }
     } else if (REVENUECAT_PREMIUM_REVOKE_EVENTS.includes(event.type)) {
-      const updateResult = await pool.query(
+      const updateResult = await db.query(
         "UPDATE profiles SET is_premium = false WHERE id = $1 RETURNING id",
         [event.app_user_id],
       );
@@ -411,13 +442,29 @@ app.post("/api/webhooks/revenuecat", async (req, res) => {
     } else {
       console.log(`[RevenueCat Webhook] İşlenmeyen event tipi: ${event.type}`);
     }
+
+    await db.query("COMMIT");
   } catch (dbErr) {
+    await db.query("ROLLBACK").catch(() => {});
     console.error("[RevenueCat Webhook] Veritabanı güncelleme hatası:", dbErr.message);
     return res.status(500).json({ error: "Veritabanı güncellenemedi." });
+  } finally {
+    db.release();
   }
 
   res.json({ received: true });
 });
+
+const MAX_JSON_IMAGES = 10;
+const DATA_URL_IMAGE_REGEX = /^data:image\/(jpeg|jpg|png|webp|gif|heic);base64,[A-Za-z0-9+/=\s]+$/;
+const MAX_CUSTOM_PROMPT_LENGTH = 500;
+
+// Premium kullanıcının özel isteği sistem prompt'una eklenir; uzunluğu sınırlanır ve
+// tırnak işaretleri temizlenir ki prompt'un geri kalanını "kapatıp" yeni talimat yazmak zorlaşsın.
+function sanitizeCustomPrompt(value) {
+  if (typeof value !== "string") return "";
+  return value.replace(/["`]/g, "'").trim().slice(0, MAX_CUSTOM_PROMPT_LENGTH);
+}
 
 // ─── MASTER SYSTEM PROMPT BUILDER ───────────────────────────────────────────
 function buildSystemPrompt({ gender, tone, length, useEmojis, useHashtags, ageRange, customPrompt, isPremium, carouselMode, isPerImage, imageCount, langName }) {
@@ -532,7 +579,7 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
       useEmojis: useEmojis !== false,
       useHashtags: useHashtags !== false,
       ageRange,
-      customPrompt: customPrompt && userRow.is_premium ? customPrompt.trim() : "",
+      customPrompt: userRow.is_premium ? sanitizeCustomPrompt(customPrompt) : "",
       isPremium: userRow.is_premium,
       carouselMode: !!carouselMode,
       isPerImage: false,
@@ -600,15 +647,20 @@ En az 2, en fazla 4 caption üret.`;
         );
       }
 
-      await client.query(
-        "UPDATE profiles SET credits = credits - 1 WHERE id = $1",
+      // Kredi, yalnızca bakiye yeterliyse ve tek sorguda düşülür. Başta yapılan kontrol,
+      // eşzamanlı isteklerde bakiyenin eksiye düşmesini tek başına engelleyemez (race condition).
+      const debit = await client.query(
+        "UPDATE profiles SET credits = credits - 1 WHERE id = $1 AND credits >= 1 RETURNING credits",
         [req.userId],
       );
+      if (debit.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return res.status(403).json({ error: "Yetersiz kredi. Lütfen kredi yükleyin." });
+      }
 
       await client.query("COMMIT");
 
-      const remainingResult = await pool.query("SELECT credits FROM profiles WHERE id = $1", [req.userId]);
-      const remainingCredits = remainingResult.rows[0].credits;
+      const remainingCredits = debit.rows[0].credits;
 
       const captions = aiCaptions.map((c) => ({ text: c.caption_text, hashtags: c.hashtags }));
 
@@ -646,15 +698,23 @@ En az 2, en fazla 4 caption üret.`;
   }
 });
 
-app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
+app.post(GENERATE_JSON_PATH, authenticateToken, jsonLarge, async (req, res) => {
   console.log("[Generate-JSON] İstek alındı, userId:", req.userId);
 
   try {
     const { images, tone, gender, ageRange, language, length, useEmojis, useHashtags, mode, customPrompt, carouselMode } = req.body;
     const isPerImage = mode === "per_image";
 
-    if (!images || images.length === 0) {
+    if (!Array.isArray(images) || images.length === 0) {
       return res.status(400).json({ error: "En az bir görsel (base64) gereklidir." });
+    }
+    // Tek krediyle sınırsız görsel işlenmesin (maliyet istismarı) ve istemci, OpenAI'ye
+    // base64 yerine rastgele bir URL gönderemesin.
+    if (images.length > MAX_JSON_IMAGES) {
+      return res.status(400).json({ error: `En fazla ${MAX_JSON_IMAGES} görsel gönderilebilir.` });
+    }
+    if (!images.every((img) => typeof img === "string" && DATA_URL_IMAGE_REGEX.test(img))) {
+      return res.status(400).json({ error: "Görseller base64 data URL (jpeg/png/webp/gif/heic) formatında olmalıdır." });
     }
 
     const userResult = await pool.query(
@@ -687,7 +747,7 @@ app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
       useEmojis: useEmojis !== false,
       useHashtags: useHashtags !== false,
       ageRange,
-      customPrompt: customPrompt && userRow.is_premium ? customPrompt.trim() : "",
+      customPrompt: userRow.is_premium ? sanitizeCustomPrompt(customPrompt) : "",
       isPremium: userRow.is_premium,
       carouselMode: !!carouselMode,
       isPerImage: !!isPerImage,
@@ -819,18 +879,18 @@ En az 2, en fazla 4 caption üret.`;
         );
       }
 
-      await client.query(
-        "UPDATE profiles SET credits = credits - $1 WHERE id = $2",
+      const debit = await client.query(
+        "UPDATE profiles SET credits = credits - $1 WHERE id = $2 AND credits >= $1 RETURNING credits",
         [requiredCredits, req.userId],
       );
+      if (debit.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return res.status(403).json({ error: "Yetersiz kredi. Lütfen kredi yükleyin." });
+      }
 
       await client.query("COMMIT");
 
-      const remainingResult = await pool.query(
-        "SELECT credits FROM profiles WHERE id = $1",
-        [req.userId],
-      );
-      const remainingCredits = remainingResult.rows[0].credits;
+      const remainingCredits = debit.rows[0].credits;
 
       const captions = aiCaptions.map((c) => ({
         text: c.caption_text,
@@ -875,8 +935,14 @@ app.get("/health", async (req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error("[Unhandled Error]", err);
-  res.status(500).json({ error: "Sunucu hatası." });
+  // Body-parser hataları (çok büyük gövde: 413, bozuk JSON: 400) istemci hatasıdır; 500 dönülmez.
+  const status = Number.isInteger(err.status) && err.status >= 400 && err.status < 500 ? err.status : 500;
+  if (status === 500) {
+    console.error("[Unhandled Error]", err);
+  } else {
+    console.warn(`[Request Error] ${status} ${err.type || err.message}`);
+  }
+  res.status(status).json({ error: status === 413 ? "İstek gövdesi çok büyük." : status === 500 ? "Sunucu hatası." : "Geçersiz istek." });
 });
 
 async function sendPushNotification(userId, title, body, data = {}) {
@@ -936,6 +1002,12 @@ async function start() {
     console.log("[DB] is_premium sütunu kontrol edildi/eklendi.");
     await pool.query("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS push_token TEXT");
     console.log("[DB] push_token sütunu kontrol edildi/eklendi.");
+    await pool.query(
+      "CREATE TABLE IF NOT EXISTS processed_webhook_events (event_id TEXT PRIMARY KEY, event_type TEXT, received_at TIMESTAMPTZ NOT NULL DEFAULT now())",
+    );
+    console.log("[DB] processed_webhook_events tablosu kontrol edildi/eklendi.");
+    // Supabase'in anon anahtarla açtığı REST API'den erişilemesin (sunucu tablo sahibi olduğu için etkilenmez).
+    await pool.query("ALTER TABLE processed_webhook_events ENABLE ROW LEVEL SECURITY");
   } catch (migErr) {
     console.warn("[DB] Migrasyon hatası (önemsiz):", migErr.message);
   }

@@ -41,7 +41,8 @@ export default function CameraWidget({
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const newUris = result.assets.map((asset) => asset.uri);
-        onImagesChange([...selectedImages, ...newUris]);
+        // Sunucu tek istekte en fazla 10 görsel kabul eder (server.js: MAX_JSON_IMAGES).
+        onImagesChange([...selectedImages, ...newUris].slice(0, 10));
       }
     } catch (error) {
       console.log("Galeri açılırken hata:", error);
