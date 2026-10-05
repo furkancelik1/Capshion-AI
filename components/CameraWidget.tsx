@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import {
   Alert,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,11 +27,14 @@ export default function CameraWidget({
 
   const pickFromGallery = async () => {
     try {
-      const permission =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert(t("home.alertPermissionTitle"), t("home.alertPermissionGallery"));
-        return;
+      // Android sistem fotoğraf seçicisi izin gerektirmez; medya izinleri app.json'da engelli
+      if (Platform.OS !== "android") {
+        const permission =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert(t("home.alertPermissionTitle"), t("home.alertPermissionGallery"));
+          return;
+        }
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({

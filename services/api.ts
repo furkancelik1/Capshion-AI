@@ -5,7 +5,12 @@ const DEFAULT_HOST = Platform.select({
   ios: 'localhost',
   default: 'localhost',
 });
-const API_URL = process.env.EXPO_PUBLIC_API_URL || `http://${DEFAULT_HOST}:3000/api`;
+// Yerel fallback yalnızca geliştirmede; production build'de EXPO_PUBLIC_API_URL zorunlu
+const API_URL = process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? `http://${DEFAULT_HOST}:3000/api` : '');
+
+if (!API_URL) {
+  console.error('[API] EXPO_PUBLIC_API_URL tanımlı değil. Production build için EAS ortam değişkenlerini kontrol edin.');
+}
 
 let _token: string | null = null;
 

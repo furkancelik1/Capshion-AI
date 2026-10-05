@@ -32,7 +32,8 @@ yarn-error.*
 
 # Local env files
 .env
-.env*.local
+.env.*
+!.env.example
 
 # typescript
 *.tsbuildinfo
@@ -45,3 +46,6 @@ OmniRoute-release-v3.8.50/
 .tmp_bundletool/
 *.aab
 *.apks
+# Yerel araç dosyaları
+OmniRoute-release-v3.8.50.zip
+/settings.json

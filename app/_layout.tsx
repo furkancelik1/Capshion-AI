@@ -221,25 +221,33 @@ export default function RootLayout() {
     }
   }, []);
 
+  const app = (
+    <BottomSheetModalProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <RootLayoutNav />
+        </AuthProvider>
+      </ToastProvider>
+    </BottomSheetModalProvider>
+  );
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <PostHogProvider
-        apiKey={"phc_ya4kkZMmmNMtDNNSHw2vtK38rifmwNThUEzJ8qNC4QwZ"}
-        debug={true}
-        options={{
-          host: "https://eu.i.posthog.com",
-          flushAt: 1,
-          disabled: false,
-        }}
-      >
-        <BottomSheetModalProvider>
-          <ToastProvider>
-            <AuthProvider>
-              <RootLayoutNav />
-            </AuthProvider>
-          </ToastProvider>
-        </BottomSheetModalProvider>
-      </PostHogProvider>
+      {/* PostHog boş anahtarla fırlatır; anahtar yoksa provider atlanır, usePostHog() undefined döner */}
+      {POSTHOG_API_KEY ? (
+        <PostHogProvider
+          apiKey={POSTHOG_API_KEY}
+          debug={__DEV__}
+          options={{
+            host: POSTHOG_HOST || "https://eu.i.posthog.com",
+            flushAt: __DEV__ ? 1 : 20,
+          }}
+        >
+          {app}
+        </PostHogProvider>
+      ) : (
+        app
+      )}
     </GestureHandlerRootView>
   );
 }

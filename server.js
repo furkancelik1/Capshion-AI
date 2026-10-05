@@ -92,10 +92,6 @@ async function dbHealthCheck() {
     return true;
   } catch (err) {
     console.error("[DB] PostgreSQL bağlantı HATASI:", err.message);
-    console.error(
-      "[DB] DATABASE_URL:",
-      process.env.DATABASE_URL || "(kullanılmıyor, fallback aktif)",
-    );
     return false;
   }
 }
@@ -518,7 +514,9 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
 
     console.log("[Generate] Dosyalar base64'e çevriliyor...");
     const base64Images = await Promise.all(files.map((f) => fs.promises.readFile(f.path).then((buf) => `data:${f.mimetype};base64,${buf.toString("base64")}`)));
-    const imageUrls = files.map((f) => `${req.protocol}://${req.hostname}:${process.env.PORT || 3000}/uploads/${f.filename}`);
+    // Railway gibi proxy arkasında iç PORT dışarıya açık değil; PUBLIC_BASE_URL yoksa isteğin Host başlığı kullanılır
+    const baseUrl = process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get("host")}`;
+    const imageUrls = files.map((f) => `${baseUrl}/uploads/${f.filename}`);
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 

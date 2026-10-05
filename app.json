@@ -4,7 +4,7 @@
     "slug": "capshion",
     "owner": "furkan1010",
     "sdkVersion": "57.0.0",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "capshion",
@@ -13,6 +13,7 @@
       "supportsTablet": true,
       "backgroundColor": "#F2F2F7",
       "bundleIdentifier": "com.furkan.capshion",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "buildNumber": "2",
       "infoPlist": {
         "NSCameraUsageDescription": "Capshion requires camera access to analyze your photos and generate premium, tailored social media captions.",
@@ -24,7 +25,6 @@
       "googleServicesFile": "./google-services.json",
       "backgroundColor": "#F2F2F7",
       "package": "com.furkan.capshion",
-      "versionCode": 11,
       "adaptiveIcon": {
         "backgroundColor": "#F2F2F7",
         "foregroundImage": "./assets/images/logo.png",
@@ -32,9 +32,16 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "READ_MEDIA_IMAGES"
+        "CAMERA"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -70,7 +77,23 @@
       "expo-image",
       "./plugins/withCleartextTraffic.js",
       "@react-native-firebase/app",
-      "@react-native-firebase/analytics"
+      "@react-native-firebase/analytics",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static",
+            "forceStaticLinking": [
+              "RNFBApp",
+              "RNFBAnalytics"
+            ]
+          }
+        }
+      ],
+      "expo-localization",
+      "expo-router",
+      "expo-secure-store",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
