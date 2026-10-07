@@ -8,14 +8,7 @@
 
 > Aşağıdaki bilgiler, projeyi lokal olarak derlemeden doğrudan test edebilmeniz için sağlanmıştır. Uygulama, üretim (production) ortamında canlı bir backend (Railway) ve canlı bir veritabanına (Supabase) bağlı olarak çalışmaktadır.
 
-| Alan | Değer |
-|---|---|
-| **Test Ortamı Linki** | [https://play.google.com/apps/internaltest/4701211965641282101](https://play.google.com/apps/internaltest/4701211965641282101) |
-| **Test E-postası** | [adurkaya@bandirma.edu.tr](mailto:adurkaya@bandirma.edu.tr) |
-| **Test Şifresi** | `Sifre1234` |
-| **Not** | Test hesabına önceden birkaç kredi tanımlanmıştır, ek bir satın alma işlemi yapmanıza gerek yoktur. |
 
-> ⚠️ Test hesabı, gerçek bir satın alma denemesi durumunda **License Testing** kapsamındadır; herhangi bir gerçek ücret tahsil edilmez.
 
 ---
 
@@ -132,7 +125,3 @@ npx expo run:android
 
 ---
 
-## 👤 Geliştirici
-
-**Furkan Çelik**
-Bu proje, [Üniversite adı] bünyesinde akademik kod incelemesi (code review) amacıyla sunulmuştur.
