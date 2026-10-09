@@ -149,7 +149,7 @@ app.post("/api/auth/register", async (req, res) => {
     const token = jwt.sign(
       { userId, email },
       JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "365d" }
     );
 
     return res.status(201).json({
@@ -200,7 +200,7 @@ app.post("/api/auth/login", async (req, res) => {
     }
 
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
-      expiresIn: "7d",
+      expiresIn: "365d",
     });
 
     console.log("[Login] Başarılı, kullanıcı id:", user.id);
