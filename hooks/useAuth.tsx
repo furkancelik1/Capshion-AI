@@ -1,6 +1,25 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
 import Purchases from 'react-native-purchases';
 import { api, setToken } from '../services/api';
+
+// Oturum (token + kullanıcı) cihazda saklanır; uygulama yeniden açıldığında geri yüklenir.
+const TOKEN_KEY = 'capshion_auth_token';
+const USER_KEY = 'capshion_auth_user';
+
+async function persistSession(token: string | null, user: AuthUser | null) {
+  try {
+    if (token && user) {
+      await SecureStore.setItemAsync(TOKEN_KEY, token);
+      await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+    } else {
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await SecureStore.deleteItemAsync(USER_KEY);
+    }
+  } catch (err: unknown) {
+    console.error('[Auth] Oturum kaydedilemedi:', err instanceof Error ? err.message : String(err));
+  }
+}
 
 interface AuthUser {
   id: string;
@@ -22,7 +41,50 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(false);
+  // Başlangıçta true: kayıtlı oturum geri yüklenene kadar yönlendirme yapılmasın
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const restoreSession = async () => {
+      try {
+        const [token, userJson] = await Promise.all([
+          SecureStore.getItemAsync(TOKEN_KEY),
+          SecureStore.getItemAsync(USER_KEY),
+        ]);
+        if (!token || !userJson) return;
+
+        const savedUser: AuthUser = JSON.parse(userJson);
+        setToken(token);
+
+        try {
+          const profile: any = await api.getProfile();
+          setUser({ ...savedUser, is_premium: !!profile?.is_premium });
+        } catch (err: any) {
+          if (err?.status === 401 || err?.status === 403) {
+            // Token süresi dolmuş/geçersiz — oturumu temizle, giriş ekranına düşsün
+            setToken(null);
+            await persistSession(null, null);
+            return;
+          }
+          // Ağ hatası vb.: kayıtlı kullanıcıyla devam et
+          setUser(savedUser);
+        }
+
+        Purchases.logIn(String(savedUser.id)).catch((rcErr: unknown) => {
+          console.error(
+            '[RevenueCat] logIn hatası:',
+            rcErr instanceof Error ? rcErr.message : String(rcErr),
+          );
+        });
+      } catch (err: unknown) {
+        console.error('[Auth] Oturum geri yüklenemedi:', err instanceof Error ? err.message : String(err));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    restoreSession();
+  }, []);
 
   const signInWithEmail = async (email: string, password: string) => {
     try {
@@ -43,8 +105,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const token = result?.token ?? result?.accessToken ?? null;
 
       if (authUser?.id && token) {
+        const nextUser: AuthUser = { id: String(authUser.id), email: authUser.email ?? email, is_premium: false };
         setToken(token);
-        setUser({ id: authUser.id, email: authUser.email ?? email, is_premium: false });
+        setUser(nextUser);
+        await persistSession(token, nextUser);
         try {
           console.log(
             '[RevenueCat] logIn öncesi user:',
@@ -92,8 +156,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const token = result?.token ?? result?.accessToken ?? null;
 
       if (authUser?.id && token) {
+        const nextUser: AuthUser = { id: String(authUser.id), email: authUser.email ?? email, is_premium: false };
         setToken(token);
-        setUser({ id: authUser.id, email: authUser.email ?? email, is_premium: false });
+        setUser(nextUser);
+        await persistSession(token, nextUser);
         try {
           console.log(
             '[RevenueCat] logIn öncesi user:',
@@ -130,6 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = () => {
     setToken(null);
     setUser(null);
+    persistSession(null, null);
     Purchases.logOut().catch((rcErr: unknown) => {
       console.error(
         '[RevenueCat] logOut hatası:',
