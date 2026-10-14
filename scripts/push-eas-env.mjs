@@ -9,6 +9,7 @@ const REQUIRED = [
   'EXPO_PUBLIC_SUPABASE_URL',
   'EXPO_PUBLIC_SUPABASE_ANON_KEY',
   'EXPO_PUBLIC_RC_GOOGLE_KEY',
+  'EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID',
 ];
 // iOS yayını sonraya kaldı; boşsa yalnızca uyarılır
 const IOS_ONLY = ['EXPO_PUBLIC_RC_APPLE_KEY'];

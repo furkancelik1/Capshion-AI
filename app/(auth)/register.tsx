@@ -26,7 +26,7 @@ import { GlassTheme } from '@/constants/LiquidGlass';
 import { api } from '@/services/api';
 
 export default function RegisterScreen() {
-  const { signInWithEmail, signUpWithEmail } = useAuth();
+  const { signInWithEmail, signUpWithEmail, signInWithSocial } = useAuth();
   const { showToast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -37,20 +37,31 @@ export default function RegisterScreen() {
   const [focusedField, setFocusedField] = useState<'email' | 'password' | 'confirmPassword' | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSocialAuth = useCallback(async (provider: 'apple' | 'google', idToken: string) => {
-    if (!supabase) throw new Error('Supabase yapılandırması eksik.');
-    const { data, error } = await supabase.auth.signInWithIdToken({ provider, token: idToken });
-    if (error) throw error;
-    const email = data.user?.email;
-    if (!email) throw new Error('E-posta alınamadı.');
-    const { error: loginError } = await signInWithEmail(email, 'social_capshion_2024');
-    if (loginError) {
-      const { error: regError } = await signUpWithEmail(email, 'social_capshion_2024');
-      if (regError) throw regError;
-    }
-    showToast('Giriş başarılı!', 'success');
-    router.replace('/(tabs)');
-  }, [signInWithEmail, signUpWithEmail, showToast]);
+  const handleSocialAuth = useCallback(
+    async (provider: 'apple' | 'google', idToken: string, userEmail?: string) => {
+      let email = userEmail;
+
+      if (supabase) {
+        try {
+          const { data, error } = await supabase.auth.signInWithIdToken({ provider, token: idToken });
+          if (!error && data?.user?.email) {
+            email = data.user.email;
+          }
+        } catch (sbErr) {
+          console.warn('[SocialAuth] Supabase doğrulaması atlandı/hata verdi, backend ile devam ediliyor:', sbErr);
+        }
+      }
+
+      const { error: socialError } = await signInWithSocial(provider, idToken, email);
+      if (socialError) {
+        throw new Error(socialError);
+      }
+
+      showToast('Giriş başarılı!', 'success');
+      router.replace('/(tabs)');
+    },
+    [signInWithSocial, showToast],
+  );
 
   const handleAppleLogin = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -63,7 +74,7 @@ export default function RegisterScreen() {
         ],
       });
       if (!credential.identityToken) throw new Error('Apple identity token alınamadı.');
-      await handleSocialAuth('apple', credential.identityToken);
+      await handleSocialAuth('apple', credential.identityToken, credential.email || undefined);
     } catch (err: any) {
       if (err.code !== 'ERR_CANCELED') {
         showToast(err.message || 'Apple ile giriş yapılamadı.', 'error');
@@ -74,16 +85,50 @@ export default function RegisterScreen() {
   const handleGoogleLogin = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
-      const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+      const { GoogleSignin, statusCodes } = require('@react-native-google-signin/google-signin');
+      const webClientId =
+        process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
+        '155828266486-1m4rmbavfs6ig0u2a5d358gjaudbgmn5.apps.googleusercontent.com';
+
       GoogleSignin.configure({
-        webClientId: 'BURAYA_GOOGLE_WEB_CLIENT_ID_GELECEK',
-        iosClientId: 'BURAYA_IOS_CLIENT_ID_GELECEK',
+        webClientId,
+        offlineAccess: false,
       });
-      await GoogleSignin.hasPlayServices();
-      const userInfo = await GoogleSignin.signIn();
-      if (!userInfo.idToken) throw new Error('Google ID token alınamadı.');
-      await handleSocialAuth('google', userInfo.idToken);
+
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const response = await GoogleSignin.signIn();
+
+      if (response?.type === 'cancelled') {
+        return;
+      }
+
+      const idToken = response?.data?.idToken || response?.idToken;
+      const email = response?.data?.user?.email || response?.user?.email;
+
+      if (!idToken) {
+        throw new Error('Google ID token alınamadı.');
+      }
+
+      await handleSocialAuth('google', idToken, email);
     } catch (err: any) {
+      const { statusCodes } = require('@react-native-google-signin/google-signin');
+      if (
+        err?.code === statusCodes?.SIGN_IN_CANCELLED ||
+        err?.code === '12501' ||
+        err?.message?.includes('CANCELLED') ||
+        err?.message?.includes('Sign in action cancelled')
+      ) {
+        return;
+      }
+      if (err?.code === statusCodes?.IN_PROGRESS) {
+        return;
+      }
+      if (err?.code === statusCodes?.PLAY_SERVICES_NOT_AVAILABLE) {
+        showToast('Google Play Hizmetleri kullanılamıyor veya güncel değil.', 'error');
+        return;
+      }
+
+      console.error('[GoogleLogin] Giriş hatası:', err);
       showToast(err.message || 'Google ile giriş yapılamadı.', 'error');
     }
   }, [showToast, handleSocialAuth]);

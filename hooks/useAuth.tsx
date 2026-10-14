@@ -32,6 +32,7 @@ interface AuthContextType {
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
   signUpWithEmail: (email: string, password: string, ageRange?: string | null) => Promise<{ error: string | null }>;
+  signInWithSocial: (provider: 'google' | 'apple', idToken?: string, email?: string) => Promise<{ error: string | null }>;
   signOut: () => void;
   refreshPremiumStatus: () => Promise<void>;
   setPremiumStatus: (isPremium: boolean) => void;
@@ -193,6 +194,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithSocial = async (provider: 'google' | 'apple', idToken?: string, email?: string) => {
+    try {
+      setLoading(true);
+      console.log('[SocialAuth] Backend isteği gönderiliyor →', { provider, email });
+      const result: any = await api.socialLogin(provider, idToken, email);
+      const authUser = result?.user ?? (result?.id ? result : null);
+      const token = result?.token ?? result?.accessToken ?? null;
+
+      if (authUser?.id && token) {
+        const nextUser: AuthUser = {
+          id: String(authUser.id),
+          email: authUser.email ?? email ?? '',
+          is_premium: false,
+        };
+        setToken(token);
+        setUser(nextUser);
+        await persistSession(token, nextUser);
+
+        try {
+          console.log('[RevenueCat] logIn öncesi user:', JSON.stringify(authUser));
+          const { customerInfo } = await Purchases.logIn(String(authUser.id));
+          console.log(
+            '[RevenueCat] logIn başarılı, aktif appUserID:',
+            customerInfo.originalAppUserId,
+          );
+        } catch (rcErr: unknown) {
+          console.error(
+            '[RevenueCat] logIn hatası:',
+            rcErr instanceof Error ? rcErr.message : String(rcErr),
+          );
+        }
+
+        refreshPremiumStatus();
+        return { error: null };
+      }
+
+      return { error: 'Token veya kullanıcı bilgisi alınamadı.' };
+    } catch (err: unknown) {
+      console.error('[SocialAuth] Giriş hatası:', err);
+      const msg = err instanceof Error ? err.message : 'Sosyal giriş işlemi başarısız.';
+      return { error: msg };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const signOut = () => {
     setToken(null);
     setUser(null);
@@ -231,6 +278,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         signInWithEmail,
         signUpWithEmail,
+        signInWithSocial,
         signOut,
         refreshPremiumStatus,
         setPremiumStatus,

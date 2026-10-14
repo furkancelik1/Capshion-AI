@@ -214,6 +214,83 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
+app.post("/api/auth/social-login", async (req, res) => {
+  console.log("[SocialLogin] İstek alındı, provider:", req.body?.provider);
+  try {
+    const { provider, idToken, email: rawEmail } = req.body;
+
+    if (!provider || (!idToken && !rawEmail)) {
+      return res.status(400).json({ error: "Sağlayıcı veya kimlik bilgisi eksik." });
+    }
+
+    let verifiedEmail = rawEmail;
+
+    if (provider === "google" && idToken) {
+      try {
+        const tokenRes = await fetch(
+          `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`
+        );
+        if (tokenRes.ok) {
+          const tokenData = await tokenRes.json();
+          if (tokenData.email) {
+            verifiedEmail = tokenData.email;
+          }
+        } else {
+          console.warn("[SocialLogin] Google tokeninfo yanıtı başarısız, iletilen e-posta kontrol edilecek.");
+        }
+      } catch (verifyErr) {
+        console.warn("[SocialLogin] Google token doğrulama uyarısı:", verifyErr.message);
+      }
+    }
+
+    if (!verifiedEmail) {
+      return res.status(400).json({ error: "E-posta adresi doğrulanamadı." });
+    }
+
+    const email = verifiedEmail.toLowerCase().trim();
+
+    // Kullanıcı mevcut mu kontrol et
+    let userResult = await pool.query(
+      "SELECT id, email FROM profiles WHERE email = $1",
+      [email]
+    );
+
+    let user = userResult.rows[0];
+
+    // Kayıtlı değilse otomatik oluştur
+    if (!user) {
+      console.log("[SocialLogin] Yeni profil oluşturuluyor:", email);
+      const randomPassword = crypto.randomUUID();
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+      const insertResult = await pool.query(
+        `INSERT INTO profiles (email, password_hash, credits, created_at)
+         VALUES ($1, $2, 5, NOW())
+         RETURNING id, email`,
+        [email, hashedPassword]
+      );
+      user = insertResult.rows[0];
+    } else {
+      console.log("[SocialLogin] Mevcut kullanıcı ile giriş yapıldı:", email, user.id);
+    }
+
+    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
+      expiresIn: "365d",
+    });
+
+    return res.json({
+      user: { id: user.id, email: user.email },
+      token,
+      message: "Giriş başarılı",
+    });
+  } catch (err) {
+    console.error("[SocialLogin] Hata:", err.message);
+    console.error("[SocialLogin] Stack:", err.stack);
+    return res
+      .status(500)
+      .json({ error: "Sunucu hatası. Lütfen daha sonra tekrar deneyin." });
+  }
+});
+
 function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];

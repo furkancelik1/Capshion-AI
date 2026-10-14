@@ -203,6 +203,12 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
 
+  socialLogin: (provider: 'google' | 'apple', idToken?: string, email?: string) =>
+    request<{ user: { id: string; email: string }; token: string; message: string }>('/auth/social-login', {
+      method: 'POST',
+      body: JSON.stringify({ provider, idToken, email }),
+    }),
+
   getProfile: () =>
     request<{ id: string; email: string; age_range: string | null; credits_remaining: number; is_premium: boolean }>(
       '/auth/profile',
