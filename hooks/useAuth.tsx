@@ -285,10 +285,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const setPremiumStatus = (isPremium: boolean) => {
-    // Değer değişmediyse aynı referansı koru — aksi halde her profil
-    // fetch'i user objesini yeniler ve buna bağlı useCallback/useEffect'lerde
-    // (örn. profile.tsx fetchProfile) sonsuz döngüye yol açar.
-    setUser((prev) => (prev && prev.is_premium !== isPremium ? { ...prev, is_premium: isPremium } : prev));
+    setUser((prev) => {
+      if (!prev || prev.is_premium === isPremium) return prev;
+      const updated = { ...prev, is_premium: isPremium };
+      SecureStore.setItemAsync(USER_KEY, JSON.stringify(updated)).catch(() => {});
+      return updated;
+    });
   };
 
   const refreshPremiumStatus = async () => {

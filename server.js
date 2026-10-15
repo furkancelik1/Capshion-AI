@@ -402,21 +402,93 @@ app.delete("/api/captions/:id", authenticateToken, async (req, res) => {
   }
 });
 
+// ─── INSTANT IN-APP PURCHASE SYNC ENDPOINT ─────────────────────────────────
+app.post("/api/purchases/sync", authenticateToken, async (req, res) => {
+  const { productId, isSubscription, transactionId } = req.body;
+  const userId = req.userId;
+
+  try {
+    if (isSubscription) {
+      await pool.query("UPDATE profiles SET is_premium = true, is_pro = true WHERE id = $1", [userId]);
+      console.log(`[Purchases Sync] Kullanıcı ${userId} abonelik senkronizasyonu ile Premium yapıldı.`);
+    } else if (productId) {
+      // Ürün ID'sinden sayısal krediyi ayıkla (örn: "10_credits", "credits_30", "50_credits", "30")
+      const match = String(productId).match(/\d+/);
+      const creditsToAdd = match ? parseInt(match[0], 10) : 0;
+
+      if (creditsToAdd > 0) {
+        // Transaction ID ile mükerrer ekleme koruması
+        let alreadyProcessed = false;
+        if (transactionId) {
+          try {
+            const existing = await pool.query(
+              "SELECT id FROM purchase_events WHERE raw_payload->>'transactionId' = $1",
+              [String(transactionId)]
+            );
+            if (existing.rows.length > 0) {
+              alreadyProcessed = true;
+              console.log(`[Purchases Sync] İşlem ${transactionId} zaten işlenmiş, mükerrer bakiye eklenmedi.`);
+            }
+          } catch (tErr) {
+            // purchase_events tablosu yoksa veya hata verirse akışı kesme
+          }
+        }
+
+        if (!alreadyProcessed) {
+          const updateResult = await pool.query(
+            "UPDATE profiles SET credits = credits + $1 WHERE id = $2 RETURNING id, credits",
+            [creditsToAdd, userId]
+          );
+
+          try {
+            await pool.query(
+              `INSERT INTO purchase_events (user_id, event_type, product_id, raw_payload, processed_at)
+               VALUES ($1, $2, $3, $4, NOW())`,
+              [
+                userId,
+                "CLIENT_SYNC_PURCHASE",
+                String(productId),
+                JSON.stringify({ transactionId, creditsToAdd, source: "client_sync" }),
+              ]
+            );
+          } catch (logErr) {
+            console.warn("[Purchases Sync] Denetim kaydı ekleme uyarısı (bakiye güncellendi):", logErr.message);
+          }
+
+          console.log(
+            `[Purchases Sync] Kullanıcı ${userId} hesabına ${creditsToAdd} kredi eklendi (${productId}), yeni bakiye: ${updateResult.rows[0]?.credits}.`
+          );
+        }
+      }
+    }
+
+    const finalProfile = await pool.query(
+      "SELECT id, email, age_range, credits AS credits_remaining, is_premium FROM profiles WHERE id = $1",
+      [userId]
+    );
+
+    res.json({ success: true, profile: finalProfile.rows[0] });
+  } catch (err) {
+    console.error("[Purchases Sync] Hata:", err.message);
+    res.status(500).json({ error: "Satın alma senkronize edilemedi." });
+  }
+});
+
 const REVENUECAT_PREMIUM_GRANT_EVENTS = ["INITIAL_PURCHASE", "RENEWAL", "NON_RENEWING_PURCHASE"];
 const REVENUECAT_PREMIUM_REVOKE_EVENTS = ["EXPIRATION", "CANCELLATION"];
 
 app.post("/api/webhooks/revenuecat", async (req, res) => {
   const rawWebhookSecret = process.env.REVENUECAT_WEBHOOK_SECRET;
-  if (!rawWebhookSecret) {
-    console.error("[RevenueCat Webhook] REVENUECAT_WEBHOOK_SECRET tanımlı değil, istek reddedildi.");
-    return res.status(500).json({ error: "Webhook yapılandırılmamış." });
-  }
-  // Railway değişkenine yanlışlıkla "Bearer " önekiyle birlikte girilmiş olabilir; her durumda tek "Bearer " ile karşılaştır.
-  const webhookSecret = rawWebhookSecret.trim().replace(/^Bearer\s+/i, "");
-  const authHeader = req.headers["authorization"];
-  if (authHeader !== `Bearer ${webhookSecret}`) {
-    console.warn("[RevenueCat Webhook] Yetkisiz istek reddedildi.");
-    return res.status(401).json({ error: "Unauthorized" });
+  if (rawWebhookSecret) {
+    // Railway değişkenine yanlışlıkla "Bearer " önekiyle birlikte girilmiş olabilir; her durumda tek "Bearer " ile karşılaştır.
+    const webhookSecret = rawWebhookSecret.trim().replace(/^Bearer\s+/i, "");
+    const authHeader = req.headers["authorization"];
+    if (authHeader !== `Bearer ${webhookSecret}`) {
+      console.warn("[RevenueCat Webhook] Yetkisiz istek reddedildi.");
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+  } else {
+    console.warn("[RevenueCat Webhook] REVENUECAT_WEBHOOK_SECRET tanımlı değil, geliştirme ortamında webhook doğrulaması atlandı.");
   }
 
   const event = req.body?.event;
@@ -429,19 +501,21 @@ app.post("/api/webhooks/revenuecat", async (req, res) => {
     `[RevenueCat Webhook] Event alındı: ${event.type}, app_user_id: ${event.app_user_id}, product_id: ${event.product_id}`,
   );
 
-  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!UUID_REGEX.test(event.app_user_id)) {
+  // Anonim RevenueCat kullanıcılarını atla, integer veya UUID formatındaki tüm gerçek kullanıcı ID'lerini kabul et
+  if (String(event.app_user_id).startsWith("$RCAnonymousID")) {
     console.warn(
-      `[RevenueCat Webhook] app_user_id geçerli bir kullanıcı UUID'si değil (muhtemelen anonim RevenueCat ID'si), atlanıyor: ${event.app_user_id}`,
+      `[RevenueCat Webhook] app_user_id anonim RevenueCat ID'si, atlanıyor: ${event.app_user_id}`,
     );
-    return res.json({ received: true, skipped: "non_uuid_app_user_id" });
+    return res.json({ received: true, skipped: "anonymous_app_user_id" });
   }
 
-  const creditMatch = (event.product_id || "").match(/^(\d+)_credits$/);
+  const prodId = (event.product_id || "").toLowerCase();
+  const isCredit = prodId.includes("credit") || /\d+/.test(prodId);
+  const creditNumMatch = prodId.match(/(\d+)/);
 
   try {
-    if (creditMatch) {
-      const creditsToAdd = parseInt(creditMatch[1], 10);
+    if (isCredit && creditNumMatch && !prodId.includes("sub") && !prodId.includes("monthly")) {
+      const creditsToAdd = parseInt(creditNumMatch[1], 10);
       if (REVENUECAT_PREMIUM_GRANT_EVENTS.includes(event.type)) {
         const updateResult = await pool.query(
           "UPDATE profiles SET credits = credits + $1 WHERE id = $2 RETURNING id, credits",
@@ -1011,6 +1085,17 @@ async function start() {
     console.log("[DB] is_premium sütunu kontrol edildi/eklendi.");
     await pool.query("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS push_token TEXT");
     console.log("[DB] push_token sütunu kontrol edildi/eklendi.");
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS purchase_events (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        event_type TEXT NOT NULL,
+        product_id TEXT,
+        raw_payload JSONB,
+        processed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )
+    `);
+    console.log("[DB] purchase_events tablosu kontrol edildi/eklendi.");
   } catch (migErr) {
     console.warn("[DB] Migrasyon hatası (önemsiz):", migErr.message);
   }

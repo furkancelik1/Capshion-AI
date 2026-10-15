@@ -214,6 +214,16 @@ export const api = {
       '/auth/profile',
     ),
 
+  syncPurchase: (data: { productId?: string; isSubscription?: boolean; transactionId?: string }) =>
+    request<{
+      success: boolean;
+      profile: { id: string; email: string; age_range: string | null; credits_remaining: number; is_premium: boolean };
+      alreadyProcessed?: boolean;
+    }>('/purchases/sync', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   updateAgeRange: (ageRange: string) =>
     request<{ message: string }>('/auth/profile/age', {
       method: 'PUT',

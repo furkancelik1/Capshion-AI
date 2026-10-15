@@ -158,14 +158,24 @@ export default function ProfileScreen() {
     fetchProfile();
   }, [fetchProfile]);
 
-  // Ekrana her geri dönüldüğünde kredi/premium bilgisini sessizce (loading
-  // göstermeden) arka planda günceller — RevenueCat satın alması Paywall'da
-  // yapılıp buraya geri dönüldüğünde bakiyenin güncel görünmesini sağlar.
+  // Ekrana her geri dönüldüğünde kredi/premium bilgisini sessizce arka planda günceller
   useFocusEffect(
     useCallback(() => {
       if (!user) return;
       fetchProfile({ silent: true });
-    }, [user, fetchProfile]),
+
+      // RevenueCat'teki aktif abonelik durumunu da kontrol et
+      Purchases.getCustomerInfo()
+        .then((info) => {
+          const prem = hasPremiumEntitlement(info);
+          setIsPremium(prem);
+          if (prem) {
+            setPremiumStatus(true);
+            api.syncPurchase({ isSubscription: true }).catch(() => {});
+          }
+        })
+        .catch(() => {});
+    }, [user, fetchProfile, setPremiumStatus]),
   );
 
   const handleSaveAgeRange = async () => {
@@ -192,18 +202,34 @@ export default function ProfileScreen() {
       // 1. Google Play penceresini açar ve ödemeyi bekler
       const { customerInfo } = await Purchases.purchasePackage(pack);
 
-      // 2. Başarılı olursa kullanıcıya bilgi ver
+      const isPrem = hasPremiumEntitlement(customerInfo);
+      if (isPrem) {
+        setIsPremium(true);
+        setPremiumStatus(true);
+      }
+
+      // 2. Satın almayı backend ile anında doğrula ve bakiyeyi güncelle
+      const latestTx = customerInfo.nonSubscriptionTransactions?.slice(-1)[0];
+      try {
+        const syncRes = await api.syncPurchase({
+          productId: pack.product.identifier,
+          isSubscription: isPrem,
+          transactionId: latestTx?.transactionIdentifier,
+        });
+        if (syncRes?.profile) {
+          setProfile(syncRes.profile);
+        }
+      } catch (syncErr) {
+        console.warn("[Profile] Satın alma sync uyarısı:", syncErr);
+      }
+
+      // 3. Başarılı olursa kullanıcıya bilgi ver
       Alert.alert(
         "Başarılı!",
-        "Satın alma işlemi tamamlandı, kredilerin yükleniyor.",
+        "Satın alma işlemi tamamlandı, bakiyeniz güncellendi.",
       );
 
-      // 3. RevenueCat webhook'un backend'de krediyi işlemesi için kısa bir
-      // gecikmeyle profili yeniden çek (aksi halde webhook henüz işlemeden
-      // gelen istek eski kredi miktarını döner).
-      setTimeout(() => {
-        fetchProfile();
-      }, 1500);
+      fetchProfile({ silent: true });
     } catch (e: any) {
       // Kullanıcı kendi isteğiyle pencereyi kapatmadıysa hatayı göster
       if (!e.userCancelled) {

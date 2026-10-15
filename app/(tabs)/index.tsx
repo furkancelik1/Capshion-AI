@@ -133,14 +133,16 @@ export default function HomeScreen() {
 
   const bottomSheetRef = useRef<BottomSheetModal | null>(null);
 
-  const { user } = useAuth();
+  const { user, refreshPremiumStatus } = useAuth();
   const { generate, generatePerImage } = useGenerateCaption();
+
+  const isUserPremium = isPremium || !!user?.is_premium;
 
   const refreshProfile = useCallback(() => {
     api.getProfile().then((data) => {
       if (data?.credits_remaining !== undefined) setCredits(data.credits_remaining);
       if (data?.is_premium !== undefined) setIsPremium(data.is_premium);
-    });
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -152,7 +154,8 @@ export default function HomeScreen() {
     useCallback(() => {
       if (!user) return;
       refreshProfile();
-    }, [user, refreshProfile]),
+      refreshPremiumStatus?.().catch(() => {});
+    }, [user, refreshProfile, refreshPremiumStatus]),
   );
 
   const captionCountRef = useRef(0);
@@ -511,7 +514,7 @@ export default function HomeScreen() {
                     selectedGender === opt && styles.lengthChipTextActive,
                   ]}
                 >
-                  {opt === "corporate" && !isPremium ? "👑 " : ""}{t(`settings.${opt}`)}
+                  {opt === "corporate" && !isUserPremium ? "👑 " : ""}{t(`settings.${opt}`)}
                 </Text>
               </Pressable>
             ))}
@@ -590,9 +593,9 @@ export default function HomeScreen() {
               <Text style={styles.switchText}>{t("settings.carouselMode")}</Text>
             </View>
             <Switch
-              value={isPremium ? carouselMode : false}
+              value={isUserPremium ? carouselMode : false}
               onValueChange={(v) => {
-                if (!isPremium) {
+                if (!isUserPremium) {
                   Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                   setShowProModal(true);
                   return;
@@ -610,18 +613,18 @@ export default function HomeScreen() {
             ref={customPromptRef}
             style={[
               styles.customPromptInput,
-              !isPremium && styles.customPromptInputLocked,
+              !isUserPremium && styles.customPromptInputLocked,
             ]}
-            value={isPremium ? customPrompt : ""}
-            onChangeText={isPremium ? setCustomPrompt : undefined}
-            placeholder={isPremium ? t("settings.customPromptPlaceholder") : "👑  " + t("settings.customPromptPremiumOnly")}
+            value={isUserPremium ? customPrompt : ""}
+            onChangeText={isUserPremium ? setCustomPrompt : undefined}
+            placeholder={isUserPremium ? t("settings.customPromptPlaceholder") : "👑  " + t("settings.customPromptPremiumOnly")}
             placeholderTextColor={GlassTheme.textPlaceholder}
             multiline
             numberOfLines={3}
             textAlignVertical="top"
-            editable={isPremium}
+            editable={isUserPremium}
             onFocus={() => {
-              if (!isPremium) {
+              if (!isUserPremium) {
                 Keyboard.dismiss();
                 customPromptRef.current?.blur();
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

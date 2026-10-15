@@ -21,6 +21,7 @@ import { GlassTheme } from "@/constants/LiquidGlass";
 import { hasPremiumEntitlement } from "@/utils/revenueCat";
 import { logAppEvent } from "@/utils/analytics";
 import { api } from "@/services/api";
+import { useAuth } from "@/hooks/useAuth";
 
 // Uygulamanın geri kalanıyla (login/profile) aynı açık iOS temasını kullanır —
 // GlassTheme üzerine paywall'a özel birkaç tint eklenir.
@@ -78,6 +79,7 @@ function findMonthlySubscription(packages: PurchasesPackage[]): PurchasesPackage
 
 export default function PaywallScreen() {
   const posthog = usePostHog();
+  const { setPremiumStatus } = useAuth();
   const [subscriptionPkg, setSubscriptionPkg] = useState<PurchasesPackage | null>(null);
   const [creditPkgs, setCreditPkgs] = useState<PurchasesPackage[]>([]);
   const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
@@ -153,18 +155,30 @@ export default function PaywallScreen() {
     try {
       setPurchasingId(subscriptionPkg.identifier);
       const { customerInfo } = await Purchases.purchasePackage(subscriptionPkg);
-      if (hasPremiumEntitlement(customerInfo)) {
-        posthog?.capture("premium_satin_alindi", {
-          paket_tipi: subscriptionPkg.product.identifier,
-          fiyat: subscriptionPkg.product.priceString,
+      
+      // Google Play satın alımı başarılı olduğu an premium durumunu etkinleştir
+      setPremiumStatus(true);
+      posthog?.capture("premium_satin_alindi", {
+        paket_tipi: subscriptionPkg.product.identifier,
+        fiyat: subscriptionPkg.product.priceString,
+      });
+
+      // Backend ile anında senkronize et
+      try {
+        const syncRes = await api.syncPurchase({
+          productId: subscriptionPkg.product.identifier,
+          isSubscription: true,
         });
-        // RevenueCat webhook'un backend'de is_premium/krediyi işlemesi için
-        // kısa bir gecikmeyle güncel profili yeniden çek.
-        setTimeout(() => {
-          refreshCredits();
-        }, 1500);
-        router.back();
+        if (syncRes?.profile?.credits_remaining !== undefined) {
+          setCreditsRemaining(syncRes.profile.credits_remaining);
+        }
+      } catch (syncErr) {
+        console.warn("[Paywall] Abonelik sync uyarısı:", syncErr);
       }
+
+      refreshCredits();
+      Alert.alert("Tebrikler!", "Premium üyeliğiniz başarıyla aktif edildi.");
+      router.back();
     } catch (err: any) {
       if (!err?.userCancelled) {
         Alert.alert(
@@ -175,7 +189,7 @@ export default function PaywallScreen() {
     } finally {
       setPurchasingId(null);
     }
-  }, [subscriptionPkg, purchasingId, posthog, refreshCredits]);
+  }, [subscriptionPkg, purchasingId, posthog, refreshCredits, setPremiumStatus]);
 
   const handleBuyCredits = useCallback(async (pkg: PurchasesPackage) => {
     if (purchasingId) return;
@@ -183,16 +197,26 @@ export default function PaywallScreen() {
     try {
       setPurchasingId(pkg.identifier);
       const { customerInfo } = await Purchases.purchasePackage(pkg);
-      void customerInfo;
       posthog?.capture("kredi_satin_alindi", {
         paket: pkg.product.identifier,
         fiyat: pkg.product.priceString,
       });
-      // RevenueCat webhook'un backend'de krediyi işlemesi için kısa bir
-      // gecikmeyle güncel kredi bilgisini yeniden çek.
-      setTimeout(() => {
-        refreshCredits();
-      }, 1500);
+
+      const latestTx = customerInfo.nonSubscriptionTransactions?.slice(-1)[0];
+      try {
+        const syncRes = await api.syncPurchase({
+          productId: pkg.product.identifier,
+          isSubscription: false,
+          transactionId: latestTx?.transactionIdentifier,
+        });
+        if (syncRes?.profile?.credits_remaining !== undefined) {
+          setCreditsRemaining(syncRes.profile.credits_remaining);
+        }
+      } catch (syncErr) {
+        console.warn("[Paywall] Kredi sync uyarısı:", syncErr);
+      }
+
+      refreshCredits();
       Alert.alert("Başarılı!", "Krediler hesabına tanımlandı.");
     } catch (err: any) {
       if (!err?.userCancelled) {
@@ -211,6 +235,8 @@ export default function PaywallScreen() {
       setRestoring(true);
       const customerInfo = await Purchases.restorePurchases();
       if (hasPremiumEntitlement(customerInfo)) {
+        setPremiumStatus(true);
+        api.syncPurchase({ isSubscription: true }).catch(() => {});
         router.back();
       } else {
         Alert.alert(
@@ -226,7 +252,7 @@ export default function PaywallScreen() {
     } finally {
       setRestoring(false);
     }
-  }, []);
+  }, [setPremiumStatus]);
 
   const subscriptionPriceLabel = subscriptionPkg?.product?.priceString ?? null;
   const subscriptionUnavailable = !loadingOfferings && !subscriptionPriceLabel;
