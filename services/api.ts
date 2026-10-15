@@ -190,6 +190,8 @@ async function requestMultipart<T>(endpoint: string, formData: FormData): Promis
   }
 }
 
+let _pendingProfilePromise: Promise<{ id: string; email: string; age_range: string | null; credits_remaining: number; is_premium: boolean }> | null = null;
+
 export const api = {
   register: (email: string, password: string, ageRange?: string | null) =>
     request<{ user: { id: string; email: string }; token: string; message: string }>('/auth/register', {
@@ -209,10 +211,17 @@ export const api = {
       body: JSON.stringify({ provider, idToken, email }),
     }),
 
-  getProfile: () =>
-    request<{ id: string; email: string; age_range: string | null; credits_remaining: number; is_premium: boolean }>(
+  getProfile: () => {
+    if (_pendingProfilePromise) return _pendingProfilePromise;
+    _pendingProfilePromise = request<{ id: string; email: string; age_range: string | null; credits_remaining: number; is_premium: boolean }>(
       '/auth/profile',
-    ),
+    ).finally(() => {
+      setTimeout(() => {
+        _pendingProfilePromise = null;
+      }, 500);
+    });
+    return _pendingProfilePromise;
+  },
 
   syncPurchase: (data: { productId?: string; isSubscription?: boolean; transactionId?: string }) =>
     request<{

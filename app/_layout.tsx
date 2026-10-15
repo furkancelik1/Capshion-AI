@@ -1,7 +1,6 @@
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import * as Notifications from "expo-notifications";
 import {
-  DarkTheme,
   DefaultTheme,
   Stack,
   ThemeProvider,
@@ -11,7 +10,7 @@ import {
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
-import { LogBox, Platform, useColorScheme, View } from "react-native";
+import { LogBox, Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PostHogProvider } from "posthog-react-native";
 import Purchases from "react-native-purchases";
@@ -73,8 +72,6 @@ function RootLayoutNav() {
   console.log("RootLayout: usePushNotifications tetiklendi...");
   const { expoPushToken } = usePushNotifications();
   console.log("RootLayout: Token Değeri:", expoPushToken);
-  useColorScheme();
-  const colorScheme: "light" | "dark" = "light";
   const { user, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
@@ -85,13 +82,18 @@ function RootLayoutNav() {
     }
   }, [expoPushToken]);
 
+  const lastSavedPushTokenRef = useRef<string | null>(null);
+
   useEffect(() => {
     const saveTokenToDatabase = async () => {
-      if (user?.email && expoPushToken) {
+      const key = `${user?.id}_${expoPushToken}`;
+      if (user?.id && expoPushToken && lastSavedPushTokenRef.current !== key) {
+        lastSavedPushTokenRef.current = key;
         try {
           await api.savePushToken(expoPushToken);
           console.log("PUSH_DEBUG: Token API ile başarıyla kaydedildi!");
         } catch (err) {
+          lastSavedPushTokenRef.current = null;
           console.error(
             "PUSH_DEBUG: Token kaydedilemedi:",
             err instanceof Error ? err.message : err,
@@ -101,7 +103,7 @@ function RootLayoutNav() {
     };
 
     saveTokenToDatabase();
-  }, [user, expoPushToken]);
+  }, [user?.id, expoPushToken]);
 
   useEffect(() => {
     initPromise.then(() => setI18nReady(true));
@@ -149,9 +151,9 @@ function RootLayoutNav() {
     segments[0] === "(auth)" || (segments[0] as string) === "(public)";
 
   const customTheme = {
-    ...(colorScheme === "dark" ? DarkTheme : DefaultTheme),
+    ...DefaultTheme,
     colors: {
-      ...(colorScheme === "dark" ? DarkTheme : DefaultTheme).colors,
+      ...DefaultTheme.colors,
       background: "transparent",
     },
   };

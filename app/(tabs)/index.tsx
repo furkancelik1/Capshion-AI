@@ -145,17 +145,12 @@ export default function HomeScreen() {
     }).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (!user) return;
-    refreshProfile();
-  }, [user, refreshProfile]);
-
   useFocusEffect(
     useCallback(() => {
-      if (!user) return;
+      if (!user?.id) return;
       refreshProfile();
       refreshPremiumStatus?.().catch(() => {});
-    }, [user, refreshProfile, refreshPremiumStatus]),
+    }, [user?.id, refreshProfile, refreshPremiumStatus]),
   );
 
   const captionCountRef = useRef(0);

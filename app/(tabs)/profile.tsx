@@ -139,7 +139,7 @@ export default function ProfileScreen() {
 
   const fetchProfile = useCallback(async (opts?: { silent?: boolean }) => {
     try {
-      if (!user) return;
+      if (!user?.id) return;
       if (!opts?.silent) setLoadingProfile(true);
       const data = await api.getProfile();
       if (data) {
@@ -152,16 +152,12 @@ export default function ProfileScreen() {
     } finally {
       if (!opts?.silent) setLoadingProfile(false);
     }
-  }, [user]);
+  }, [user?.id, setPremiumStatus]);
 
-  useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
-
-  // Ekrana her geri dönüldüğünde kredi/premium bilgisini sessizce arka planda günceller
+  // Ekrana her odaklanıldığında (ilk açılış dahil) kredi/premium bilgisini sessizce günceller
   useFocusEffect(
     useCallback(() => {
-      if (!user) return;
+      if (!user?.id) return;
       fetchProfile({ silent: true });
 
       // RevenueCat'teki aktif abonelik durumunu da kontrol et

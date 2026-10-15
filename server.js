@@ -33,7 +33,7 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "Çok fazla istek. Lütfen daha sonra tekrar deneyin." }
 });
-const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false });
+const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false });
 
 const upload = multer({
   storage,
@@ -96,10 +96,10 @@ async function dbHealthCheck() {
   }
 }
 
-app.use("/api/auth", authLimiter);
+// Genel API rate limiting (authLimiter yalnızca register/login uç noktalarında uygulanır)
 app.use("/api", apiLimiter);
 
-app.post("/api/auth/register", async (req, res) => {
+app.post("/api/auth/register", authLimiter, async (req, res) => {
   console.log(
     "[Register] İstek alındı, body:",
     JSON.stringify({ ...req.body, password: "***" }),
@@ -166,7 +166,7 @@ app.post("/api/auth/register", async (req, res) => {
   }
 });
 
-app.post("/api/auth/login", async (req, res) => {
+app.post("/api/auth/login", authLimiter, async (req, res) => {
   console.log(
     "[Login] İstek alındı, body:",
     JSON.stringify({ ...req.body, password: "***" }),
@@ -214,7 +214,7 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
-app.post("/api/auth/social-login", async (req, res) => {
+app.post("/api/auth/social-login", authLimiter, async (req, res) => {
   console.log("[SocialLogin] İstek alındı, provider:", req.body?.provider);
   try {
     const { provider, idToken, email: rawEmail } = req.body;
