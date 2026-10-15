@@ -2,6 +2,12 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import Purchases from 'react-native-purchases';
 import { api, setToken } from '../services/api';
+import {
+  firebaseSignInWithEmail,
+  firebaseSignUpWithEmail,
+  firebaseSignInWithGoogle,
+  firebaseSignOut,
+} from '../services/firebase';
 
 // Oturum (token + kullanıcı) cihazda saklanır; uygulama yeniden açıldığında geri yüklenir.
 const TOKEN_KEY = 'capshion_auth_token';
@@ -90,10 +96,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithEmail = async (email: string, password: string) => {
     try {
       setLoading(true);
-      console.log('[Login] ADIM 1: Node.js backend isteği gönderiliyor →', email);
-      // NOT: Bu akışta Supabase'e (signInWithPassword/signInWithIdToken) hiç istek atılmıyor.
-      // Supabase sadece handleSocialAuth (Apple/Google) akışında kullanılıyor, e-posta/şifre
-      // girişinde devreye girmiyor — dolayısıyla burada "Supabase isteği" adımı yok.
+      console.log('[Login] ADIM 1: Firebase Auth ve Backend isteği gönderiliyor →', email);
+
+      try {
+        await firebaseSignInWithEmail(email, password);
+        console.log('[Login] Firebase Auth girişi ve Firestore profili başarılı');
+      } catch (fbErr: any) {
+        console.warn('[Login] Firebase Auth uyarısı:', fbErr?.message || fbErr);
+      }
+
       const result: any = await api.login(email, password);
 
       console.log('[Login] ADIM 2: Backend 200 OK döndü, raw yanıt:', JSON.stringify(result));
@@ -152,6 +163,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUpWithEmail = async (email: string, password: string, ageRange?: string | null) => {
     try {
       setLoading(true);
+
+      try {
+        await firebaseSignUpWithEmail(email, password, ageRange);
+        console.log('[Register] Firebase Auth kaydı ve Firestore profili oluşturuldu');
+      } catch (fbErr: any) {
+        console.warn('[Register] Firebase Auth uyarısı:', fbErr?.message || fbErr);
+      }
+
       const result: any = await api.register(email, password, ageRange);
       const authUser = result?.user ?? (result?.id ? result : null);
       const token = result?.token ?? result?.accessToken ?? null;
@@ -197,7 +216,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithSocial = async (provider: 'google' | 'apple', idToken?: string, email?: string) => {
     try {
       setLoading(true);
-      console.log('[SocialAuth] Backend isteği gönderiliyor →', { provider, email });
+      console.log('[SocialAuth] Backend ve Firebase isteği gönderiliyor →', { provider, email });
+
+      if (provider === 'google' && idToken) {
+        try {
+          await firebaseSignInWithGoogle(idToken);
+          console.log('[SocialAuth] Firebase Google girişi ve Firestore profili senkronize edildi');
+        } catch (fbErr: any) {
+          console.warn('[SocialAuth] Firebase Google girişi uyarısı:', fbErr?.message || fbErr);
+        }
+      }
+
       const result: any = await api.socialLogin(provider, idToken, email);
       const authUser = result?.user ?? (result?.id ? result : null);
       const token = result?.token ?? result?.accessToken ?? null;
@@ -244,6 +273,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null);
     setUser(null);
     persistSession(null, null);
+    firebaseSignOut().catch((fbErr) => {
+      console.warn('[Firebase Auth] Çıkış uyarısı:', fbErr);
+    });
     Purchases.logOut().catch((rcErr: unknown) => {
       console.error(
         '[RevenueCat] logOut hatası:',

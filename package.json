@@ -19,6 +19,7 @@
     "dotenv": "^17.4.2",
     "expo": "~57.0.26",
     "expo-apple-authentication": "~57.0.2",
+    "firebase": "^12.17.1",
     "expo-application": "~57.0.3",
     "expo-blur": "~57.0.3",
     "expo-build-properties": "~57.0.22",
