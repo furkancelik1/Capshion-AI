@@ -49,3 +49,6 @@ OmniRoute-release-v3.8.50/
 # Yerel araç dosyaları
 OmniRoute-release-v3.8.50.zip
 /settings.json
+
+.agents
+.claude
