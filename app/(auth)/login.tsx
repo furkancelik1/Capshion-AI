@@ -1,3 +1,14 @@
+import AmbientGlow from '@/components/AmbientGlow';
+import GlassPanel from '@/components/GlassPanel';
+import HapticButton from '@/components/HapticButton';
+import { GlassTheme } from '@/constants/LiquidGlass';
+import { useToast } from '@/context/ToastContext';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/services/supabase';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { router, Stack } from 'expo-router';
+import { usePostHog } from 'posthog-react-native';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -12,17 +23,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
-import { Ionicons } from '@expo/vector-icons';
-import { router, Stack } from 'expo-router';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/context/ToastContext';
-import { supabase } from '@/services/supabase';
-import { usePostHog } from 'posthog-react-native';
-import AmbientGlow from '@/components/AmbientGlow';
-import GlassPanel from '@/components/GlassPanel';
-import HapticButton from '@/components/HapticButton';
-import { GlassTheme } from '@/constants/LiquidGlass';
 
 export default function LoginScreen() {
   const { signInWithEmail, signUpWithEmail, signInWithSocial, loading } = useAuth();
@@ -86,7 +86,7 @@ export default function LoginScreen() {
       const { GoogleSignin, statusCodes } = require('@react-native-google-signin/google-signin');
       const webClientId =
         process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
-        '155828266486-1m4rmbavfs6ig0u2a5d358gjaudbgmn5.apps.googleusercontent.com';
+        '155828266486-8b03t1gp1lk16irpvkkeu95vcpqk58n7.apps.googleusercontent.com';
 
       GoogleSignin.configure({
         webClientId,
@@ -98,6 +98,8 @@ export default function LoginScreen() {
 
       if (response?.type === 'cancelled') {
         return;
+
+
       }
 
       const idToken = response?.data?.idToken || response?.idToken;

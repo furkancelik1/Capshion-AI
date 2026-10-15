@@ -88,7 +88,7 @@ export default function RegisterScreen() {
       const { GoogleSignin, statusCodes } = require('@react-native-google-signin/google-signin');
       const webClientId =
         process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
-        '155828266486-1m4rmbavfs6ig0u2a5d358gjaudbgmn5.apps.googleusercontent.com';
+        '155828266486-8b03t1gp1lk16irpvkkeu95vcpqk58n7.apps.googleusercontent.com';
 
       GoogleSignin.configure({
         webClientId,
