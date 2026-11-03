@@ -409,7 +409,7 @@ app.post("/api/purchases/sync", authenticateToken, async (req, res) => {
 
   try {
     if (isSubscription) {
-      await pool.query("UPDATE profiles SET is_premium = true, is_pro = true WHERE id = $1", [userId]);
+      await pool.query("UPDATE profiles SET is_premium = true WHERE id = $1", [userId]);
       console.log(`[Purchases Sync] Kullanıcı ${userId} abonelik senkronizasyonu ile Premium yapıldı.`);
     } else if (productId) {
       // Ürün ID'sinden sayısal krediyi ayıkla (örn: "10_credits", "credits_30", "50_credits", "30")
@@ -665,7 +665,7 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
       return res.status(404).json({ error: "Kullanıcı bulunamadı." });
     }
 
-    if (userRow.credits < 1) {
+    if (!userRow.is_premium && userRow.credits < 1) {
       console.log("[Generate] Yetersiz kredi, userId:", req.userId);
       return res.status(403).json({ error: "Yetersiz kredi. Lütfen kredi yükleyin." });
     }
@@ -756,10 +756,12 @@ En az 2, en fazla 4 caption üret.`;
         );
       }
 
-      await client.query(
-        "UPDATE profiles SET credits = credits - 1 WHERE id = $1",
-        [req.userId],
-      );
+      if (!userRow.is_premium) {
+        await client.query(
+          "UPDATE profiles SET credits = credits - 1 WHERE id = $1",
+          [req.userId],
+        );
+      }
 
       await client.query("COMMIT");
 
@@ -825,7 +827,7 @@ app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
 
     const requiredCredits = isPerImage ? images.length : 1;
 
-    if (userRow.credits < requiredCredits) {
+    if (!userRow.is_premium && userRow.credits < requiredCredits) {
       return res.status(403).json({ error: `Yetersiz kredi. Gerekli: ${requiredCredits}, Mevcut: ${userRow.credits}` });
     }
 
@@ -975,10 +977,12 @@ En az 2, en fazla 4 caption üret.`;
         );
       }
 
-      await client.query(
-        "UPDATE profiles SET credits = credits - $1 WHERE id = $2",
-        [requiredCredits, req.userId],
-      );
+      if (!userRow.is_premium) {
+        await client.query(
+          "UPDATE profiles SET credits = credits - $1 WHERE id = $2",
+          [requiredCredits, req.userId],
+        );
+      }
 
       await client.query("COMMIT");
 

@@ -248,14 +248,14 @@ export default function HomeScreen() {
       return;
     }
 
-    if (credits !== null && credits <= 0) {
+    if (!isUserPremium && credits !== null && credits <= 0) {
       logAppEvent("out_of_credits", { source: "pre_check" });
       setShowCreditModal(true);
       return;
     }
 
     const vipTones = ["viral", "luxury", "storyteller"];
-    if (!isPremium && selectedTone && vipTones.includes(selectedTone)) {
+    if (!isUserPremium && selectedTone && vipTones.includes(selectedTone)) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setShowProModal(true);
       return;
@@ -272,11 +272,13 @@ export default function HomeScreen() {
         selectedTone,
         selectedGender,
         ageRange || undefined,
-        { length, useEmojis, useHashtags, customPrompt: isPremium ? customPrompt : undefined, carouselMode: isPremium ? carouselMode : false },
+        { length, useEmojis, useHashtags, customPrompt: isUserPremium ? customPrompt : undefined, carouselMode: isUserPremium ? carouselMode : false },
       );
 
       if (result) {
-        setCredits(result.remainingCredits);
+        if (!isUserPremium) {
+          setCredits(result.remainingCredits);
+        }
         hasNavigatedRef.current = true;
         router.push({
           pathname: "/caption/[id]",
@@ -439,7 +441,7 @@ export default function HomeScreen() {
             <ToneSelector
               selectedTone={selectedTone}
               onToneSelect={setSelectedTone}
-              isPremium={isPremium}
+              isPremium={isUserPremium}
               onPremiumRequired={() => {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                 setShowProModal(true);
@@ -452,7 +454,7 @@ export default function HomeScreen() {
           bottomSheetRef={bottomSheetRef}
           selectedTone={selectedTone}
           onToneSelect={setSelectedTone}
-          isPremium={isPremium}
+          isPremium={isUserPremium}
           onPremiumRequired={() => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             setShowProModal(true);
@@ -491,7 +493,7 @@ export default function HomeScreen() {
               <Pressable
                 key={opt}
                 onPress={() => {
-                  if (opt === "corporate" && !isPremium) {
+                  if (opt === "corporate" && !isUserPremium) {
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
                     setShowProModal(true);
                     return;

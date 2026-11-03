@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import Purchases from 'react-native-purchases';
 import { api, setToken } from '../services/api';
+import { hasPremiumEntitlement } from '../utils/revenueCat';
 import {
   firebaseSignInWithEmail,
   firebaseSignUpWithEmail,
@@ -296,7 +297,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshPremiumStatus = async () => {
     try {
       const data: any = await api.getProfile();
-      setPremiumStatus(!!data?.is_premium);
+      let isPrem = !!data?.is_premium;
+      if (!isPrem) {
+        try {
+          const info = await Purchases.getCustomerInfo();
+          if (hasPremiumEntitlement(info)) {
+            isPrem = true;
+            await api.syncPurchase({ isSubscription: true }).catch(() => {});
+          }
+        } catch {
+          // RevenueCat hazır değilse mevcut değeri koru
+        }
+      }
+      setPremiumStatus(isPrem);
     } catch (err: unknown) {
       console.error(
         '[Auth] Premium durumu güncellenemedi:',
