@@ -1029,6 +1029,9 @@ En az 2, en fazla 4 caption üret.`;
   }
 });
 
+// ─── HOOK LAB (bağımsız modül, mevcut uç noktalara dokunmaz) ───
+require("./routes/hookLab").registerHookLabRoutes(app, { pool, authenticateToken, buildSystemPrompt });
+
 app.get("/health", async (req, res) => {
   const dbOk = await dbHealthCheck();
   res.status(dbOk ? 200 : 503).json({ status: dbOk ? "ok" : "degraded", timestamp: new Date().toISOString() });

@@ -180,5 +180,41 @@
     "welcomeBack": "Tekrar hoş geldin",
     "createAccount": "Hesap Oluştur",
     "subtitle": "Yaratıcı platformumuza katıl"
+  },
+  "hookLab": {
+    "title": "Hook Lab",
+    "entry": "🎯 Hook Lab",
+    "setupTitle": "5 farklı kanca, tek fotoğraf",
+    "setupSub": "Aynı görsel için 5 farklı açılış stili üretelim. Beğendiğini sağa, beğenmediğini sola kaydır — Capshion senin tarzını öğrensin.",
+    "platformLabel": "Platform",
+    "generate": "5 Kanca Üret",
+    "costNote": "1 kredi kullanır · Premium'da sınırsız",
+    "swipeHint": "Sağa kaydır: beğen · Sola kaydır: geç",
+    "unlock": "Premium ile aç",
+    "unlockedToast": "Tüm kancaların açıldı 👑",
+    "noImage": "Önce bir fotoğraf seç.",
+    "outOfCreditsTitle": "Kredin bitti",
+    "outOfCreditsBody": "Hook Lab'ı kullanmaya devam etmek için Premium'a geç ya da kredi yükle.",
+    "goPremium": "Premium'a geç",
+    "error": "Hook Lab şu an üretim yapamadı. Tekrar dene.",
+    "doneTitle": "Seçtiklerin hazır ✨",
+    "doneTitleNone": "Senin için ürettiklerimiz",
+    "upsellTitle": "{{count}} kanca daha seni bekliyor",
+    "upsellSub": "Premium ile tüm stilleri aç, sınırsız üret.",
+    "again": "Kartları tekrar gör",
+    "platforms": {
+      "instagram": "Instagram",
+      "tiktok": "TikTok",
+      "linkedin": "LinkedIn",
+      "x": "X",
+      "threads": "Threads"
+    },
+    "styles": {
+      "question": "❓ Soru",
+      "bold_claim": "⚡ Cesur iddia",
+      "confession": "🤫 İtiraf",
+      "humor": "😄 Mizah",
+      "curiosity": "👀 Merak"
+    }
   }
 }

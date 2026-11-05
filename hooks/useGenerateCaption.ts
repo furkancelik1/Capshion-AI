@@ -16,7 +16,7 @@ function mimeFromUri(uri: string): string {
   }
 }
 
-async function safeReadBase64(uri: string, toast: ReturnType<typeof useToast>['showToast']): Promise<string | null> {
+export async function safeReadBase64(uri: string, toast: ReturnType<typeof useToast>['showToast']): Promise<string | null> {
   const compressedUri = await compressImage(uri);
   try {
     const base64 = await FileSystem.readAsStringAsync(compressedUri, { encoding: 'base64' });

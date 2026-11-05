@@ -78,6 +78,26 @@ interface GenerateCaptionJsonResponse {
   remainingCredits: number;
 }
 
+// ─── Hook Lab ───
+export type HookLabPlatform = 'instagram' | 'tiktok' | 'linkedin' | 'x' | 'threads';
+export type HookStyle = 'question' | 'bold_claim' | 'confession' | 'humor' | 'curiosity';
+
+export type HookLabVariant =
+  | { index: number; style: HookStyle; locked: false; hook: string; caption_text: string; hashtags: string[] }
+  | { index: number; style: HookStyle; locked: true; hook_preview: string };
+
+export interface HookLabSession {
+  success: boolean;
+  session_id: string;
+  platform: HookLabPlatform;
+  unlocked_count: number;
+  variants: HookLabVariant[];
+  is_premium: boolean;
+  remainingCredits?: number;
+}
+
+export type HookLabFeedbackAction = 'like' | 'skip' | 'copy' | 'edit_copy';
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -275,6 +295,30 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ ...data, mode: 'per_image' }),
     }, 120000),
+
+  hookLabGenerate: (data: {
+    images: string[];
+    platform: HookLabPlatform;
+    tone: string;
+    gender: string;
+    ageRange: string;
+    language: string;
+    useEmojis?: boolean;
+    useHashtags?: boolean;
+  }) =>
+    request<HookLabSession>('/hook-lab/generate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, 120000),
+
+  hookLabGetSession: (sessionId: string) =>
+    request<HookLabSession>(`/hook-lab/${sessionId}`),
+
+  hookLabFeedback: (sessionId: string, index: number, action: HookLabFeedbackAction, editedText?: string) =>
+    request<{ success: boolean }>(`/hook-lab/${sessionId}/feedback`, {
+      method: 'POST',
+      body: JSON.stringify({ index, action, editedText }),
+    }),
 
   deleteCaption: (captionId: string) =>
     request<{ message: string }>(`/captions/${captionId}`, {

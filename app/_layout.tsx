@@ -186,6 +186,10 @@ function RootLayoutNav() {
               />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen
+                name="hook-lab"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
                 name="caption/[id]"
                 options={{
                   headerShown: false,

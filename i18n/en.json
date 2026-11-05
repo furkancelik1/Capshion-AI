@@ -180,5 +180,41 @@
     "welcomeBack": "Welcome back",
     "createAccount": "Create Account",
     "subtitle": "Join our creative platform"
+  },
+  "hookLab": {
+    "title": "Hook Lab",
+    "entry": "🎯 Hook Lab",
+    "setupTitle": "5 different hooks, one photo",
+    "setupSub": "We'll write 5 opening styles for the same image. Swipe right on what you like, left on what you don't — Capshion learns your style.",
+    "platformLabel": "Platform",
+    "generate": "Generate 5 Hooks",
+    "costNote": "Uses 1 credit · Unlimited with Premium",
+    "swipeHint": "Swipe right: like · Swipe left: skip",
+    "unlock": "Unlock with Premium",
+    "unlockedToast": "All your hooks are unlocked 👑",
+    "noImage": "Pick a photo first.",
+    "outOfCreditsTitle": "Out of credits",
+    "outOfCreditsBody": "Go Premium or top up credits to keep using Hook Lab.",
+    "goPremium": "Go Premium",
+    "error": "Hook Lab couldn't generate right now. Please try again.",
+    "doneTitle": "Your picks are ready ✨",
+    "doneTitleNone": "Here's what we wrote for you",
+    "upsellTitle": "{{count}} more hooks are waiting",
+    "upsellSub": "Unlock every style and generate without limits with Premium.",
+    "again": "See the cards again",
+    "platforms": {
+      "instagram": "Instagram",
+      "tiktok": "TikTok",
+      "linkedin": "LinkedIn",
+      "x": "X",
+      "threads": "Threads"
+    },
+    "styles": {
+      "question": "❓ Question",
+      "bold_claim": "⚡ Bold claim",
+      "confession": "🤫 Confession",
+      "humor": "😄 Humor",
+      "curiosity": "👀 Curiosity"
+    }
   }
 }

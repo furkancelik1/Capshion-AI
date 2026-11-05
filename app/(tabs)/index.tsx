@@ -43,6 +43,9 @@ import { api, lastNavigationTimestamp } from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 import { logAppEvent } from "../../utils/analytics";
 
+// Hook Lab: geliştirmede her zaman açık; build'lerde EXPO_PUBLIC_HOOK_LAB=true ile açılır.
+const HOOK_LAB_ENABLED = __DEV__ || process.env.EXPO_PUBLIC_HOOK_LAB === "true";
+
 function renderFeatureIcon(icon: string) {
   switch (icon) {
     case "tone":
@@ -345,6 +348,35 @@ export default function HomeScreen() {
     router.push("/paywall");
   };
 
+  const handleOpenHookLab = () => {
+    if (isGenerating) return;
+    if (selectedImages.length === 0) {
+      Alert.alert(t("home.alertMissingTitle"), t("hookLab.noImage"));
+      return;
+    }
+    if (!isUserPremium && credits !== null && credits <= 0) {
+      logAppEvent("out_of_credits", { source: "hook_lab_entry" });
+      setShowCreditModal(true);
+      return;
+    }
+    // Ana akıştaki VIP ton kuralı Hook Lab için de geçerli
+    if (!isUserPremium && selectedTone && ["viral", "luxury", "storyteller"].includes(selectedTone)) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setShowProModal(true);
+      return;
+    }
+    logAppEvent("hook_lab_opened", { tone: String(selectedTone) });
+    router.push({
+      pathname: "/hook-lab",
+      params: {
+        images: JSON.stringify(selectedImages),
+        tone: String(selectedTone || ""),
+        gender: selectedGender,
+        ageRange: ageRange || "",
+      },
+    });
+  };
+
   const canGenerate =
     selectedImages.length > 0 && !!selectedTone && !isGenerating;
 
@@ -382,6 +414,16 @@ export default function HomeScreen() {
                 {t("home.generateText")}
               </Text>
             </HapticButton>
+            {HOOK_LAB_ENABLED && (
+              <HapticButton
+                style={[styles.secondaryButton, selectedImages.length === 0 && styles.primaryButtonMuted]}
+                onPress={handleOpenHookLab}
+                activeOpacity={0.7}
+                disabled={isGenerating}
+              >
+                <Text style={styles.secondaryButtonText}>{t("hookLab.entry")}</Text>
+              </HapticButton>
+            )}
             <HapticButton
               style={styles.secondaryButton}
               onPress={handleHowItWorks}
