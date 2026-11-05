@@ -53,6 +53,26 @@ function previewOf(text) {
   return words.slice(0, 3).join(" ") + (words.length > 3 ? "…" : "");
 }
 
+// AI bazen kancayı tırnak içine alıyor ("...", “...”, «...»); kopyalanan metinde istenmez.
+const QUOTE_PAIRS = [['"', '"'], ["“", "”"], ["„", "“"], ["«", "»"], ["'", "'"], ["‘", "’"]];
+function stripWrappingQuotes(line) {
+  const t = String(line || "").trim();
+  for (const [open, close] of QUOTE_PAIRS) {
+    if (t.length > 2 && t.startsWith(open) && t.endsWith(close)) {
+      const inner = t.slice(open.length, t.length - close.length);
+      if (!inner.includes(open) && !inner.includes(close)) return inner.trim();
+    }
+  }
+  return t;
+}
+
+function cleanCaption(text) {
+  const lines = String(text || "").trim().split("\n");
+  const i = lines.findIndex((l) => l.trim());
+  if (i >= 0) lines[i] = stripWrappingQuotes(lines[i]);
+  return lines.join("\n");
+}
+
 function firstLine(text) {
   return String(text || "").split("\n").map((l) => l.trim()).find(Boolean) || "";
 }
@@ -75,12 +95,12 @@ function parseVariants(raw) {
     .filter((v) => v && (v.caption_text || v.text))
     .slice(0, VARIANT_COUNT)
     .map((v, i) => {
-      const text = String(v.caption_text || v.text || "").trim();
+      const text = cleanCaption(v.caption_text || v.text || "");
       let style = STYLE_IDS.includes(v.style) && !used.has(v.style) ? v.style : STYLE_IDS.find((s) => !used.has(s)) || STYLE_IDS[i % STYLE_IDS.length];
       used.add(style);
       return {
         style,
-        hook: String(v.hook || "").trim() || firstLine(text),
+        hook: stripWrappingQuotes(v.hook) || firstLine(text),
         caption_text: text,
         hashtags: Array.isArray(v.hashtags) ? v.hashtags.map(String).slice(0, 10) : [],
       };
@@ -237,7 +257,7 @@ function registerHookLabRoutes(app, { pool, authenticateToken, buildSystemPrompt
       return res.status(201).json({ success: true, ...session, is_premium: userRow.is_premium, remainingCredits });
     } catch (err) {
       console.error("[HookLab] Hata:", err.message);
-      if (!res.headersSent) res.status(500).json({ success: false, error: "Hook Lab şu an üretim yapamadı." });
+      if (!res.headersSent) res.status(500).json({ success: false, error: "Şu anda açıklama oluşturulamadı. Lütfen tekrar dene." });
     }
   });
 
@@ -312,4 +332,4 @@ function registerHookLabRoutes(app, { pool, authenticateToken, buildSystemPrompt
   });
 }
 
-module.exports = { registerHookLabRoutes, PLATFORM_IDS, STYLE_IDS, _test: { parseVariants, toPublicSession, previewOf } };
+module.exports = { registerHookLabRoutes, PLATFORM_IDS, STYLE_IDS, _test: { parseVariants, toPublicSession, previewOf, stripWrappingQuotes } };

@@ -85,18 +85,26 @@ function HookCard({ variant, onUnlock }: { variant: HookLabVariant; onUnlock: ()
     );
   }
 
+  const body = variant.caption_text.split("\n").slice(1).join("\n").trim();
+  const isShortHook = variant.hook.length <= 48;
+
   return (
     <View style={styles.card}>
       <Text style={styles.styleChip}>{styleLabel}</Text>
-      <Text style={styles.hookText}>{variant.hook}</Text>
-      <ScrollView style={styles.bodyScroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.bodyText}>
-          {variant.caption_text.split("\n").slice(1).join("\n").trim()}
-        </Text>
-        {variant.hashtags?.length ? (
-          <Text style={styles.hashtags}>{variant.hashtags.join(" ")}</Text>
-        ) : null}
+      {/* Kısa metinler kartın ortasında durur, uzunlar üstten başlayıp kayar */}
+      <ScrollView
+        style={styles.bodyScroll}
+        contentContainerStyle={styles.bodyContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={[styles.hookText, styles.hookInBody, isShortHook && styles.hookTextLarge]}>{variant.hook}</Text>
+        {body ? <Text style={styles.bodyText}>{body}</Text> : null}
       </ScrollView>
+      {variant.hashtags?.length ? (
+        <View style={styles.hashtagFooter}>
+          <Text style={styles.hashtags}>{variant.hashtags.join(" ")}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -501,9 +509,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(52,199,89,0.1)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: GlassTheme.radiusPill, overflow: "hidden",
   },
   hookText: { fontSize: 24, fontWeight: "800", color: GlassTheme.textMain, marginTop: 16, lineHeight: 31, letterSpacing: -0.3 },
-  bodyScroll: { marginTop: 14 },
-  bodyText: { fontSize: 16, color: GlassTheme.textMain, lineHeight: 23, opacity: 0.85 },
-  hashtags: { fontSize: 14, color: "#007AFF", marginTop: 12, lineHeight: 20 },
+  hookInBody: { marginTop: 0 },
+  hookTextLarge: { fontSize: 30, lineHeight: 37, letterSpacing: -0.6 },
+  bodyScroll: { flex: 1, marginTop: 4 },
+  bodyContent: { flexGrow: 1, justifyContent: "center", paddingVertical: 12, gap: 14 },
+  bodyText: { fontSize: 17, color: GlassTheme.textMain, lineHeight: 25, opacity: 0.8 },
+  hashtagFooter: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: GlassTheme.border, paddingTop: 14, marginTop: 4 },
+  hashtags: { fontSize: 14, color: "#007AFF", lineHeight: 20 },
   lockedBody: { marginTop: 18, gap: 10, overflow: "hidden", borderRadius: 8, paddingVertical: 4 },
   fakeLine: { height: 14, borderRadius: 7, backgroundColor: "rgba(0,0,0,0.08)" },
   unlockBtn: {
