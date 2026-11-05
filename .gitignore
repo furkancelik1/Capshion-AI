@@ -52,3 +52,7 @@ OmniRoute-release-v3.8.50.zip
 
 .agents
 .claude
+
+# Caption karşılaştırma (scripts/caption-eval.js) — kişisel fotoğraflar ve çıktılar
+eval/photos/
+eval/out/
