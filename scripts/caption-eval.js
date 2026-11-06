@@ -61,12 +61,16 @@ function flagsFor(text, hashtags, { useHashtags = true } = {}) {
   const t = String(text || "");
   const low = t.toLocaleLowerCase("tr");
   const flags = [];
-  const { TR_CLICHES = [] } = (() => { try { return require(path.join(ROOT, "prompts", "captionPromptV2.js")); } catch { return {}; } })();
+  const { TR_CLICHES = [] } = (() => { try { return require(path.join(ROOT, "prompts", fs.existsSync(path.join(ROOT, "prompts", "captionPromptV3.js")) ? "captionPromptV3.js" : "captionPromptV2.js")); } catch { return {}; } })();
   for (const c of TR_CLICHES) if (low.includes(c.toLocaleLowerCase("tr"))) flags.push(`klişe: "${c}"`);
   for (const c of EN_CLICHES) if (new RegExp(`\\b${c}`, "i").test(t)) flags.push(`ing. klişe: "${c}"`);
   if (/^\s*bugün/i.test(t)) flags.push('"Bugün" ile başlıyor');
   if (/fotoğrafta|bu kadın|bu adam/i.test(low)) flags.push("3. şahıs betimleme");
   if (/\bçünkü\b|\bbu nedenle\b|\bancak\b/i.test(low)) flags.push("yazı dili bağlacı");
+  if (/\b(siz|sizin|sizce|kaydedin|paylaşın|etiketleyin)\b/i.test(low)) flags.push('"siz" hitabı');
+  if (/kaydet|lazım olur/i.test(low)) flags.push("kaydet CTA'sı");
+  if (/\S+\s+ve\s+ben\b/i.test(low)) flags.push('"X ve ben" kalıbı');
+  if (/\(boş\)|^\s*$/.test(t)) flags.push("boş");
   const excl = (t.match(/!/g) || []).length;
   if (excl > 1) flags.push(`${excl} ünlem`);
   if (useHashtags) {
@@ -95,7 +99,7 @@ async function runOne(openai, prompt, opts, dataUrl) {
   const started = Date.now();
   const res = await openai.chat.completions.create({
     model: MODEL,
-    messages: [{ role: "user", content: [{ type: "text", text: prompt.buildSystemPrompt(opts) + JSON_SUFFIX }, { type: "image_url", image_url: { url: dataUrl } }] }],
+    messages: [{ role: "user", content: [{ type: "text", text: prompt.buildSystemPrompt(opts) + (prompt.buildJsonSuffix ? prompt.buildJsonSuffix(opts) : JSON_SUFFIX) }, { type: "image_url", image_url: { url: dataUrl } }] }],
     response_format: { type: "json_object" },
     max_tokens: 3000,
     temperature: 0.75,
@@ -227,6 +231,18 @@ render();
   console.log("");
 
   const clean = rows.map(({ dataUrl, ...r }) => r);
+  // Aynı sürümde farklı fotoğraflarda birebir tekrar eden cümle → muhtemelen prompt'taki örnek kopyalanmış
+  for (const v of VERSIONS) {
+    const seen = new Map();
+    clean.forEach((r, ri) => (r.results[v]?.captions || []).forEach((c) => c.text.split(/\n+/).map((l) => l.trim().toLocaleLowerCase("tr")).filter((l) => l.length > 20).forEach((l) => {
+      if (!seen.has(l)) seen.set(l, new Set());
+      seen.get(l).add(ri);
+    })));
+    clean.forEach((r) => (r.results[v]?.captions || []).forEach((c) => {
+      const dup = c.text.split(/\n+/).map((l) => l.trim().toLocaleLowerCase("tr")).find((l) => seen.get(l)?.size > 1);
+      if (dup) c.flags.push(`başka fotoğrafta da var: "${dup.slice(0, 40)}…"`);
+    }));
+  }
   fs.writeFileSync(path.join(outDir, "results.json"), JSON.stringify({ meta: { runId, model: MODEL, versions: VERSIONS, tones: TONES, length: LENGTH }, rows: clean }, null, 2));
   fs.writeFileSync(path.join(outDir, "report.html"), renderReport(clean, { runId, model: MODEL, versions: VERSIONS, date: new Date().toLocaleString("tr-TR") }));
 
@@ -234,7 +250,10 @@ render();
     const caps = clean.flatMap((r) => r.results[v]?.captions || []);
     const flagged = caps.reduce((n, c) => n + c.flags.length, 0);
     const errors = clean.filter((r) => r.results[v]?.error).length;
-    console.log(`[Eval] ${v}: ${caps.length} caption, ${flagged} otomatik uyarı${errors ? `, ${errors} hata` : ""}`);
+    const empty = clean.filter((r) => !r.results[v]?.error && !(r.results[v]?.captions || []).length).length;
+    const tags = caps.map((c) => c.hashtags.length);
+    const avgTags = tags.length ? (tags.reduce((a, b) => a + b, 0) / tags.length).toFixed(1) : "0";
+    console.log(`[Eval] ${v}: ${caps.length} caption, ${empty} boş yanıt, ort. ${avgTags} hashtag, ${flagged} otomatik uyarı${errors ? `, ${errors} hata` : ""}`);
   }
   console.log(`[Eval] Rapor: ${path.relative(ROOT, path.join(outDir, "report.html"))}`);
 })();

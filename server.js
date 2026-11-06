@@ -644,6 +644,29 @@ CTA İSTENİYOR: Metnin sonunda (hashtag'lerden önce) TEK bir kısa ve profesyo
   return prompt;
 }
 
+// ─── PROMPT SÜRÜMÜ SEÇİMİ ───────────────────────────────────────────────────
+// CAPTION_PROMPT_VERSION=v1  → yukarıdaki buildSystemPrompt (eski davranış, birebir)
+// CAPTION_PROMPT_VERSION=v3  → prompts/captionPromptV3.js (varsayılan)
+// Sorun olursa Railway'de değişkeni v1 yapıp yeniden başlatmak yeterli; kod değişmez.
+const CAPTION_PROMPT_VERSION = String(process.env.CAPTION_PROMPT_VERSION || "v3").trim().toLowerCase();
+const activeCaptionPrompt = (() => {
+  if (CAPTION_PROMPT_VERSION === "v1") return { buildSystemPrompt, version: "v1" };
+  try {
+    if (!/^v\d+$/.test(CAPTION_PROMPT_VERSION)) throw new Error("geçersiz sürüm adı");
+    const mod = require(`./prompts/captionPrompt${CAPTION_PROMPT_VERSION.toUpperCase()}.js`);
+    if (typeof mod.buildSystemPrompt !== "function") throw new Error("buildSystemPrompt bulunamadı");
+    return mod;
+  } catch (err) {
+    console.error(`[Prompt] "${CAPTION_PROMPT_VERSION}" yüklenemedi (${err.message}); v1 kullanılıyor.`);
+    return { buildSystemPrompt, version: "v1" };
+  }
+})();
+console.log(`[Prompt] Caption prompt sürümü: ${activeCaptionPrompt.version}`);
+const buildActivePrompt = (opts) => activeCaptionPrompt.buildSystemPrompt(opts);
+// Aktif sürüm kendi JSON şablonunu veriyorsa onu, vermiyorsa (v1) eski şablonu kullan.
+const jsonSuffixOr = (fallback, opts) =>
+  (typeof activeCaptionPrompt.buildJsonSuffix === "function" ? activeCaptionPrompt.buildJsonSuffix(opts) : fallback);
+
 app.post("/api/captions/generate", authenticateToken, upload.array("images", 5), async (req, res) => {
   console.log("[Generate] İstek alındı, userId:", req.userId);
 
@@ -681,7 +704,7 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
     const langMap = { tr: "Türkçe", en: "English", de: "Deutsch", fr: "Français", es: "Español", ar: "العربية", ru: "Русский" };
     const langName = langMap[language] || language || "Türkçe";
 
-    const prompt = buildSystemPrompt({
+    const prompt = buildActivePrompt({
       gender,
       tone,
       length,
@@ -694,7 +717,7 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
       isPerImage: false,
       imageCount: files.length,
       langName,
-    }) + `\n\nSadece JSON formatında yanıt ver:
+    }) + jsonSuffixOr(`\n\nSadece JSON formatında yanıt ver:
 
 {
   "captions": [
@@ -703,7 +726,7 @@ app.post("/api/captions/generate", authenticateToken, upload.array("images", 5),
   ]
 }
 
-En az 2, en fazla 4 caption üret.`;
+En az 2, en fazla 4 caption üret.`, { isPerImage: false, imageCount: files.length });
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -838,7 +861,7 @@ app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
     const langMap = { tr: "Türkçe", en: "English", de: "Deutsch", fr: "Français", es: "Español", ar: "العربية", ru: "Русский" };
     const langName = langMap[language] || language || "Türkçe";
 
-    const basePrompt = buildSystemPrompt({
+    const basePrompt = buildActivePrompt({
       gender,
       tone,
       length,
@@ -855,7 +878,7 @@ app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
 
     let prompt;
     if (isPerImage) {
-      prompt = basePrompt + `\n\nSadece JSON formatında yanıt ver:
+      prompt = basePrompt + jsonSuffixOr(`\n\nSadece JSON formatında yanıt ver:
 
 {
   "captions": [
@@ -864,9 +887,9 @@ app.post("/api/captions/generate-json", authenticateToken, async (req, res) => {
   ]
 }
 
-Tam olarak ${images.length} caption üret. image_index sırası görsellerle eşleşmeli.`;
+Tam olarak ${images.length} caption üret. image_index sırası görsellerle eşleşmeli.`, { isPerImage: true, imageCount: images.length });
     } else {
-      prompt = basePrompt + `\n\nSadece JSON formatında yanıt ver:
+      prompt = basePrompt + jsonSuffixOr(`\n\nSadece JSON formatında yanıt ver:
 
 {
   "captions": [
@@ -875,7 +898,7 @@ Tam olarak ${images.length} caption üret. image_index sırası görsellerle eş
   ]
 }
 
-En az 2, en fazla 4 caption üret.`;
+En az 2, en fazla 4 caption üret.`, { isPerImage: false, imageCount: images.length });
     }
 
     const callOpenAI = async (retryPrompt) => {
@@ -1030,7 +1053,7 @@ En az 2, en fazla 4 caption üret.`;
 });
 
 // ─── HOOK LAB (bağımsız modül, mevcut uç noktalara dokunmaz) ───
-require("./routes/hookLab").registerHookLabRoutes(app, { pool, authenticateToken, buildSystemPrompt });
+require("./routes/hookLab").registerHookLabRoutes(app, { pool, authenticateToken, buildSystemPrompt: buildActivePrompt });
 
 app.get("/health", async (req, res) => {
   const dbOk = await dbHealthCheck();
