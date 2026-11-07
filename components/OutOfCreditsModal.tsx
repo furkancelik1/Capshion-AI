@@ -2,19 +2,28 @@ import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GlassTheme } from "../constants/LiquidGlass";
 
 interface OutOfCreditsModalProps {
   visible: boolean;
   onClose: () => void;
   onBuy?: () => void;
+  /** Verilirse "Reklam izle, +N kredi" butonu gösterilir (ödüllü reklam). */
+  onWatchAd?: () => void;
+  watchAdLoading?: boolean;
+  adRemainingToday?: number;
+  adRewardCredits?: number;
 }
 
 export default function OutOfCreditsModal({
   visible,
   onClose,
   onBuy,
+  onWatchAd,
+  watchAdLoading = false,
+  adRemainingToday = 0,
+  adRewardCredits = 1,
 }: OutOfCreditsModalProps) {
   const { t } = useTranslation();
 
@@ -69,6 +78,29 @@ export default function OutOfCreditsModal({
             </LinearGradient>
           </TouchableOpacity>
 
+          {onWatchAd ? (
+            <TouchableOpacity
+              style={[styles.adButton, (watchAdLoading || adRemainingToday <= 0) && styles.adButtonDisabled]}
+              onPress={onWatchAd}
+              disabled={watchAdLoading || adRemainingToday <= 0}
+              activeOpacity={0.75}
+            >
+              {watchAdLoading ? (
+                <ActivityIndicator size="small" color="#1C1C1E" />
+              ) : (
+                <>
+                  <View style={styles.adButtonRow}>
+                    <Ionicons name="play-circle-outline" size={18} color="#1C1C1E" style={{ marginRight: 6 }} />
+                    <Text style={styles.adButtonText}>{t("ads.watchButton", { count: adRewardCredits })}</Text>
+                  </View>
+                  <Text style={styles.adButtonSub}>
+                    {adRemainingToday > 0 ? t("ads.remainingToday", { count: adRemainingToday }) : t("ads.limitShort")}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          ) : null}
+
           <TouchableOpacity
             style={styles.laterButton}
             onPress={onClose}
@@ -84,6 +116,21 @@ export default function OutOfCreditsModal({
 }
 
 const styles = StyleSheet.create({
+  adButton: {
+    width: "100%",
+    minHeight: 52,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.1)",
+    backgroundColor: "rgba(255,255,255,0.7)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+  },
+  adButtonDisabled: { opacity: 0.5 },
+  adButtonRow: { flexDirection: "row", alignItems: "center" },
+  adButtonText: { fontSize: 15, fontWeight: "600", color: "#1C1C1E" },
+  adButtonSub: { fontSize: 12, color: "#8E8E93", marginTop: 2 },
   overlay: {
     flex: 1,
     justifyContent: "center",

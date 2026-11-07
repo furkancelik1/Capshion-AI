@@ -216,5 +216,17 @@
       "humor": "😄 Esprili",
       "curiosity": "👀 Merak"
     }
+  },
+  "ads": {
+    "watchButton": "Reklam izle, +{{count}} kredi",
+    "remainingToday": "Bugün {{count}} hakkın kaldı",
+    "limitShort": "Bugünkü reklam hakkın doldu",
+    "granted": "+{{count}} kredi hesabına eklendi 🎉",
+    "pending": "Reklam tamamlandı, kredin birkaç saniye içinde eklenecek.",
+    "notCompleted": "Kredi kazanmak için reklamı sonuna kadar izlemen gerekiyor.",
+    "limitReached": "Bugünkü reklam hakkın doldu. Yarın tekrar gel ya da Premium'a geç.",
+    "noConsent": "Reklam gösterebilmemiz için reklam tercihlerini onaylaman gerekiyor.",
+    "unavailable": "Şu anda gösterilecek reklam yok, birazdan tekrar dene.",
+    "error": "Reklam açılamadı. Lütfen tekrar dene."
   }
 }

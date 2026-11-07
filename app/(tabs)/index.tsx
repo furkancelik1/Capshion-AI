@@ -39,6 +39,7 @@ import ToneSelector from "../../components/ToneSelector";
 import { GlassTheme } from "../../constants/LiquidGlass";
 import { useAuth } from "../../hooks/useAuth";
 import { useGenerateCaption } from "../../hooks/useGenerateCaption";
+import { describeWatchOutcome, useRewardedCredits } from "../../hooks/useRewardedCredits";
 import { api, lastNavigationTimestamp } from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 import { logAppEvent } from "../../utils/analytics";
@@ -140,6 +141,7 @@ export default function HomeScreen() {
   const { generate, generatePerImage } = useGenerateCaption();
 
   const isUserPremium = isPremium || !!user?.is_premium;
+  const rewarded = useRewardedCredits();
 
   const refreshProfile = useCallback(() => {
     api.getProfile().then((data) => {
@@ -375,6 +377,25 @@ export default function HomeScreen() {
         ageRange: ageRange || "",
       },
     });
+  };
+
+  // Kredisi biten pencere açılınca günlük reklam hakkını tazele
+  useEffect(() => {
+    if (showCreditModal) rewarded.refresh();
+  }, [showCreditModal]);
+
+  const handleWatchAd = async () => {
+    const outcome = await rewarded.watch("out_of_credits_modal");
+    const { message, type } = describeWatchOutcome(t, outcome, rewarded.rewardCredits);
+    if (outcome.kind === "granted") {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setCredits(outcome.credits);
+      setShowCreditModal(false);
+    } else if (outcome.kind === "pending") {
+      setShowCreditModal(false);
+      setTimeout(refreshProfile, 5000);
+    }
+    showToast?.(message, type);
   };
 
   const canGenerate =
@@ -764,6 +785,10 @@ export default function HomeScreen() {
         visible={showCreditModal}
         onClose={() => setShowCreditModal(false)}
         onBuy={goToPaywall}
+        onWatchAd={rewarded.available ? handleWatchAd : undefined}
+        watchAdLoading={rewarded.watching}
+        adRemainingToday={rewarded.remainingToday}
+        adRewardCredits={rewarded.rewardCredits}
       />
     </View>
   );

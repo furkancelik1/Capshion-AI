@@ -216,5 +216,17 @@
       "humor": "😄 Humor",
       "curiosity": "👀 Curiosity"
     }
+  },
+  "ads": {
+    "watchButton": "Watch an ad, +{{count}} credit",
+    "remainingToday": "{{count}} left today",
+    "limitShort": "Daily ad limit reached",
+    "granted": "+{{count}} credit added to your account 🎉",
+    "pending": "Ad finished, your credit will arrive in a few seconds.",
+    "notCompleted": "Watch the ad to the end to earn a credit.",
+    "limitReached": "You've used today's ad credits. Come back tomorrow or go Premium.",
+    "noConsent": "Please accept the ad preferences so we can show ads.",
+    "unavailable": "No ad available right now, try again shortly.",
+    "error": "Couldn't open the ad. Please try again."
   }
 }

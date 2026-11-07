@@ -3,6 +3,7 @@ import HapticButton from "@/components/HapticButton";
 import { GlassTheme } from "@/constants/LiquidGlass";
 import { useToast } from "@/context/ToastContext";
 import { safeReadBase64 } from "@/hooks/useGenerateCaption";
+import { describeWatchOutcome, useRewardedCredits } from "@/hooks/useRewardedCredits";
 import {
   api,
   ApiError,
@@ -202,6 +203,7 @@ export default function HookLabScreen() {
   const [liked, setLiked] = useState<number[]>([]);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const swipeRef = useRef<((dir: "left" | "right") => void) | null>(null);
+  const rewarded = useRewardedCredits();
   const wentToPaywall = useRef(false);
 
   const sendFeedback = useCallback(
@@ -271,6 +273,16 @@ export default function HookLabScreen() {
       if (err instanceof ApiError && err.status === 403) {
         Alert.alert(t("hookLab.outOfCreditsTitle"), t("hookLab.outOfCreditsBody"), [
           { text: t("common.cancel"), style: "cancel" },
+          ...(rewarded.available && rewarded.remainingToday > 0
+            ? [{
+                text: t("ads.watchButton", { count: rewarded.rewardCredits }),
+                onPress: async () => {
+                  const outcome = await rewarded.watch("hook_lab");
+                  const { message, type } = describeWatchOutcome(t, outcome, rewarded.rewardCredits);
+                  showToast?.(message, type);
+                },
+              }]
+            : []),
           { text: t("hookLab.goPremium"), onPress: () => openPaywall("out_of_credits") },
         ]);
       } else {

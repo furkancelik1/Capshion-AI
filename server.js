@@ -1055,6 +1055,9 @@ En az 2, en fazla 4 caption üret.`, { isPerImage: false, imageCount: images.len
 // ─── HOOK LAB (bağımsız modül, mevcut uç noktalara dokunmaz) ───
 require("./routes/hookLab").registerHookLabRoutes(app, { pool, authenticateToken, buildSystemPrompt: buildActivePrompt });
 
+// ─── ÖDÜLLÜ REKLAM (bağımsız modül; ADS_REWARDED_ENABLED=true olmadan uygulamada görünmez) ───
+require("./routes/ads").registerAdsRoutes(app, { pool, authenticateToken });
+
 app.get("/health", async (req, res) => {
   const dbOk = await dbHealthCheck();
   res.status(dbOk ? 200 : 503).json({ status: dbOk ? "ok" : "degraded", timestamp: new Date().toISOString() });

@@ -320,6 +320,12 @@ export const api = {
       body: JSON.stringify({ index, action, editedText }),
     }),
 
+  adsStatus: () =>
+    request<{ enabled: boolean; dailyLimit: number; usedToday: number; remainingToday: number; rewardCredits: number; devReward?: boolean }>('/ads/status'),
+
+  adsDevReward: () =>
+    request<{ success: boolean; status: string; credits: number | null }>('/ads/dev-reward', { method: 'POST' }),
+
   deleteCaption: (captionId: string) =>
     request<{ message: string }>(`/captions/${captionId}`, {
       method: 'DELETE',
