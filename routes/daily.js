@@ -267,8 +267,11 @@ function createScheduler({ pool, sendPushNotification, getOrCreateIdea, now = ()
     return sent;
   }
 
-  async function tick() {
-    const { date: today, hour } = istanbulNow(now());
+  // hourOverride: test için belirli bir saati simüle et (yalnızca /api/daily/run üzerinden)
+  async function tick({ hourOverride } = {}) {
+    const clock = istanbulNow(now());
+    const today = clock.date;
+    const hour = Number.isInteger(hourOverride) ? hourOverride : clock.hour;
     const result = { today, hour, morning: 0, evening: 0 };
     result.morning = await morning(today, hour);
     if (hour === streakHour) result.evening = await evening(today);
@@ -359,7 +362,15 @@ function registerDailyRoutes(app, { pool, authenticateToken, sendPushNotificatio
     const secret = process.env.DAILY_CRON_SECRET;
     if (!secret || req.get("x-cron-secret") !== secret) return res.status(404).json({ error: "Bulunamadı." });
     try {
-      res.json(await scheduler.tick());
+      const hour = req.query.hour !== undefined ? parseInt(req.query.hour, 10) : undefined;
+      if (hour !== undefined && (!Number.isInteger(hour) || hour < 0 || hour > 23)) {
+        return res.status(400).json({ error: "hour 0-23 olmalı" });
+      }
+      // Yerel testte aynı gün tekrar denemek için "bugün gönderildi" işaretlerini sıfırla
+      if (req.query.reset === "1" && process.env.NODE_ENV !== "production") {
+        await pool.query("UPDATE user_preferences SET last_idea_push_date = NULL, last_streak_push_date = NULL");
+      }
+      res.json(await scheduler.tick({ hourOverride: hour }));
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
