@@ -68,7 +68,8 @@ function specialDaysAround(today) {
   for (let i = 0; i <= 3; i++) {
     const d = addDays(today, i);
     const name = fixed[d.slice(5)];
-    if (name) out.push(i === 0 ? `BUGÜN: ${name}` : `${i} gün sonra: ${name}`);
+    // Anma günleri yalnızca o gün önerilir; önceden "hazırlık" içeriği uygun değil
+    if (name && (i === 0 || !/Anma Günü/.test(name))) out.push(i === 0 ? `BUGÜN: ${name}` : `${i} gün sonra: ${name}`);
   }
   return out;
 }
