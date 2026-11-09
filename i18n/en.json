@@ -231,7 +231,8 @@
   },
   "daily": {
     "title": "Today's idea",
-    "streakDays": "{{count}} days",
+    "streakDays_one": "{{count}} day",
+    "streakDays_other": "{{count}} days",
     "streakStart": "Start a streak",
     "streakKeep": "Create a caption today to make it {{next}} days.",
     "streakDone": "Today is done ✓",

@@ -117,7 +117,10 @@ function buildIdeaPrompt({ niche, today, language }) {
     ? "Write all fields in natural, everyday English."
     : `Tüm alanları doğal, günlük konuşma Türkçesiyle yaz. Şu klişeleri kullanma: ${cliches.slice(0, 30).map((c) => `"${c}"`).join(", ")}.`;
 
-  return `Sosyal medyada içerik üreten birine BUGÜN telefonuyla çekip paylaşabileceği TEK bir içerik fikri öner.
+  const langHead = language === "en"
+    ? "IMPORTANT: The user's app is in ENGLISH. Write every JSON field in English only, even though these instructions are in Turkish.\n\n"
+    : "";
+  return `${langHead}Sosyal medyada içerik üreten birine BUGÜN telefonuyla çekip paylaşabileceği TEK bir içerik fikri öner.
 
 BAĞLAM:
 - Niş: ${NICHES[niche] || NICHES.genel}
@@ -136,7 +139,13 @@ Sadece şu JSON'u döndür:
   "idea": "1-2 cümle: ne çekip paylaşacağı",
   "tip": "1 cümle: çekimle ilgili pratik bir ipucu (ışık, açı, kompozisyon)",
   "hook": "bu paylaşım için örnek bir caption ilk satırı, en fazla 90 karakter"
-}`;
+}${language === "en" ? "\n\nReminder: all four fields in ENGLISH." : ""}`;
+}
+
+// İngilizce istenip Türkçe gelen fikri yakala (ğ, ş, ı gibi harfler İngilizcede geçmez)
+function languageMismatch(idea, language) {
+  if (language !== "en" || !idea) return false;
+  return /[ğĞşŞıİ]/.test(`${idea.title} ${idea.idea} ${idea.tip} ${idea.hook}`);
 }
 
 function normalizeIdea(raw) {
@@ -153,19 +162,25 @@ function createIdeaService({ pool, openaiFactory }) {
   return async function getOrCreateIdea(niche, today, language = "tr") {
     const key = `${niche}|${today}|${language}`;
     const existing = await pool.query("SELECT idea FROM daily_ideas WHERE niche = $1 AND idea_date = $2 AND language = $3", [niche, today, language]);
-    if (existing.rows[0]) return existing.rows[0].idea;
+    if (existing.rows[0] && !languageMismatch(existing.rows[0].idea, language)) return existing.rows[0].idea;
+    if (existing.rows[0]) {
+      await pool.query("DELETE FROM daily_ideas WHERE niche = $1 AND idea_date = $2 AND language = $3", [niche, today, language]);
+    }
     if (inflight.has(key)) return inflight.get(key);
 
     const job = (async () => {
       const openai = openaiFactory();
-      const completion = await openai.chat.completions.create({
-        model: process.env.DAILY_IDEA_MODEL || "gpt-4o",
-        messages: [{ role: "user", content: buildIdeaPrompt({ niche, today, language }) }],
-        response_format: { type: "json_object" },
-        max_tokens: 500,
-        temperature: 0.9,
-      });
-      const idea = normalizeIdea(completion.choices[0]?.message?.content);
+      let idea = null;
+      for (let attempt = 1; attempt <= 2 && (!idea || languageMismatch(idea, language)); attempt++) {
+        const completion = await openai.chat.completions.create({
+          model: process.env.DAILY_IDEA_MODEL || "gpt-4o",
+          messages: [{ role: "user", content: buildIdeaPrompt({ niche, today, language }) }],
+          response_format: { type: "json_object" },
+          max_tokens: 500,
+          temperature: attempt === 1 ? 0.9 : 0.6,
+        });
+        idea = normalizeIdea(completion.choices[0]?.message?.content);
+      }
       if (!idea) throw new Error("Günün fikri üretilemedi");
       await pool.query(
         `INSERT INTO daily_ideas (niche, idea_date, language, idea) VALUES ($1, $2, $3, $4)
@@ -355,5 +370,5 @@ function registerDailyRoutes(app, { pool, authenticateToken, sendPushNotificatio
 
 module.exports = {
   registerDailyRoutes,
-  _test: { istanbulNow, addDays, computeStreak, specialDaysAround, nthWeekday, buildIdeaPrompt, normalizeIdea, createScheduler, createIdeaService, activeDaysFor },
+  _test: { languageMismatch, istanbulNow, addDays, computeStreak, specialDaysAround, nthWeekday, buildIdeaPrompt, normalizeIdea, createScheduler, createIdeaService, activeDaysFor },
 };
