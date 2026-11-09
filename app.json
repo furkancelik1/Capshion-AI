@@ -10,7 +10,7 @@
     "scheme": "capshion",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "backgroundColor": "#F2F2F7",
       "bundleIdentifier": "com.furkan.capshion",
       "googleServicesFile": "./GoogleService-Info.plist",
@@ -19,7 +19,8 @@
         "NSCameraUsageDescription": "Capshion requires camera access to analyze your photos and generate premium, tailored social media captions.",
         "NSPhotoLibraryUsageDescription": "Capshion requires photo library access to let you select images for professional caption generation.",
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "googleServicesFile": "./google-services.json",
@@ -80,7 +81,8 @@
         {
           "androidAppId": "ca-app-pub-6029770395883794~1220859464",
           "iosAppId": "ca-app-pub-3940256099942544~1458002511",
-          "delayAppMeasurementInit": true
+          "delayAppMeasurementInit": true,
+          "userTrackingUsageDescription": "Bu izin yalnızca sana daha alakalı reklamlar göstermek için kullanılır. İzin vermesen de uygulamanın tüm özellikleri çalışır."
         }
       ],
       "expo-image",

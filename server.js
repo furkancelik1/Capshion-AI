@@ -1021,6 +1021,9 @@ require("./routes/ads").registerAdsRoutes(app, { pool, authenticateToken });
 // ─── GÜNLÜK RİTİM (bağımsız modül; bildirimler DAILY_PUSH_ENABLED=true ile açılır) ───
 require("./routes/daily").registerDailyRoutes(app, { pool, authenticateToken, sendPushNotification });
 
+// ─── HESAP SİLME (App Store + Google Play zorunluluğu) ───
+require("./routes/account").registerAccountRoutes(app, { pool, authenticateToken });
+
 app.get("/health", async (req, res) => {
   const dbOk = await dbHealthCheck();
   res.status(dbOk ? 200 : 503).json({ status: dbOk ? "ok" : "degraded", timestamp: new Date().toISOString() });

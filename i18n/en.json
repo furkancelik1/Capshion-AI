@@ -81,6 +81,11 @@
     "feedback": "Share Your Feedback",
     "signOut": "Sign Out",
     "signOutConfirm": "Are you sure you want to sign out of your account?",
+    "deleteAccount": "Delete my account",
+    "deleteAccountAction": "Delete permanently",
+    "deleteAccountConfirm": "Your account, credits and all generated captions will be permanently deleted. This can't be undone.\n\nIf you have an active subscription, cancel it in the App Store or Google Play to stop being charged.",
+    "deleteAccountDone": "Your account has been deleted.",
+    "deleteAccountFailed": "Couldn't delete your account. Please try again.",
     "ageNotSet": "Not specified"
   },
   "outOfCredits": {

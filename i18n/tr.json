@@ -81,6 +81,11 @@
     "feedback": "Deneyimini Geliştir",
     "signOut": "Çıkış Yap",
     "signOutConfirm": "Hesabınızdan çıkış yapmak istediğinize emin misiniz?",
+    "deleteAccount": "Hesabımı sil",
+    "deleteAccountAction": "Kalıcı olarak sil",
+    "deleteAccountConfirm": "Hesabın, kredilerin ve oluşturduğun tüm açıklamalar kalıcı olarak silinecek. Bu işlem geri alınamaz.\n\nAktif bir aboneliğin varsa ücretlendirmenin durması için aboneliği App Store veya Google Play'den ayrıca iptal etmelisin.",
+    "deleteAccountDone": "Hesabın silindi.",
+    "deleteAccountFailed": "Hesap silinemedi. Lütfen tekrar dene.",
     "ageNotSet": "Belirtilmedi"
   },
   "outOfCredits": {

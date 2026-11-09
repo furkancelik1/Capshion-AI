@@ -6,8 +6,10 @@ import GlassPanel from "@/components/GlassPanel";
 import HapticButton from "@/components/HapticButton";
 import PremiumBadge from "@/components/PremiumBadge";
 import { GlassTheme } from "@/constants/LiquidGlass";
+import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/hooks/useAuth";
-import { api } from "@/services/api";
+import { api, ApiError } from "@/services/api";
+import { firebaseDeleteCurrentUser } from "@/services/firebase";
 import { hasPremiumEntitlement } from "@/utils/revenueCat";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
@@ -18,6 +20,7 @@ import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -90,6 +93,8 @@ function RowItem({
 export default function ProfileScreen() {
   const { t, i18n } = useTranslation();
   const { user, signOut, setPremiumStatus } = useAuth();
+  const { showToast } = useToast();
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -189,6 +194,40 @@ export default function ProfileScreen() {
     Alert.alert(t("profile.signOut"), t("profile.signOutConfirm"), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("common.yes"), style: "destructive", onPress: signOut },
+    ]);
+  };
+
+  const runDeleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      try {
+        await api.deleteAccount();
+      } catch (err) {
+        // Apple ile bağlı hesap: Apple token'larını iptal edebilmek için yeniden doğrulama
+        if (err instanceof ApiError && err.status === 409 && Platform.OS === "ios") {
+          const AppleAuthentication = require("expo-apple-authentication");
+          const cred = await AppleAuthentication.signInAsync({ requestedScopes: [] });
+          if (!cred?.authorizationCode) throw err;
+          await api.deleteAccount(cred.authorizationCode);
+        } else {
+          throw err;
+        }
+      }
+      await firebaseDeleteCurrentUser();
+      await signOut();
+      showToast(t("profile.deleteAccountDone"), "success");
+    } catch (err: any) {
+      if (err?.code === "ERR_REQUEST_CANCELED") return; // Apple penceresi kapatıldı
+      showToast(err?.message || t("profile.deleteAccountFailed"), "error");
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(t("profile.deleteAccount"), t("profile.deleteAccountConfirm"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("profile.deleteAccountAction"), style: "destructive", onPress: runDeleteAccount },
     ]);
   };
 
@@ -465,6 +504,21 @@ export default function ProfileScreen() {
             </HapticButton>
           </BlurView>
         </View>
+
+        {/* ── Hesabı sil (App Store / Google Play zorunluluğu) ── */}
+        <TouchableOpacity
+          style={styles.deleteAccountRow}
+          onPress={handleDeleteAccount}
+          disabled={deletingAccount}
+          accessibilityRole="button"
+          accessibilityLabel={t("profile.deleteAccount")}
+        >
+          {deletingAccount ? (
+            <ActivityIndicator size="small" color="rgba(255,59,48,0.8)" />
+          ) : (
+            <Text style={styles.deleteAccountText}>{t("profile.deleteAccount")}</Text>
+          )}
+        </TouchableOpacity>
       </ScrollView>
 
       <FeedbackModal
@@ -751,5 +805,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#FF3B30",
+  },
+  deleteAccountRow: {
+    alignSelf: "center",
+    marginTop: 18,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    minHeight: 44,
+    justifyContent: "center",
+  },
+  deleteAccountText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "rgba(255,59,48,0.8)",
   },
 });

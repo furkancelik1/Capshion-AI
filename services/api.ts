@@ -359,6 +359,12 @@ export const api = {
       body: JSON.stringify({ amount, currency: currency || 'usd', userId }),
     }),
 
+  deleteAccount: (appleAuthorizationCode?: string) =>
+    request<{ success: boolean }>('/auth/account', {
+      method: 'DELETE',
+      body: JSON.stringify(appleAuthorizationCode ? { appleAuthorizationCode } : {}),
+    }, 30000),
+
   savePushToken: (pushToken: string) =>
     request<{ message: string }>('/auth/push-token', {
       method: 'POST',

@@ -8,6 +8,7 @@ import {
   GoogleAuthProvider,
   signInWithCredential,
   signOut as fbSignOut,
+  deleteUser,
   onAuthStateChanged,
   User as FirebaseUser,
 } from 'firebase/auth';
@@ -18,6 +19,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   serverTimestamp,
 } from 'firebase/firestore';
 
@@ -114,4 +116,15 @@ export async function firebaseSignInWithGoogle(idToken: string) {
  */
 export async function firebaseSignOut() {
   await fbSignOut(auth);
+}
+
+/**
+ * Hesap silme sonrası Firebase tarafını temizler (en iyi çaba; hata fırlatmaz).
+ * Asıl veriler sunucuda silinir; burada Firestore profili ve Firebase Auth kullanıcısı kaldırılır.
+ */
+export async function firebaseDeleteCurrentUser() {
+  const user = auth.currentUser;
+  if (!user) return;
+  try { await deleteDoc(doc(db, 'profiles', user.uid)); } catch (e) { console.warn('[Firebase] profil silinemedi:', (e as Error)?.message); }
+  try { await deleteUser(user); } catch (e) { console.warn('[Firebase] kullanıcı silinemedi:', (e as Error)?.message); }
 }
