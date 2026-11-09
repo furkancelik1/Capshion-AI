@@ -14,6 +14,8 @@ const path = require("path");
 const crypto = require("crypto");
 const fs = require("fs");
 const OpenAI = require("openai");
+const { resolveSocialEmail, linkAppleIdentity } = require("./routes/oauthVerify");
+const { syncFromRevenueCat, grantCreditsOnce } = require("./routes/purchaseVerify");
 
 
 const storage = multer.diskStorage({
@@ -219,32 +221,22 @@ app.post("/api/auth/social-login", authLimiter, async (req, res) => {
   try {
     const { provider, idToken, email: rawEmail } = req.body;
 
-    if (!provider || (!idToken && !rawEmail)) {
+    if (!provider || !idToken) {
       return res.status(400).json({ error: "Sağlayıcı veya kimlik bilgisi eksik." });
     }
 
-    let verifiedEmail = rawEmail;
-
-    if (provider === "google" && idToken) {
-      try {
-        const tokenRes = await fetch(
-          `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`
-        );
-        if (tokenRes.ok) {
-          const tokenData = await tokenRes.json();
-          if (tokenData.email) {
-            verifiedEmail = tokenData.email;
-          }
-        } else {
-          console.warn("[SocialLogin] Google tokeninfo yanıtı başarısız, iletilen e-posta kontrol edilecek.");
-        }
-      } catch (verifyErr) {
-        console.warn("[SocialLogin] Google token doğrulama uyarısı:", verifyErr.message);
-      }
+    // Kimlik YALNIZCA sağlayıcının imzaladığı token'dan alınır (routes/oauthVerify.js).
+    // İstemcinin gönderdiği e-posta (rawEmail) kimlik doğrulamada KULLANILMAZ.
+    let social;
+    try {
+      social = await resolveSocialEmail({ provider, idToken, pool });
+    } catch (verifyErr) {
+      console.warn(`[SocialLogin] Doğrulama reddedildi (${provider}):`, verifyErr.message);
+      return res.status(verifyErr.status || 401).json({ error: verifyErr.status === 400 ? verifyErr.message : "Giriş doğrulanamadı. Lütfen tekrar deneyin." });
     }
-
-    if (!verifiedEmail) {
-      return res.status(400).json({ error: "E-posta adresi doğrulanamadı." });
+    const verifiedEmail = typeof social === "string" ? social : social.email;
+    if (rawEmail && rawEmail.toLowerCase().trim() !== verifiedEmail) {
+      console.warn("[SocialLogin] İstemci e-postası token ile uyuşmuyor; token esas alındı.");
     }
 
     const email = verifiedEmail.toLowerCase().trim();
@@ -271,6 +263,10 @@ app.post("/api/auth/social-login", authLimiter, async (req, res) => {
       user = insertResult.rows[0];
     } else {
       console.log("[SocialLogin] Mevcut kullanıcı ile giriş yapıldı:", email, user.id);
+    }
+
+    if (typeof social === "object" && social.appleSubject && social.needsLink) {
+      await linkAppleIdentity(pool, social.appleSubject, user.id);
     }
 
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
@@ -404,62 +400,15 @@ app.delete("/api/captions/:id", authenticateToken, async (req, res) => {
 
 // ─── INSTANT IN-APP PURCHASE SYNC ENDPOINT ─────────────────────────────────
 app.post("/api/purchases/sync", authenticateToken, async (req, res) => {
-  const { productId, isSubscription, transactionId } = req.body;
+  // İstemcinin gönderdiği productId / isSubscription'a GÜVENİLMEZ (routes/purchaseVerify.js).
+  // Premium ve krediler RevenueCat sunucusundan doğrulanarak uygulanır; yoksa webhook bekler.
   const userId = req.userId;
-
   try {
-    if (isSubscription) {
-      await pool.query("UPDATE profiles SET is_premium = true WHERE id = $1", [userId]);
-      console.log(`[Purchases Sync] Kullanıcı ${userId} abonelik senkronizasyonu ile Premium yapıldı.`);
-    } else if (productId) {
-      // Ürün ID'sinden sayısal krediyi ayıkla (örn: "10_credits", "credits_30", "50_credits", "30")
-      const match = String(productId).match(/\d+/);
-      const creditsToAdd = match ? parseInt(match[0], 10) : 0;
-
-      if (creditsToAdd > 0) {
-        // Transaction ID ile mükerrer ekleme koruması
-        let alreadyProcessed = false;
-        if (transactionId) {
-          try {
-            const existing = await pool.query(
-              "SELECT id FROM purchase_events WHERE raw_payload->>'transactionId' = $1",
-              [String(transactionId)]
-            );
-            if (existing.rows.length > 0) {
-              alreadyProcessed = true;
-              console.log(`[Purchases Sync] İşlem ${transactionId} zaten işlenmiş, mükerrer bakiye eklenmedi.`);
-            }
-          } catch (tErr) {
-            // purchase_events tablosu yoksa veya hata verirse akışı kesme
-          }
-        }
-
-        if (!alreadyProcessed) {
-          const updateResult = await pool.query(
-            "UPDATE profiles SET credits = credits + $1 WHERE id = $2 RETURNING id, credits",
-            [creditsToAdd, userId]
-          );
-
-          try {
-            await pool.query(
-              `INSERT INTO purchase_events (user_id, event_type, product_id, raw_payload, processed_at)
-               VALUES ($1, $2, $3, $4, NOW())`,
-              [
-                userId,
-                "CLIENT_SYNC_PURCHASE",
-                String(productId),
-                JSON.stringify({ transactionId, creditsToAdd, source: "client_sync" }),
-              ]
-            );
-          } catch (logErr) {
-            console.warn("[Purchases Sync] Denetim kaydı ekleme uyarısı (bakiye güncellendi):", logErr.message);
-          }
-
-          console.log(
-            `[Purchases Sync] Kullanıcı ${userId} hesabına ${creditsToAdd} kredi eklendi (${productId}), yeni bakiye: ${updateResult.rows[0]?.credits}.`
-          );
-        }
-      }
+    const result = await syncFromRevenueCat(pool, userId);
+    if (!result.verified) {
+      console.warn("[Purchases Sync] REVENUECAT_SECRET_API_KEY tanımlı değil; doğrulama yapılamadı, webhook beklenecek.");
+    } else if (result.premium || result.creditsAdded) {
+      console.log(`[Purchases Sync] Kullanıcı ${userId}: premium=${result.premium}, +${result.creditsAdded} kredi (RevenueCat doğrulamalı).`);
     }
 
     const finalProfile = await pool.query(
@@ -467,12 +416,13 @@ app.post("/api/purchases/sync", authenticateToken, async (req, res) => {
       [userId]
     );
 
-    res.json({ success: true, profile: finalProfile.rows[0] });
+    res.json({ success: true, verified: result.verified, profile: finalProfile.rows[0] });
   } catch (err) {
     console.error("[Purchases Sync] Hata:", err.message);
     res.status(500).json({ error: "Satın alma senkronize edilemedi." });
   }
 });
+
 
 const REVENUECAT_PREMIUM_GRANT_EVENTS = ["INITIAL_PURCHASE", "RENEWAL", "NON_RENEWING_PURCHASE"];
 const REVENUECAT_PREMIUM_REVOKE_EVENTS = ["EXPIRATION", "CANCELLATION"];
@@ -487,8 +437,12 @@ app.post("/api/webhooks/revenuecat", async (req, res) => {
       console.warn("[RevenueCat Webhook] Yetkisiz istek reddedildi.");
       return res.status(401).json({ error: "Unauthorized" });
     }
+  } else if (process.env.ALLOW_UNSIGNED_REVENUECAT_WEBHOOK !== "true") {
+    // İmzasız webhook kabul edilirse herkes istediği kullanıcıyı Premium yapabilir
+    console.error("[RevenueCat Webhook] REVENUECAT_WEBHOOK_SECRET tanımlı değil; istek reddedildi.");
+    return res.status(503).json({ error: "Webhook yapılandırılmamış." });
   } else {
-    console.warn("[RevenueCat Webhook] REVENUECAT_WEBHOOK_SECRET tanımlı değil, geliştirme ortamında webhook doğrulaması atlandı.");
+    console.warn("[RevenueCat Webhook] İmzasız webhook kabul ediliyor (ALLOW_UNSIGNED_REVENUECAT_WEBHOOK=true, yalnızca yerel test).");
   }
 
   const event = req.body?.event;
@@ -517,16 +471,19 @@ app.post("/api/webhooks/revenuecat", async (req, res) => {
     if (isCredit && creditNumMatch && !prodId.includes("sub") && !prodId.includes("monthly")) {
       const creditsToAdd = parseInt(creditNumMatch[1], 10);
       if (REVENUECAT_PREMIUM_GRANT_EVENTS.includes(event.type)) {
-        const updateResult = await pool.query(
-          "UPDATE profiles SET credits = credits + $1 WHERE id = $2 RETURNING id, credits",
-          [creditsToAdd, event.app_user_id],
-        );
-        if (updateResult.rows.length === 0) {
-          console.warn(`[RevenueCat Webhook] Kullanıcı bulunamadı: ${event.app_user_id}`);
-        } else {
-          console.log(
-            `[RevenueCat Webhook] Kullanıcı ${event.app_user_id} hesabına ${creditsToAdd} kredi eklendi (${event.type}), yeni bakiye: ${updateResult.rows[0].credits}.`,
+        // Aynı alım uygulama senkronizasyonu ya da webhook tekrarıyla ikinci kez kredi vermesin
+        const tx = event.transaction_id || event.original_transaction_id || event.id;
+        try {
+          const g = await grantCreditsOnce(pool, { transactionId: tx, userId: event.app_user_id, productId: event.product_id, source: "webhook" });
+          console.log(`[RevenueCat Webhook] Kredi (${event.type}) tx=${tx}: ${g.granted ? `+${g.added}, yeni bakiye ${g.credits}` : g.reason}`);
+        } catch (grantErr) {
+          if (grantErr.code !== "42P01") throw grantErr;
+          // credit_grants migration'ı henüz yoksa eski davranış (satın alma kaybolmasın)
+          const updateResult = await pool.query(
+            "UPDATE profiles SET credits = credits + $1 WHERE id = $2 RETURNING id, credits",
+            [creditsToAdd, event.app_user_id],
           );
+          console.warn(`[RevenueCat Webhook] credit_grants yok, tekrar korumasız ${creditsToAdd} kredi eklendi (${updateResult.rows.length ? "ok" : "kullanıcı yok"}).`);
         }
       } else {
         console.log(`[RevenueCat Webhook] Kredi ürünü için işlenmeyen event tipi: ${event.type}`);
@@ -543,6 +500,9 @@ app.post("/api/webhooks/revenuecat", async (req, res) => {
           `[RevenueCat Webhook] Kullanıcı ${event.app_user_id} Premium yapıldı (${event.type}).`,
         );
       }
+    } else if (event.type === "CANCELLATION" && event.expiration_at_ms && Number(event.expiration_at_ms) > Date.now()) {
+      // Otomatik yenileme kapatıldı ama ödenen dönem sürüyor → Premium EXPIRATION'a kadar devam
+      console.log(`[RevenueCat Webhook] ${event.app_user_id} yenilemeyi iptal etti; Premium ${new Date(Number(event.expiration_at_ms)).toISOString()} tarihine kadar sürüyor.`);
     } else if (REVENUECAT_PREMIUM_REVOKE_EVENTS.includes(event.type)) {
       const updateResult = await pool.query(
         "UPDATE profiles SET is_premium = false WHERE id = $1 RETURNING id",
