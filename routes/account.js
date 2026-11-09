@@ -11,7 +11,8 @@ const fs = require("fs");
 const path = require("path");
 const jwt = require("jsonwebtoken");
 
-const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || "furkansteam2022@gmail.com";
+// Destek e-postası yalnızca ortam değişkeninden gelir (koda kişisel adres yazılmaz)
+const supportEmail = () => (process.env.SUPPORT_EMAIL || "").trim();
 
 function appleConfig() {
   const { APPLE_TEAM_ID, APPLE_KEY_ID } = process.env;
@@ -122,6 +123,7 @@ function registerAccountRoutes(app, { pool, authenticateToken, uploadsDir = path
   });
 
   const page = (req, res) => {
+    const SUPPORT_EMAIL = supportEmail();
     res.set("Content-Type", "text/html; charset=utf-8");
     res.set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'");
     res.send(`<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -137,9 +139,9 @@ h1{font-size:26px;margin:0 0 4px}h2{font-size:18px;margin:0 0 8px}p,li{color:var
 <h1>Capshion AI — Hesap Silme</h1><p>Hesabını ve verilerini kalıcı olarak silebilirsin.</p>
 <section><h2>1. Uygulama içinden (önerilen, anında)</h2>
 <ol><li>Capshion AI uygulamasını aç ve giriş yap.</li><li><b>Profil</b> sekmesine git.</li><li>En alttaki <b>Hesabımı sil</b> seçeneğine dokun ve onayla.</li></ol></section>
-<section><h2>2. Uygulamaya erişemiyorsan</h2>
+${SUPPORT_EMAIL ? `<section><h2>2. Uygulamaya erişemiyorsan</h2>
 <p>Hesabının bağlı olduğu e-posta adresinden <a href="mailto:${SUPPORT_EMAIL}?subject=Hesap%20silme%20talebi">${SUPPORT_EMAIL}</a> adresine
-<b>"Hesap silme talebi"</b> konulu bir e-posta gönder. Talebin en geç 30 gün içinde işlenir ve sana bilgi verilir.</p></section>
+<b>"Hesap silme talebi"</b> konulu bir e-posta gönder. Talebin en geç 30 gün içinde işlenir ve sana bilgi verilir.</p></section>` : ""}
 <section><h2>Neler silinir?</h2>
 <ul><li>Hesap bilgilerin (e-posta, yaş aralığı), kredi bakiyen ve Premium durumun</li>
 <li>Oluşturduğun tüm açıklamalar, Hook Lab oturumları ve yüklediğin görseller</li>
@@ -149,7 +151,7 @@ h1{font-size:26px;margin:0 0 4px}h2{font-size:18px;margin:0 0 8px}p,li{color:var
 <hr style="border:none;border-top:1px solid rgba(128,128,128,.2);margin:28px 0">
 <h1>Account Deletion</h1>
 <section><p><b>In the app:</b> Profile → Delete my account → confirm. Deletion is immediate.<br>
-<b>Without the app:</b> email <a href="mailto:${SUPPORT_EMAIL}?subject=Account%20deletion%20request">${SUPPORT_EMAIL}</a> from your account's email address with the subject "Account deletion request". We process requests within 30 days.</p>
+${SUPPORT_EMAIL ? `<b>Without the app:</b> email <a href="mailto:${SUPPORT_EMAIL}?subject=Account%20deletion%20request">${SUPPORT_EMAIL}</a> from your account's email address with the subject "Account deletion request". We process requests within 30 days.` : ""}</p>
 <p>Deleted: account info, credits, Premium status, all captions, Hook Lab sessions, uploaded images, notification preferences and ad reward records. Purchase records may be kept in anonymized form for legal accounting. Cancel any active subscription in Google Play / App Store separately.</p></section>
 </main></body></html>`);
   };
