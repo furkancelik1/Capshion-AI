@@ -98,6 +98,19 @@ export interface HookLabSession {
 
 export type HookLabFeedbackAction = 'like' | 'skip' | 'copy' | 'edit_copy';
 
+// ─── Günlük ritim ───
+export type DailyNiche = 'genel' | 'moda' | 'yemek' | 'seyahat' | 'fitness' | 'guzellik' | 'is' | 'sanat' | 'ev' | 'evcil';
+export interface DailyIdea { title: string; idea: string; tip: string; hook: string }
+export interface DailyPreferences { optedIn: boolean; niche: DailyNiche; notifyHour: number; enabled: boolean }
+export interface DailyToday {
+  date: string;
+  idea: DailyIdea | null;
+  niche: DailyNiche;
+  streak: { current: number; longest: number; activeToday: boolean };
+  preferences: DailyPreferences;
+  niches: DailyNiche[];
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -325,6 +338,15 @@ export const api = {
 
   adsDevReward: () =>
     request<{ success: boolean; status: string; credits: number | null }>('/ads/dev-reward', { method: 'POST' }),
+
+  dailyToday: (lang?: string) =>
+    request<DailyToday>(`/daily/today${lang ? `?lang=${encodeURIComponent(lang)}` : ''}`, {}, 30000),
+
+  dailyPreferences: (prefs: { niche: DailyNiche; notifyHour: number; enabled: boolean; language?: string }) =>
+    request<{ success: boolean; preferences: DailyPreferences }>('/daily/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(prefs),
+    }),
 
   deleteCaption: (captionId: string) =>
     request<{ message: string }>(`/captions/${captionId}`, {

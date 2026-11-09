@@ -1058,6 +1058,9 @@ require("./routes/hookLab").registerHookLabRoutes(app, { pool, authenticateToken
 // ─── ÖDÜLLÜ REKLAM (bağımsız modül; ADS_REWARDED_ENABLED=true olmadan uygulamada görünmez) ───
 require("./routes/ads").registerAdsRoutes(app, { pool, authenticateToken });
 
+// ─── GÜNLÜK RİTİM (bağımsız modül; bildirimler DAILY_PUSH_ENABLED=true ile açılır) ───
+require("./routes/daily").registerDailyRoutes(app, { pool, authenticateToken, sendPushNotification });
+
 app.get("/health", async (req, res) => {
   const dbOk = await dbHealthCheck();
   res.status(dbOk ? 200 : 503).json({ status: dbOk ? "ok" : "degraded", timestamp: new Date().toISOString() });

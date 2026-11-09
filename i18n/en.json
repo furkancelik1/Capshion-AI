@@ -228,5 +228,40 @@
     "noConsent": "Please accept the ad preferences so we can show ads.",
     "unavailable": "No ad available right now, try again shortly.",
     "error": "Couldn't open the ad. Please try again."
+  },
+  "daily": {
+    "title": "Today's idea",
+    "streakDays": "{{count}} days",
+    "streakStart": "Start a streak",
+    "streakKeep": "Create a caption today to make it {{next}} days.",
+    "streakDone": "Today is done ✓",
+    "streakFirst": "Create your first caption today to start a streak.",
+    "hookLabel": "Sample first line",
+    "copyHook": "Copy sample first line",
+    "enableCta": "Send me an idea daily",
+    "scheduleSummary": "Daily at {{hour}} · {{niche}}",
+    "edit": "Edit",
+    "setupTitle": "Daily idea",
+    "setupSub": "We'll send a post idea for your niche at the time you pick. If your streak is about to break, we'll remind you once in the evening.",
+    "nicheLabel": "Your niche",
+    "hourLabel": "Notification time",
+    "save": "Save",
+    "disable": "Turn off daily notifications",
+    "saved": "Daily idea notifications are on ☀️",
+    "disabled": "Daily notifications turned off.",
+    "permissionDenied": "Notifications are off. You can allow them for Capshion in your phone settings.",
+    "error": "Couldn't save, please try again.",
+    "niches": {
+      "genel": "Everyday life",
+      "moda": "Fashion & style",
+      "yemek": "Food & cafés",
+      "seyahat": "Travel & city",
+      "fitness": "Sports & fitness",
+      "guzellik": "Beauty & care",
+      "is": "Work & career",
+      "sanat": "Art & photography",
+      "ev": "Home & decor",
+      "evcil": "Pets"
+    }
   }
 }

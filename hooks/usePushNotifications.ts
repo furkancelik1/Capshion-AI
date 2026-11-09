@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface PushNotificationState {
   expoPushToken?: string;
@@ -85,8 +86,17 @@ async function registerForPushNotificationsAsync(): Promise<string | undefined> 
   }
 }
 
+export const DAILY_PUSH_FLAG_KEY = 'capshion_daily_push_on';
+
 export async function schedulePeriodicReminder() {
   await Notifications.cancelAllScheduledNotificationsAsync();
+
+  // Günlük fikir bildirimini açan kullanıcıya ayrıca 3 günlük genel hatırlatma gönderme
+  try {
+    if ((await AsyncStorage.getItem(DAILY_PUSH_FLAG_KEY)) === '1') return;
+  } catch {
+    // depolama okunamazsa eski davranış
+  }
 
   await Notifications.scheduleNotificationAsync({
     content: {

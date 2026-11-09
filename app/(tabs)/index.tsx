@@ -23,6 +23,7 @@ import {
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import AmbientGlow from "../../components/AmbientGlow";
 import CameraWidget from "../../components/CameraWidget";
+import DailyRitualCard from "../../components/DailyRitualCard";
 import AILoadingOverlay from "../../components/AILoadingOverlay";
 import GlassBottomSheet from "../../components/GlassBottomSheet";
 import {
@@ -466,6 +467,9 @@ export default function HomeScreen() {
             </View>
           ))}
         </GlassPanel>
+
+        {/* ── Günlük ritim: bugünün fikri + seri ── */}
+        <DailyRitualCard />
 
         {/* ── CameraWidget (Çoklu Fotoğraf Seçimi) ── */}
         <CameraWidget

@@ -228,5 +228,40 @@
     "noConsent": "Reklam gösterebilmemiz için reklam tercihlerini onaylaman gerekiyor.",
     "unavailable": "Şu anda gösterilecek reklam yok, birazdan tekrar dene.",
     "error": "Reklam açılamadı. Lütfen tekrar dene."
+  },
+  "daily": {
+    "title": "Bugünün fikri",
+    "streakDays": "{{count}} gün",
+    "streakStart": "Seriyi başlat",
+    "streakKeep": "Bugün bir açıklama oluştur, serin {{next}} gün olsun.",
+    "streakDone": "Bugünü tamamladın ✓",
+    "streakFirst": "Bugün ilk açıklamanı oluştur, serin başlasın.",
+    "hookLabel": "Örnek ilk satır",
+    "copyHook": "Örnek ilk satırı kopyala",
+    "enableCta": "Her gün fikir gönder",
+    "scheduleSummary": "Her gün {{hour}} · {{niche}}",
+    "edit": "Düzenle",
+    "setupTitle": "Günlük fikir",
+    "setupSub": "Seçtiğin saatte, içerik alanına özel bir paylaşım fikri gönderelim. Serin bozulmak üzereyse akşam bir kez hatırlatırız.",
+    "nicheLabel": "İçerik alanın",
+    "hourLabel": "Bildirim saati",
+    "save": "Kaydet",
+    "disable": "Günlük bildirimleri kapat",
+    "saved": "Günlük fikir bildirimleri açıldı ☀️",
+    "disabled": "Günlük bildirimler kapatıldı.",
+    "permissionDenied": "Bildirim izni kapalı. Telefon ayarlarından Capshion'a bildirim izni verebilirsin.",
+    "error": "Kaydedilemedi, lütfen tekrar dene.",
+    "niches": {
+      "genel": "Günlük yaşam",
+      "moda": "Moda & stil",
+      "yemek": "Yemek & kafe",
+      "seyahat": "Seyahat & şehir",
+      "fitness": "Spor & fitness",
+      "guzellik": "Güzellik & bakım",
+      "is": "İş & kariyer",
+      "sanat": "Sanat & fotoğraf",
+      "ev": "Ev & dekorasyon",
+      "evcil": "Evcil hayvan"
+    }
   }
 }
