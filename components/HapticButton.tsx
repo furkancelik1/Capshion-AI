@@ -2,6 +2,10 @@ import * as Haptics from 'expo-haptics';
 import { Pressable, StyleProp, ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
+// Stil ve içerik aynı kutuda olmalı: aksi halde `flexDirection: 'row'` gibi
+// düzen stilleri dış Pressable'da kalır, çocuklar alt alta dizilir.
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 interface HapticButtonProps {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -35,17 +39,15 @@ export default function HapticButton({ onPress, style, children, activeOpacity =
   };
 
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled}
       pointerEvents={pointerEvents}
-      style={style}
+      style={[style, animatedStyle]}
     >
-      <Animated.View style={animatedStyle}>
-        {children}
-      </Animated.View>
-    </Pressable>
+      {children}
+    </AnimatedPressable>
   );
 }

@@ -9,7 +9,16 @@ import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getCachedImageUris, api } from "../../services/api";
+import { getCachedImageUris, getToken, api } from "../../services/api";
+
+// /uploads/ yolu sunucuda yetki istiyor; yerel dosya (file://, ph://) için başlık gerekmez
+function imageSource(uri?: string | null) {
+  const token = getToken();
+  if (!uri) return { uri: "" };
+  return uri.includes("/uploads/") && token
+    ? { uri, headers: { Authorization: `Bearer ${token}` } }
+    : { uri };
+}
 import { useTranslation } from "react-i18next";
 import { useToast } from "../../context/ToastContext";
 import {
@@ -90,7 +99,7 @@ function PerImageCard({
             style={styles.cardBlur}
           >
             <View style={styles.cardInner}>
-              <ExpoImage source={{ uri: imageUri }} style={styles.perImagePreview} contentFit="cover" cachePolicy="memory-disk" />
+              <ExpoImage source={imageSource(imageUri)} style={styles.perImagePreview} contentFit="cover" cachePolicy="memory-disk" />
               <Text style={styles.perImageLabel}>{t("common.image")} {index + 1}</Text>
               <TypeWriterText text={caption.text ?? ''} delay={(index + 1) * 150 + 200} />
               {(caption.hashtags ?? []).length > 0 && (
@@ -317,7 +326,7 @@ export default function CaptionDetailScreen() {
             const first = rows[0];
             const imgUrl = first.image_url && first.image_url !== "base64" ? first.image_url : "";
             if (imgUrl) {
-              setImageUrls([imgUrl]);
+              setImageUrls((prev) => (prev.length > 0 && !prev[0].startsWith("http") ? prev : [imgUrl]));
             }
             setCaptions(parseCaptionRows(rows as any[]));
           } else if (isActive && retries < 2) {
@@ -503,7 +512,7 @@ export default function CaptionDetailScreen() {
 
               return targetImageUrl && targetImageUrl !== "base64" ? (
                 <ExpoImage
-                  source={{ uri: targetImageUrl }}
+                  source={imageSource(targetImageUrl)}
                   style={{
                     width: 120,
                     height: 120,

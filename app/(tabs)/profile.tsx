@@ -105,6 +105,7 @@ export default function ProfileScreen() {
   // RevenueCat States
   const [isPremium, setIsPremium] = useState(false);
   const [rcPackages, setRcPackages] = useState<any[]>([]);
+  const [rcLoaded, setRcLoaded] = useState(false);
 
   // Backend (is_premium) veya RevenueCat entitlement'ından biri premium diyorsa premium say.
   const isUserPremium = isPremium || !!profile?.is_premium;
@@ -134,6 +135,8 @@ export default function ProfileScreen() {
           "[Profile] RevenueCat verileri alınamadı:",
           err?.message ?? err,
         );
+      } finally {
+        if (mounted) setRcLoaded(true);
       }
     };
     initRevenueCat();
@@ -155,7 +158,8 @@ export default function ProfileScreen() {
     } catch {
       console.log("Profil yüklenirken hata");
     } finally {
-      if (!opts?.silent) setLoadingProfile(false);
+      // Sessiz yenilemede de ilk yükleme durumunu kapat (aksi halde kredi "..." kalır)
+      setLoadingProfile(false);
     }
   }, [user?.id, setPremiumStatus]);
 
@@ -382,6 +386,8 @@ export default function ProfileScreen() {
         )}
 
         {/* ── Kredi Paketleri (RevenueCat'ten Dinamik Gelecek) ── */}
+        {(!rcLoaded || rcPackages.length > 0) && (
+        <>
         <SectionHeader title={t("profile.topUp")} />
         <ScrollView
           horizontal
@@ -423,6 +429,8 @@ export default function ProfileScreen() {
             })
           )}
         </ScrollView>
+        </>
+        )}
 
         {/* ── Section: Uygulama ── */}
         <SectionHeader title={t("profile.language")} />
@@ -537,7 +545,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 100,
-    paddingBottom: 120,
+    paddingBottom: 170,
     paddingHorizontal: 16,
   },
 

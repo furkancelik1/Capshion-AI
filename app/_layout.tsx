@@ -194,6 +194,8 @@ function RootLayoutNav() {
                 options={{
                   headerShown: false,
                   presentation: "modal",
+                  // iOS'ta modalın arkası siyah; şeffaf bırakılırsa koyu yazılar görünmez
+                  contentStyle: { backgroundColor: "#F2F2F7" },
                 }}
               />
             </Stack>
