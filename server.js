@@ -1052,7 +1052,7 @@ async function sendPushNotification(userId, title, body, data = {}) {
       },
       body: JSON.stringify({
         to: pushToken,
-        sound: "capshion_sound",
+        sound: "capshion_sound.wav", // iOS uzantılı dosya adı ister; Android kanal sesini kullanır
         title: title,
         body: body,
         data: data,

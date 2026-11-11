@@ -16,12 +16,14 @@ export function usePushNotifications(): PushNotificationState {
   const responseListener = useRef<Notifications.EventSubscription>(null);
 
   useEffect(() => {
-    registerForPushNotificationsAsync().then((token) => {
-      setExpoPushToken(token);
-      if (token) {
-        schedulePeriodicReminder();
-      }
-    });
+    registerForPushNotificationsAsync()
+      .then((token) => {
+        setExpoPushToken(token);
+        if (token) {
+          schedulePeriodicReminder().catch((e) => console.warn('PUSH_DEBUG: hatırlatma kurulamadı:', e));
+        }
+      })
+      .catch((e) => console.error('PUSH_DEBUG: bildirim kaydı başarısız:', e));
 
     notificationListener.current = Notifications.addNotificationReceivedListener((n) => {
       setNotification(n);
@@ -41,7 +43,14 @@ export function usePushNotifications(): PushNotificationState {
 }
 
 async function registerForPushNotificationsAsync(): Promise<string | undefined> {
-  await Notifications.setAutoServerRegistrationEnabledAsync(false);
+  // Not: setAutoServerRegistrationEnabledAsync(false) iOS'ta null kabul etmeyen yerel
+  // fonksiyona null gönderip hata fırlatıyordu ve izin hiç istenmiyordu. Expo'nun kendi
+  // sunucu kaydı bizim için gereksiz; hata olursa da akışı durdurmasın.
+  try {
+    await Notifications.setAutoServerRegistrationEnabledAsync(false);
+  } catch {
+    // iOS'ta desteklenmeyen kullanım — yok say
+  }
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
@@ -102,7 +111,7 @@ export async function schedulePeriodicReminder() {
     content: {
       title: "Bugün Ne Paylaşacaksın? 📸",
       body: "Yeni fotoğrafların için en trend açıklama metinlerini oluşturma zamanı!",
-      sound: "capshion_sound",
+      sound: "capshion_sound.wav", // iOS uzantılı dosya adı ister; Android kanal sesini kullanır
       data: { type: "reminder" },
     },
     trigger: {
