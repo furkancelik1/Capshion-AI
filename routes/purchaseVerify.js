@@ -28,8 +28,13 @@ async function fetchSubscriber(appUserId, fetchImpl = fetch) {
 }
 
 function hasActiveEntitlement(subscriber, now = Date.now()) {
+  const active = (e) => !e.expires_date || new Date(e.expires_date).getTime() > now;
   const ents = subscriber?.entitlements || {};
-  return Object.values(ents).some((e) => !e.expires_date || new Date(e.expires_date).getTime() > now);
+  if (Object.values(ents).some(active)) return true;
+  // Ürün RevenueCat'te bir entitlement'a bağlı değilse de süresi dolmamış,
+  // iade edilmemiş aboneliği Premium say (webhook ile aynı davranış).
+  const subs = subscriber?.subscriptions || {};
+  return Object.values(subs).some((s) => !s.refunded_at && s.expires_date && active(s));
 }
 
 /**
