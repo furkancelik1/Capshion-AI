@@ -73,6 +73,18 @@ function cleanCaption(text) {
   return lines.join("\n");
 }
 
+// Model hashtag'leri hem caption_text'in sonuna hem "hashtags" alanına yazabiliyor;
+// metnin sonundaki hashtag dizisini ayırıp tek yerde (hashtags) tutar.
+const TRAILING_TAGS = /(?:\s*#[\p{L}\p{N}_]+)+\s*$/u;
+function splitTrailingHashtags(text, hashtags) {
+  const m = String(text || "").match(TRAILING_TAGS);
+  if (!m || m.index === 0) return { text, hashtags };
+  const found = m[0].match(/#[\p{L}\p{N}_]+/gu) || [];
+  const merged = [...hashtags];
+  for (const t of found) if (!merged.some((h) => h.toLowerCase() === t.toLowerCase())) merged.push(t);
+  return { text: text.slice(0, m.index).replace(/\s+$/, ""), hashtags: merged.slice(0, 10) };
+}
+
 function firstLine(text) {
   return String(text || "").split("\n").map((l) => l.trim()).find(Boolean) || "";
 }
@@ -95,14 +107,18 @@ function parseVariants(raw) {
     .filter((v) => v && (v.caption_text || v.text))
     .slice(0, VARIANT_COUNT)
     .map((v, i) => {
-      const text = cleanCaption(v.caption_text || v.text || "");
+      const split = splitTrailingHashtags(
+        cleanCaption(v.caption_text || v.text || ""),
+        Array.isArray(v.hashtags) ? v.hashtags.map(String) : [],
+      );
+      const text = split.text;
       let style = STYLE_IDS.includes(v.style) && !used.has(v.style) ? v.style : STYLE_IDS.find((s) => !used.has(s)) || STYLE_IDS[i % STYLE_IDS.length];
       used.add(style);
       return {
         style,
         hook: stripWrappingQuotes(v.hook) || firstLine(text),
         caption_text: text,
-        hashtags: Array.isArray(v.hashtags) ? v.hashtags.map(String).slice(0, 10) : [],
+        hashtags: split.hashtags.slice(0, 10),
       };
     });
 }
