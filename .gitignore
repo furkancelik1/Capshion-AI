@@ -56,3 +56,6 @@ OmniRoute-release-v3.8.50.zip
 # Caption karşılaştırma (scripts/caption-eval.js) — kişisel fotoğraflar ve çıktılar
 eval/photos/
 eval/out/
+
+# Mağaza ekran görüntüleri (yerel)
+store-assets/
