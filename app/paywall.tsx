@@ -38,10 +38,10 @@ const Luxe = {
 };
 
 const PRO_FEATURES = [
-  "Aylık 50 kredi otomatik yüklenir",
+  "Sınırsız başlık üretimi — kredi harcanmaz",
   "Tüm premium tonlar (Viral, Lüks, Hikaye Anlatıcı)",
   "Serbest metin (custom prompt) ile üretim",
-  "Karusel modu ve öncelikli işlem hızı",
+  "Karusel modu (çoklu görsel)",
 ];
 
 function creditsInPackage(pkg: PurchasesPackage): number {
