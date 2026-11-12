@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Linking,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -36,6 +38,9 @@ const Luxe = {
   textMuted: GlassTheme.textMuted,
   textFaint: "#C7C7CC",
 };
+
+const PRIVACY_URL = "https://furkancelik1.github.io/capshion-policy/";
+const TERMS_URL = "https://furkancelik1.github.io/capshion-policy/terms.html";
 
 const PRO_FEATURES = [
   "Sınırsız başlık üretimi — kredi harcanmaz",
@@ -414,9 +419,23 @@ export default function PaywallScreen() {
           </HapticButton>
 
           <Text style={styles.disclaimer}>
-            Abonelik, iptal edilene kadar otomatik yenilenir. Kredi paketleri tek
-            seferliktir ve süresi dolmaz.
+            Capshion Pro aylık otomatik yenilenen bir aboneliktir. Ücret, satın alma
+            onayında {Platform.OS === "ios" ? "Apple ID" : "Google Play"} hesabından tahsil edilir.
+            Abonelik, dönem bitmeden en az 24 saat önce iptal edilmezse aynı fiyatla
+            otomatik yenilenir. Aboneliğini {Platform.OS === "ios" ? "App Store" : "Google Play"} hesap
+            ayarlarından yönetebilir ve iptal edebilirsin. Kredi paketleri tek seferliktir
+            ve süresi dolmaz.
           </Text>
+
+          <View style={styles.legalRow}>
+            <TouchableOpacity onPress={() => Linking.openURL(TERMS_URL)} hitSlop={8}>
+              <Text style={styles.legalLink}>Kullanım Koşulları</Text>
+            </TouchableOpacity>
+            <Text style={styles.legalDot}>·</Text>
+            <TouchableOpacity onPress={() => Linking.openURL(PRIVACY_URL)} hitSlop={8}>
+              <Text style={styles.legalLink}>Gizlilik Politikası</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -661,5 +680,22 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 16,
     lineHeight: 17,
+  },
+  legalRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 12,
+    marginBottom: 8,
+    gap: 8,
+  },
+  legalLink: {
+    fontSize: 12,
+    color: Luxe.textMuted,
+    textDecorationLine: "underline",
+  },
+  legalDot: {
+    fontSize: 12,
+    color: Luxe.textFaint,
   },
 });
