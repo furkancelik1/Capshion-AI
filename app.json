@@ -14,7 +14,7 @@
       "backgroundColor": "#F2F2F7",
       "bundleIdentifier": "com.furkan.capshion",
       "googleServicesFile": "./GoogleService-Info.plist",
-      "buildNumber": "6",
+      "buildNumber": "7",
       "infoPlist": {
         "NSCameraUsageDescription": "Capshion requires camera access to analyze your photos and generate premium, tailored social media captions.",
         "NSPhotoLibraryUsageDescription": "Capshion requires photo library access to let you select images for professional caption generation.",
@@ -26,7 +26,7 @@
       "googleServicesFile": "./google-services.json",
       "backgroundColor": "#F2F2F7",
       "package": "com.furkan.capshion",
-      "versionCode": 43,
+      "versionCode": 44,
       "adaptiveIcon": {
         "backgroundColor": "#F2F2F7",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
