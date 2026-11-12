@@ -88,6 +88,12 @@
       "expo-image",
       "./plugins/withCleartextTraffic.js",
       "./plugins/withRNFirebaseDisableSPM.js",
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "Bu izin yalnızca sana daha alakalı reklamlar göstermek için kullanılır. İzin vermesen de uygulamanın tüm özellikleri çalışır."
+        }
+      ],
       "@react-native-firebase/app",
       "@react-native-firebase/analytics",
       [
