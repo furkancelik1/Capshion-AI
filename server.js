@@ -1094,7 +1094,7 @@ async function start() {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS purchase_events (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER,
+        user_id TEXT,
         event_type TEXT NOT NULL,
         product_id TEXT,
         raw_payload JSONB,

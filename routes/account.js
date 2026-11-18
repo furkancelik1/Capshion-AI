@@ -95,7 +95,7 @@ function registerAccountRoutes(app, { pool, authenticateToken, uploadsDir = path
       try {
         await client.query("BEGIN");
         await tolerateMissing(client.query("DELETE FROM generated_captions WHERE user_id = $1", [userId]));
-        await tolerateMissing(client.query("UPDATE purchase_events SET user_id = NULL WHERE user_id = $1", [userId])); // mali denetim kaydı anonim kalır
+        await tolerateMissing(client.query("UPDATE purchase_events SET user_id = NULL WHERE user_id::text = $1::text", [userId])); // mali denetim kaydı anonim kalır
         await client.query("DELETE FROM profiles WHERE id = $1", [userId]);
         await client.query("COMMIT");
       } catch (txErr) {
