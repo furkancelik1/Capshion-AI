@@ -1,5 +1,6 @@
 import Constants, { ExecutionEnvironment } from "expo-constants";
 import { Platform } from "react-native";
+import { ensureTrackingPermission } from "./trackingPermission";
 import type * as GMA from "react-native-google-mobile-ads";
 
 /**
@@ -68,16 +69,8 @@ function prepare(gma: GmaModule): Promise<boolean> {
         readyPromise = null;
         return false;
       }
-      // iOS: App Tracking Transparency izni (reddedilirse reklamlar IDFA olmadan gösterilir)
-      if (Platform.OS === "ios") {
-        try {
-          const att = require("expo-tracking-transparency");
-          const current = await att.getTrackingPermissionsAsync();
-          if (current.status === "undetermined") await att.requestTrackingPermissionsAsync();
-        } catch (err) {
-          console.log("[Ads] ATT izni istenemedi:", err);
-        }
-      }
+      // iOS: App Tracking Transparency izni (açılışta sorulmadıysa burada)
+      await ensureTrackingPermission();
       await gma.default().initialize();
       return true;
     } catch (err) {

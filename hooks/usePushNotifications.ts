@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { ensureTrackingPermission } from '../utils/trackingPermission';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
@@ -52,6 +53,8 @@ async function registerForPushNotificationsAsync(): Promise<string | undefined> 
     // iOS'ta desteklenmeyen kullanım — yok say
   }
 
+  // Önce iOS izleme (ATT) izni — iki sistem penceresi aynı anda açılmasın
+  await ensureTrackingPermission();
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 

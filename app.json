@@ -16,8 +16,8 @@
       "googleServicesFile": "./GoogleService-Info.plist",
       "buildNumber": "7",
       "infoPlist": {
-        "NSCameraUsageDescription": "Capshion requires camera access to analyze your photos and generate premium, tailored social media captions.",
-        "NSPhotoLibraryUsageDescription": "Capshion requires photo library access to let you select images for professional caption generation.",
+        "NSCameraUsageDescription": "Kamera, açıklama üretmek istediğin fotoğrafı çekebilmen için kullanılır.",
+        "NSPhotoLibraryUsageDescription": "Fotoğraf arşivin, açıklama üretmek istediğin fotoğrafları seçebilmen için kullanılır.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "usesAppleSignIn": true
