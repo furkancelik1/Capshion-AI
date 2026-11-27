@@ -269,7 +269,7 @@ export default function HomeScreen() {
 
     logAppEvent("ai_generation_started", { tone: String(selectedTone), mode: captionMode });
     setIsGenerating(true);
-    showToast?.("Üretim başladı. Arka plana alabilirsiniz, hazır olduğunda bildirim göndereceğiz. ✨", "info");
+    showToast?.(t("home.generationStarted"), "info");
 
     try {
       const genFn = captionMode === "per_image" ? generatePerImage : generate;
@@ -307,6 +307,8 @@ export default function HomeScreen() {
         msg.toLowerCase().includes("network") ||
         msg.toLowerCase().includes("bağlanılamadı") ||
         msg.toLowerCase().includes("zaman aşımı") ||
+        msg.toLowerCase().includes("connect") ||
+        msg.toLowerCase().includes("timed out") ||
         (err as any)?.name === "AbortError" ||
         (err as any)?.status === 0 ||
         (err as any)?.status === 408;
@@ -317,7 +319,8 @@ export default function HomeScreen() {
       // bu durumu oturum hatalarından (aynı zamanda 403 dönebilen) ayırt ediyoruz.
       const status = (err as any)?.status;
       const isInsufficientCredit =
-        (status === 402 || status === 403) && msg.toLowerCase().includes("kredi");
+        (status === 402 || status === 403) &&
+        (msg.toLowerCase().includes("kredi") || msg.toLowerCase().includes("credit"));
 
       if (isInsufficientCredit) {
         console.log("[Generate] Backend yetersiz kredi bildirdi, paywall'a yönlendiriliyor.");
@@ -328,7 +331,7 @@ export default function HomeScreen() {
         setShowCreditModal(true);
       } else if (isNetworkError && isBackgrounded) {
         console.log("Fetch işlemi arka plana geçiş sebebiyle iptal edildi, sunucu işlemi devraldı.");
-        showToast?.("İşlem arka planda devam ediyor, hazır olunca bildirim alacaksın. ⏳", "info");
+        showToast?.(t("home.backgroundContinues"), "info");
         pendingBackgroundGenerationRef.current = true;
       } else if (isNetworkError) {
         Alert.alert(t("outOfCredits.connectionError"), t("outOfCredits.connectionErrorDesc"));

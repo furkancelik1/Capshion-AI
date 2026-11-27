@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import i18next from 'i18next';
 
 export interface PushNotificationState {
   expoPushToken?: string;
@@ -80,7 +81,7 @@ async function registerForPushNotificationsAsync(): Promise<string | undefined> 
 
     if (Platform.OS === 'android') {
       const createdChannel = await Notifications.setNotificationChannelAsync('capshion_sound_v5', {
-        name: 'Capshion Özel Bildirimler',
+        name: i18next.t('notifications.channelName'),
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         sound: 'capshion_sound',
@@ -112,8 +113,8 @@ export async function schedulePeriodicReminder() {
 
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: "Bugün Ne Paylaşacaksın? 📸",
-      body: "Yeni fotoğrafların için en trend açıklama metinlerini oluşturma zamanı!",
+      title: i18next.t("notifications.reminderTitle"),
+      body: i18next.t("notifications.reminderBody"),
       sound: "capshion_sound.wav", // iOS uzantılı dosya adı ister; Android kanal sesini kullanır
       data: { type: "reminder" },
     },

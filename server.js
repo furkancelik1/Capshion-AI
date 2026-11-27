@@ -52,6 +52,48 @@ if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
 
 const app = express();
 app.set('trust proxy', 1);
+// Uygulama dili Accept-Language ile gelir; Türkçe dışındaki dillerde hata mesajları İngilizceye çevrilir
+const EN_ERRORS = {
+  "Çok fazla istek. Lütfen daha sonra tekrar deneyin.": "Too many requests. Please try again later.",
+  "E-posta ve şifre zorunludur.": "Email and password are required.",
+  "Şifre en az 6 karakter olmalıdır.": "Password must be at least 6 characters.",
+  "Bu e-posta adresi zaten kayıtlı.": "This email is already registered.",
+  "Sunucu hatası. Lütfen daha sonra tekrar deneyin.": "Server error. Please try again later.",
+  "E-posta veya şifre hatalı.": "Incorrect email or password.",
+  "Sağlayıcı veya kimlik bilgisi eksik.": "Missing provider or credentials.",
+  "Giriş doğrulanamadı. Lütfen tekrar deneyin.": "Couldn't verify sign-in. Please try again.",
+  "Profil bulunamadı.": "Profile not found.",
+  "Sunucu hatası.": "Server error.",
+  "Satın alma senkronize edilemedi.": "Couldn't sync your purchase.",
+  "En az bir görsel gereklidir.": "At least one image is required.",
+  "En az bir görsel (base64) gereklidir.": "At least one image is required.",
+  "Kullanıcı bulunamadı.": "User not found.",
+  "Yetersiz kredi. Lütfen kredi yükleyin.": "Not enough credits. Please top up your credits.",
+  "Altyazı oluşturulamadı.": "Couldn't generate captions.",
+  "Hesap bulunamadı.": "Account not found.",
+  "Apple ile yeniden doğrulama gerekiyor.": "Please sign in with Apple again to continue.",
+  "Hesap silinemedi. Lütfen tekrar dene.": "Couldn't delete your account. Please try again.",
+  "Geçersiz görsel verisi.": "Invalid image data.",
+  "Şu anda açıklama oluşturulamadı. Lütfen tekrar dene.": "Couldn't generate captions right now. Please try again.",
+  "Geçersiz oturum.": "Invalid session.",
+  "Oturum bulunamadı.": "Session not found.",
+  "Geçersiz geri bildirim.": "Invalid feedback.",
+  "Geçersiz tercih.": "Invalid preference.",
+};
+app.use((req, res, next) => {
+  const al = (req.get("accept-language") || "").toLowerCase();
+  req.lang = al && !al.startsWith("tr") ? "en" : "tr";
+  if (req.lang === "en") {
+    const json = res.json.bind(res);
+    res.json = (body) => {
+      if (body && typeof body.error === "string" && EN_ERRORS[body.error]) {
+        body = { ...body, error: EN_ERRORS[body.error] };
+      }
+      return json(body);
+    };
+  }
+  next();
+});
 app.use(helmet());
 app.use(compression());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
@@ -755,8 +797,8 @@ En az 2, en fazla 4 caption üret.`, { isPerImage: false, imageCount: files.leng
 
       sendPushNotification(
         req.userId,
-        "Başlıkların Hazır! ✨",
-        "Yapay zeka harika içerikler üretti. İncelemek için dokun!",
+        langName === "Türkçe" ? "Başlıkların Hazır! ✨" : "Your captions are ready! ✨",
+        langName === "Türkçe" ? "Yapay zeka harika içerikler üretti. İncelemek için dokun!" : "Tap to see what we wrote for you.",
         { screen: "history", post_id: postId }
       ).catch(err => console.error("[Push] Async error:", err.message));
 
@@ -983,8 +1025,8 @@ En az 2, en fazla 4 caption üret.`, { isPerImage: false, imageCount: images.len
 
       sendPushNotification(
         req.userId,
-        "Başlıkların Hazır! ✨",
-        "Yapay zeka harika içerikler üretti. İncelemek için dokun!",
+        langName === "Türkçe" ? "Başlıkların Hazır! ✨" : "Your captions are ready! ✨",
+        langName === "Türkçe" ? "Yapay zeka harika içerikler üretti. İncelemek için dokun!" : "Tap to see what we wrote for you.",
         { screen: "history", post_id: postId }
       ).catch(err => console.error("[Push] Async error:", err.message));
 

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
+import i18next from 'i18next';
 import Purchases from 'react-native-purchases';
 import { api, setToken } from '../services/api';
 import { hasPremiumEntitlement } from '../utils/revenueCat';
@@ -147,14 +148,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log('[Login] ADIM 3: 200 döndü ama user/token eşleşmedi (format sorunu):', JSON.stringify(result));
-      return { error: 'Token veya kullanıcı bilgisi alınamadı.' };
+      return { error: i18next.t('auth.tokenMissing') };
     } catch (err: unknown) {
       // Asıl hatayı maskeleme — kullanıcıya gösterilen mesajdan önce konsola yaz.
       console.log(
         '[Login] ADIM 4: CATCH bloğu tetiklendi — backend non-2xx döndürdü veya network/parse hatası oluştu:',
         err instanceof Error ? { name: err.name, message: err.message, status: (err as any).status } : err,
       );
-      const msg = err instanceof Error ? err.message : 'Giriş işlemi başarısız.';
+      const msg = err instanceof Error ? err.message : i18next.t('auth.loginError');
       return { error: msg };
     } finally {
       setLoading(false);
@@ -204,10 +205,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.error('[Register] Beklenmeyen response formatı:', JSON.stringify(result));
-      return { error: 'Kayıt sonrası kullanıcı oluşturulamadı.' };
+      return { error: i18next.t('auth.registerUserFailed') };
     } catch (err: unknown) {
       console.error('[Register] Kayıt hatası:', err);
-      const msg = err instanceof Error ? err.message : 'Kayıt işlemi başarısız.';
+      const msg = err instanceof Error ? err.message : i18next.t('auth.registerError');
       return { error: msg };
     } finally {
       setLoading(false);
@@ -260,10 +261,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: null };
       }
 
-      return { error: 'Token veya kullanıcı bilgisi alınamadı.' };
+      return { error: i18next.t('auth.tokenMissing') };
     } catch (err: unknown) {
       console.error('[SocialAuth] Giriş hatası:', err);
-      const msg = err instanceof Error ? err.message : 'Sosyal giriş işlemi başarısız.';
+      const msg = err instanceof Error ? err.message : i18next.t('auth.socialError');
       return { error: msg };
     } finally {
       setLoading(false);

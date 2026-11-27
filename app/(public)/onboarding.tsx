@@ -13,25 +13,24 @@ import { GlassTheme } from "@/constants/LiquidGlass";
 import AmbientGlow from "@/components/AmbientGlow";
 import GlassPanel from "@/components/GlassPanel";
 import HapticButton from "@/components/HapticButton";
+import { useTranslation } from "react-i18next";
 
 const { height, width } = Dimensions.get("window");
 
 const PAGES = [
   {
-    title: "CAPSHION'A HOŞ GELDİN",
-    subtitle: "Sosyal medyanı yapay zeka ile yönet",
+    title: "onboarding.p1Title",
+    subtitle: "onboarding.p1Sub",
     icon: "sparkles" as const,
   },
   {
-    title: "KUSURSUZ İÇERİKLER",
-    subtitle:
-      "Yapay zeka desteğiyle fotoğraflarına en uygun başlıkları, etiketleri ve açıklamaları saniyeler içinde oluştur.",
+    title: "onboarding.p2Title",
+    subtitle: "onboarding.p2Sub",
     icon: "bulb" as const,
   },
   {
-    title: "TONUNU SEÇ, ÖNE ÇIK",
-    subtitle:
-      "Havalı, eğlenceli, minimalist veya profesyonel — markana ve tarzına en uygun tonu seç, fark yarat.",
+    title: "onboarding.p3Title",
+    subtitle: "onboarding.p3Sub",
     icon: "color-palette" as const,
   },
 ];
@@ -106,6 +105,7 @@ function Section({
 }
 
 export default function OnboardingScreen() {
+  const { t } = useTranslation();
   const scrollY = useSharedValue(0);
 
   const scrollHandler = useAnimatedScrollHandler({
@@ -132,8 +132,8 @@ export default function OnboardingScreen() {
             key={i}
             index={i}
             scrollY={scrollY}
-            title={page.title}
-            subtitle={page.subtitle}
+            title={t(page.title)}
+            subtitle={t(page.subtitle)}
             icon={page.icon}
           />
         ))}
@@ -141,16 +141,16 @@ export default function OnboardingScreen() {
           <Animated.View style={styles.centerContent}>
             <GlassPanel style={styles.lastCard}>
               <Ionicons name="rocket" size={44} color={GlassTheme.neonPlatinum} />
-              <Text style={styles.lastTitle}>HAZIRSIN!</Text>
+              <Text style={styles.lastTitle}>{t("onboarding.readyTitle")}</Text>
               <Text style={styles.lastSubtitle}>
-                Yapay zeka destekli captions dünyasına adım atmaya ne dersin?
+                {t("onboarding.readySub")}
               </Text>
               <HapticButton
                 style={styles.startButton}
                 onPress={() => router.push("/(auth)/login")}
                 activeOpacity={0.85}
               >
-                <Text style={styles.startButtonText}>GİRİŞ YAP / BAŞLA</Text>
+                <Text style={styles.startButtonText}>{t("onboarding.start")}</Text>
               </HapticButton>
             </GlassPanel>
           </Animated.View>

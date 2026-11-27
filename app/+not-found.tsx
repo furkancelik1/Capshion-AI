@@ -2,16 +2,18 @@ import { BlurView } from 'expo-blur';
 import { Link, Stack } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { GlassTheme } from '@/constants/LiquidGlass';
+import { useTranslation } from 'react-i18next';
 
 export default function NotFoundScreen() {
+  const { t } = useTranslation();
   return (
     <>
       <Stack.Screen options={{ title: 'Oops!' }} />
       <View style={styles.container}>
         <BlurView intensity={GlassTheme.blurIntensity} tint="systemThinMaterialLight" style={styles.card}>
-          <Text style={styles.title}>Bu sayfa bulunamadı.</Text>
+          <Text style={styles.title}>{t('notFound.title')}</Text>
           <Link href="/(tabs)" style={styles.link}>
-            <Text style={styles.linkText}>Ana sayfaya dön</Text>
+            <Text style={styles.linkText}>{t('notFound.back')}</Text>
           </Link>
         </BlurView>
       </View>

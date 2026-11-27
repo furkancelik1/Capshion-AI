@@ -2,13 +2,14 @@ import { BlurView } from 'expo-blur';
 import { StyleSheet, Text, View } from 'react-native';
 import LottieView from 'lottie-react-native';
 import { GlassTheme } from '@/constants/LiquidGlass';
+import i18next from 'i18next';
 
 interface LiquidLoadingProps {
   message?: string;
 }
 
 export default function LiquidLoading({
-  message = 'Açıklamalar oluşturuluyor...',
+  message = i18next.t('generating.loading'),
 }: LiquidLoadingProps) {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">

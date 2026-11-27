@@ -69,7 +69,9 @@
     "alertPaymentSuccess": "Ödeme Başarılı! 🎉",
     "alertPaymentSuccessDesc": "Kredin hesabına eklendi.",
     "alertPaymentFailureTitle": "Ödeme Başarısız",
-    "alertPaymentRetry": "Lütfen tekrar deneyin."
+    "alertPaymentRetry": "Lütfen tekrar deneyin.",
+    "generationStarted": "Üretim başladı. Arka plana alabilirsiniz, hazır olduğunda bildirim göndereceğiz. ✨",
+    "backgroundContinues": "İşlem arka planda devam ediyor, hazır olunca bildirim alacaksın. ⏳"
   },
   "profile": {
     "balance": "Mevcut Bakiye",
@@ -86,7 +88,13 @@
     "deleteAccountConfirm": "Hesabın, kredilerin ve oluşturduğun tüm açıklamalar kalıcı olarak silinecek. Bu işlem geri alınamaz.\n\nAktif bir aboneliğin varsa ücretlendirmenin durması için aboneliği App Store veya Google Play'den ayrıca iptal etmelisin.",
     "deleteAccountDone": "Hesabın silindi.",
     "deleteAccountFailed": "Hesap silinemedi. Lütfen tekrar dene.",
-    "ageNotSet": "Belirtilmedi"
+    "ageNotSet": "Belirtilmedi",
+    "upgrade": "Premium'a Yükselt",
+    "ageUpdateFailed": "Yaş aralığı güncellenemedi.",
+    "selectAgeRange": "Yaş Aralığını Seç",
+    "purchaseDoneTitle": "Başarılı!",
+    "purchaseDoneBody": "Satın alma işlemi tamamlandı, bakiyeniz güncellendi.",
+    "purchaseErrorTitle": "Satın Alma Hatası"
   },
   "outOfCredits": {
     "title": "Kredi Bakiyeniz Tükendi ⚡",
@@ -111,7 +119,8 @@
   },
   "generating": {
     "title": "Sizin için en uygun metin hazırlanıyor",
-    "subtitle": "Fotoğrafların analiz ediliyor, en uygun metin oluşturuluyor..."
+    "subtitle": "Fotoğrafların analiz ediliyor, en uygun metin oluşturuluyor...",
+    "loading": "Açıklamalar oluşturuluyor..."
   },
   "howItWorks": {
     "title": "Nasıl Çalışır?",
@@ -149,13 +158,34 @@
     "errorSession": "Oturum bulunamadı. Lütfen tekrar giriş yapın."
   },
   "tones": {
-    "cool": { "name": "Havalı", "prompt": "Trendy / Cool" },
-    "humorous": { "name": "Eğlenceli", "prompt": "Witty / Humorous" },
-    "minimal": { "name": "Minimalist", "prompt": "Minimal / Aesthetic" },
-    "professional": { "name": "Profesyonel", "prompt": "Professional / Corporate" },
-    "storyteller": { "name": "Hikaye Anlatıcı", "prompt": "Storyteller" },
-    "viral": { "name": "Viral Kanca", "prompt": "Viral / Yüksek Etkileşim" },
-    "luxury": { "name": "Ultra Lüks", "prompt": "Lüks / Premium" }
+    "cool": {
+      "name": "Havalı",
+      "prompt": "Trendy / Cool"
+    },
+    "humorous": {
+      "name": "Eğlenceli",
+      "prompt": "Witty / Humorous"
+    },
+    "minimal": {
+      "name": "Minimalist",
+      "prompt": "Minimal / Aesthetic"
+    },
+    "professional": {
+      "name": "Profesyonel",
+      "prompt": "Professional / Corporate"
+    },
+    "storyteller": {
+      "name": "Hikaye Anlatıcı",
+      "prompt": "Storyteller"
+    },
+    "viral": {
+      "name": "Viral Kanca",
+      "prompt": "Viral / Yüksek Etkileşim"
+    },
+    "luxury": {
+      "name": "Ultra Lüks",
+      "prompt": "Lüks / Premium"
+    }
   },
   "settings": {
     "title": "İnce Ayarlar",
@@ -184,7 +214,36 @@
   "auth": {
     "welcomeBack": "Tekrar hoş geldin",
     "createAccount": "Hesap Oluştur",
-    "subtitle": "Yaratıcı platformumuza katıl"
+    "subtitle": "Yaratıcı platformumuza katıl",
+    "loginSubtitle": "Devam etmek için giriş yap",
+    "loginSuccess": "Giriş başarılı!",
+    "appleTokenMissing": "Apple kimlik bilgisi alınamadı.",
+    "appleFailed": "Apple ile giriş yapılamadı.",
+    "googleTokenMissing": "Google kimlik bilgisi alınamadı.",
+    "googlePlayUnavailable": "Google Play Hizmetleri kullanılamıyor veya güncel değil.",
+    "googleFailed": "Google ile giriş yapılamadı.",
+    "warning": "Uyarı",
+    "fieldsRequired": "E-posta ve şifre alanları zorunludur.",
+    "loginFailed": "Giriş Başarısız",
+    "registerFailed": "Kayıt Başarısız",
+    "unknownError": "Bilinmeyen bir hata oluştu.",
+    "passwordMin": "Şifre en az 6 karakter olmalıdır.",
+    "passwordMismatch": "Şifreler eşleşmiyor.",
+    "email": "E-posta",
+    "password": "Şifre",
+    "passwordRepeat": "Şifre Tekrar",
+    "signIn": "Giriş Yap",
+    "signUp": "Kaydol",
+    "orContinueWith": "Veya şununla devam et",
+    "withApple": "Apple ile Giriş Yap",
+    "withGoogle": "Google ile Giriş Yap",
+    "noAccount": "Hesabın yok mu?",
+    "haveAccount": "Zaten hesabın var mı?",
+    "tokenMissing": "Token veya kullanıcı bilgisi alınamadı.",
+    "loginError": "Giriş işlemi başarısız.",
+    "registerUserFailed": "Kayıt sonrası kullanıcı oluşturulamadı.",
+    "registerError": "Kayıt işlemi başarısız.",
+    "socialError": "Sosyal giriş işlemi başarısız."
   },
   "hookLab": {
     "title": "Hook Lab",
@@ -268,5 +327,63 @@
       "ev": "Ev & dekorasyon",
       "evcil": "Evcil hayvan"
     }
+  },
+  "paywall": {
+    "heroTitle": "Daha fazla üretim,\ndaha az beklemek",
+    "bestValue": "EN AVANTAJLI",
+    "unavailable": "Şu anda uygun değil",
+    "perMonth": "/ ay",
+    "ctaGoPro": "Pro'ya Geç",
+    "ctaUnavailable": "Şu Anda Kullanılamıyor",
+    "feature1": "Sınırsız başlık üretimi — kredi harcanmaz",
+    "feature2": "Tüm premium tonlar (Viral, Lüks, Hikaye Anlatıcı)",
+    "feature3": "Serbest metin (custom prompt) ile üretim",
+    "feature4": "Karusel modu (çoklu görsel)",
+    "creditsSection": "Kredi Takviyesi",
+    "creditsSectionSub": "Abonelik olmadan tek seferlik kredi satın al.",
+    "noCreditPacks": "Şu anda kredi paketi bulunamadı.",
+    "popular": "POPÜLER",
+    "creditUnit": "kredi",
+    "restore": "Satın Almayı Geri Yükle",
+    "disclaimer": "Capshion Pro aylık otomatik yenilenen bir aboneliktir. Ücret, satın alma onayında {{account}} hesabından tahsil edilir. Abonelik, dönem bitmeden en az 24 saat önce iptal edilmezse aynı fiyatla otomatik yenilenir. Aboneliğini {{store}} hesap ayarlarından yönetebilir ve iptal edebilirsin. Kredi paketleri tek seferliktir ve süresi dolmaz.",
+    "terms": "Kullanım Koşulları",
+    "privacy": "Gizlilik Politikası",
+    "subSuccessTitle": "Tebrikler!",
+    "subSuccessBody": "Premium üyeliğiniz başarıyla aktif edildi.",
+    "creditsSuccessTitle": "Başarılı!",
+    "creditsSuccessBody": "Krediler hesabına tanımlandı.",
+    "purchaseFailedTitle": "Satın Alma Başarısız",
+    "purchaseFailedBody": "Satın alma işlemi tamamlanamadı, lütfen tekrar deneyin.",
+    "restoreDoneTitle": "Geri Yükleme Tamamlandı",
+    "restoreNothing": "Geri yüklenebilir bir satın alma bulunamadı.",
+    "restoreFailedTitle": "Geri Yükleme Başarısız",
+    "restoreFailedBody": "Satın almalarınız geri yüklenemedi."
+  },
+  "onboarding": {
+    "p1Title": "CAPSHION'A HOŞ GELDİN",
+    "p1Sub": "Sosyal medyanı yapay zeka ile yönet",
+    "p2Title": "KUSURSUZ İÇERİKLER",
+    "p2Sub": "Yapay zeka desteğiyle fotoğraflarına en uygun başlıkları, etiketleri ve açıklamaları saniyeler içinde oluştur.",
+    "p3Title": "TONUNU SEÇ, ÖNE ÇIK",
+    "p3Sub": "Havalı, eğlenceli, minimalist veya profesyonel — markana ve tarzına en uygun tonu seç, fark yarat.",
+    "readyTitle": "HAZIRSIN!",
+    "readySub": "Yapay zeka destekli captions dünyasına adım atmaya ne dersin?",
+    "start": "GİRİŞ YAP / BAŞLA"
+  },
+  "errors": {
+    "imageUpload": "Görsel yüklenemedi, lütfen tekrar seçin.",
+    "serverUnreachable": "Sunucuya bağlanılamadı.",
+    "unexpected": "Beklenmeyen yanıt",
+    "generic": "Bir hata oluştu",
+    "timeout": "İstek zaman aşımına uğradı."
+  },
+  "notFound": {
+    "title": "Bu sayfa bulunamadı.",
+    "back": "Ana sayfaya dön"
+  },
+  "notifications": {
+    "channelName": "Capshion Bildirimleri",
+    "reminderTitle": "Bugün Ne Paylaşacaksın? 📸",
+    "reminderBody": "Yeni fotoğrafların için en trend açıklama metinlerini oluşturma zamanı!"
   }
 }

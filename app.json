@@ -4,7 +4,7 @@
     "slug": "capshion",
     "owner": "furkan1010",
     "sdkVersion": "57.0.0",
-    "version": "1.0.9",
+    "version": "1.0.10",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "capshion",
@@ -26,7 +26,7 @@
       "googleServicesFile": "./google-services.json",
       "backgroundColor": "#F2F2F7",
       "package": "com.furkan.capshion",
-      "versionCode": 44,
+      "versionCode": 45,
       "adaptiveIcon": {
         "backgroundColor": "#F2F2F7",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
