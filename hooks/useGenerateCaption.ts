@@ -30,7 +30,7 @@ export async function safeReadBase64(uri: string, toast: ReturnType<typeof useTo
       await FileSystem.deleteAsync(dest);
       return `data:${mimeFromUri(compressedUri)};base64,${base64}`;
     } catch {
-      toast?.("Görsel yüklenemedi, lütfen tekrar seçin.", "error");
+      toast?.(i18next.t("errors.imageUpload"), "error");
       return null;
     }
   }
@@ -55,7 +55,7 @@ export function useGenerateCaption() {
       const base64Images = results.filter((r): r is string => r !== null);
 
       if (base64Images.length === 0) {
-        throw new Error("Görsel yüklenemedi, lütfen tekrar seçin.");
+        throw new Error(i18next.t("errors.imageUpload"));
       }
 
       const result = await api.generateCaptionJson({
@@ -81,7 +81,7 @@ export function useGenerateCaption() {
       return result;
 
     } catch (err: any) {
-      const msg = err?.message || 'Sunucuya bağlanılamadı.';
+      const msg = err?.message || i18next.t('errors.serverUnreachable');
       console.log('[Generate] Istek durduruldu:', msg);
       setError(msg);
       posthog?.capture('caption_olusturma_hatasi', { hata_mesaji: msg });
@@ -104,7 +104,7 @@ export function useGenerateCaption() {
       const base64Images = results.filter((r): r is string => r !== null);
 
       if (base64Images.length === 0) {
-        throw new Error("Görsel yüklenemedi, lütfen tekrar seçin.");
+        throw new Error(i18next.t("errors.imageUpload"));
       }
 
       const result = await api.generatePerImage({
@@ -130,7 +130,7 @@ export function useGenerateCaption() {
       return result;
 
     } catch (err: any) {
-      const msg = err?.message || 'Sunucuya bağlanılamadı.';
+      const msg = err?.message || i18next.t('errors.serverUnreachable');
       console.log('[Generate-PerImage] Istek durduruldu:', msg);
       setError(msg);
       posthog?.capture('caption_olusturma_hatasi', { hata_mesaji: msg });

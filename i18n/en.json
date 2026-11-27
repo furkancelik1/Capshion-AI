@@ -69,7 +69,9 @@
     "alertPaymentSuccess": "Payment Successful! 🎉",
     "alertPaymentSuccessDesc": "Credits have been added to your account.",
     "alertPaymentFailureTitle": "Payment Failed",
-    "alertPaymentRetry": "Please try again."
+    "alertPaymentRetry": "Please try again.",
+    "generationStarted": "Generating. You can leave the app — we'll notify you when it's ready. ✨",
+    "backgroundContinues": "Still working in the background — you'll get a notification when it's ready. ⏳"
   },
   "profile": {
     "balance": "Your Balance",
@@ -86,7 +88,13 @@
     "deleteAccountConfirm": "Your account, credits and all generated captions will be permanently deleted. This can't be undone.\n\nIf you have an active subscription, cancel it in the App Store or Google Play to stop being charged.",
     "deleteAccountDone": "Your account has been deleted.",
     "deleteAccountFailed": "Couldn't delete your account. Please try again.",
-    "ageNotSet": "Not specified"
+    "ageNotSet": "Not specified",
+    "upgrade": "Upgrade to Premium",
+    "ageUpdateFailed": "Couldn't update your age range.",
+    "selectAgeRange": "Select Age Range",
+    "purchaseDoneTitle": "Success!",
+    "purchaseDoneBody": "Purchase complete, your balance has been updated.",
+    "purchaseErrorTitle": "Purchase Error"
   },
   "outOfCredits": {
     "title": "Out of Credits ⚡",
@@ -111,7 +119,8 @@
   },
   "generating": {
     "title": "Crafting the perfect text for you",
-    "subtitle": "Analyzing your photos, generating the ideal text..."
+    "subtitle": "Analyzing your photos, generating the ideal text...",
+    "loading": "Creating captions..."
   },
   "howItWorks": {
     "title": "How It Works?",
@@ -149,13 +158,34 @@
     "errorSession": "Session not found. Please sign in again."
   },
   "tones": {
-    "cool": { "name": "Cool", "prompt": "Trendy / Cool" },
-    "humorous": { "name": "Humorous", "prompt": "Witty / Humorous" },
-    "minimal": { "name": "Minimalist", "prompt": "Minimal / Aesthetic" },
-    "professional": { "name": "Professional", "prompt": "Professional / Corporate" },
-    "storyteller": { "name": "Storyteller", "prompt": "Storyteller" },
-    "viral": { "name": "Viral Hook", "prompt": "Viral / High Engagement" },
-    "luxury": { "name": "Ultra Luxury", "prompt": "Luxury / Premium" }
+    "cool": {
+      "name": "Cool",
+      "prompt": "Trendy / Cool"
+    },
+    "humorous": {
+      "name": "Humorous",
+      "prompt": "Witty / Humorous"
+    },
+    "minimal": {
+      "name": "Minimalist",
+      "prompt": "Minimal / Aesthetic"
+    },
+    "professional": {
+      "name": "Professional",
+      "prompt": "Professional / Corporate"
+    },
+    "storyteller": {
+      "name": "Storyteller",
+      "prompt": "Storyteller"
+    },
+    "viral": {
+      "name": "Viral Hook",
+      "prompt": "Viral / High Engagement"
+    },
+    "luxury": {
+      "name": "Ultra Luxury",
+      "prompt": "Luxury / Premium"
+    }
   },
   "settings": {
     "title": "Advanced Settings",
@@ -184,7 +214,36 @@
   "auth": {
     "welcomeBack": "Welcome back",
     "createAccount": "Create Account",
-    "subtitle": "Join our creative platform"
+    "subtitle": "Join our creative platform",
+    "loginSubtitle": "Sign in to continue",
+    "loginSuccess": "Signed in!",
+    "appleTokenMissing": "Couldn't get your Apple credentials.",
+    "appleFailed": "Couldn't sign in with Apple.",
+    "googleTokenMissing": "Couldn't get your Google credentials.",
+    "googlePlayUnavailable": "Google Play Services is unavailable or out of date.",
+    "googleFailed": "Couldn't sign in with Google.",
+    "warning": "Heads up",
+    "fieldsRequired": "Email and password are required.",
+    "loginFailed": "Sign-in Failed",
+    "registerFailed": "Sign-up Failed",
+    "unknownError": "An unknown error occurred.",
+    "passwordMin": "Password must be at least 6 characters.",
+    "passwordMismatch": "Passwords don't match.",
+    "email": "Email",
+    "password": "Password",
+    "passwordRepeat": "Confirm Password",
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "orContinueWith": "Or continue with",
+    "withApple": "Sign in with Apple",
+    "withGoogle": "Sign in with Google",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "tokenMissing": "Couldn't get your session details.",
+    "loginError": "Sign-in failed.",
+    "registerUserFailed": "Couldn't create your account.",
+    "registerError": "Sign-up failed.",
+    "socialError": "Social sign-in failed."
   },
   "hookLab": {
     "title": "Hook Lab",
@@ -269,5 +328,63 @@
       "ev": "Home & decor",
       "evcil": "Pets"
     }
+  },
+  "paywall": {
+    "heroTitle": "Create more,\nwait less",
+    "bestValue": "BEST VALUE",
+    "unavailable": "Currently unavailable",
+    "perMonth": "/ month",
+    "ctaGoPro": "Go Pro",
+    "ctaUnavailable": "Currently Unavailable",
+    "feature1": "Unlimited caption generation — no credits used",
+    "feature2": "All premium tones (Viral, Luxury, Storyteller)",
+    "feature3": "Generate with your own custom prompt",
+    "feature4": "Carousel mode (multiple images)",
+    "creditsSection": "Credit Top-Up",
+    "creditsSectionSub": "Buy one-time credits without a subscription.",
+    "noCreditPacks": "No credit packs available right now.",
+    "popular": "POPULAR",
+    "creditUnit": "credits",
+    "restore": "Restore Purchases",
+    "disclaimer": "Capshion Pro is a monthly auto-renewing subscription. Payment is charged to your {{account}} account at confirmation of purchase. The subscription renews automatically at the same price unless cancelled at least 24 hours before the end of the current period. You can manage and cancel your subscription in your {{store}} account settings. Credit packs are one-time purchases and never expire.",
+    "terms": "Terms of Use",
+    "privacy": "Privacy Policy",
+    "subSuccessTitle": "Congratulations!",
+    "subSuccessBody": "Your Premium membership is now active.",
+    "creditsSuccessTitle": "Success!",
+    "creditsSuccessBody": "Credits have been added to your account.",
+    "purchaseFailedTitle": "Purchase Failed",
+    "purchaseFailedBody": "The purchase couldn't be completed. Please try again.",
+    "restoreDoneTitle": "Restore Complete",
+    "restoreNothing": "No purchases to restore were found.",
+    "restoreFailedTitle": "Restore Failed",
+    "restoreFailedBody": "Your purchases couldn't be restored."
+  },
+  "onboarding": {
+    "p1Title": "WELCOME TO CAPSHION",
+    "p1Sub": "Run your social media with AI",
+    "p2Title": "FLAWLESS CONTENT",
+    "p2Sub": "Create the best captions and hashtags for your photos in seconds with AI.",
+    "p3Title": "PICK YOUR TONE, STAND OUT",
+    "p3Sub": "Cool, funny, minimal or professional — choose the tone that fits your brand and style.",
+    "readyTitle": "YOU'RE READY!",
+    "readySub": "Ready to step into the world of AI-powered captions?",
+    "start": "SIGN IN / GET STARTED"
+  },
+  "errors": {
+    "imageUpload": "Couldn't upload the image, please select it again.",
+    "serverUnreachable": "Couldn't connect to the server.",
+    "unexpected": "Unexpected response",
+    "generic": "Something went wrong",
+    "timeout": "The request timed out."
+  },
+  "notFound": {
+    "title": "This page doesn't exist.",
+    "back": "Go to home"
+  },
+  "notifications": {
+    "channelName": "Capshion Notifications",
+    "reminderTitle": "What will you post today? 📸",
+    "reminderBody": "Time to create trending captions for your new photos!"
   }
 }

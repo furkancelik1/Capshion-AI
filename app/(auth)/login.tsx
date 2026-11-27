@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import AmbientGlow from '@/components/AmbientGlow';
 import GlassPanel from '@/components/GlassPanel';
 import HapticButton from '@/components/HapticButton';
@@ -25,6 +26,7 @@ import {
 } from 'react-native';
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const { signInWithEmail, signUpWithEmail, signInWithSocial, loading } = useAuth();
   const { showToast } = useToast();
   const posthog = usePostHog();
@@ -54,7 +56,7 @@ export default function LoginScreen() {
         throw new Error(socialError);
       }
 
-      showToast('Giriş başarılı!', 'success');
+      showToast(t('auth.loginSuccess'), 'success');
       posthog?.capture('kullanici_giris_yapti', { method: provider });
       router.replace('/(tabs)');
     },
@@ -71,11 +73,11 @@ export default function LoginScreen() {
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
       });
-      if (!credential.identityToken) throw new Error('Apple identity token alınamadı.');
+      if (!credential.identityToken) throw new Error(t('auth.appleTokenMissing'));
       await handleSocialAuth('apple', credential.identityToken, credential.email || undefined);
     } catch (err: any) {
       if (err.code !== 'ERR_CANCELED') {
-        showToast(err.message || 'Apple ile giriş yapılamadı.', 'error');
+        showToast(err.message || t('auth.appleFailed'), 'error');
       }
     }
   }, [showToast, handleSocialAuth]);
@@ -106,7 +108,7 @@ export default function LoginScreen() {
       const email = response?.data?.user?.email || response?.user?.email;
 
       if (!idToken) {
-        throw new Error('Google ID token alınamadı.');
+        throw new Error(t('auth.googleTokenMissing'));
       }
 
       await handleSocialAuth('google', idToken, email);
@@ -124,18 +126,18 @@ export default function LoginScreen() {
         return;
       }
       if (err?.code === statusCodes?.PLAY_SERVICES_NOT_AVAILABLE) {
-        showToast('Google Play Hizmetleri kullanılamıyor veya güncel değil.', 'error');
+        showToast(t('auth.googlePlayUnavailable'), 'error');
         return;
       }
 
       console.error('[GoogleLogin] Giriş hatası:', err);
-      showToast(err.message || 'Google ile giriş yapılamadı.', 'error');
+      showToast(err.message || t('auth.googleFailed'), 'error');
     }
   }, [showToast, handleSocialAuth]);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Uyarı', 'E-posta ve şifre alanları zorunludur.');
+      Alert.alert(t('auth.warning'), t('auth.fieldsRequired'));
       return;
     }
 
@@ -144,7 +146,7 @@ export default function LoginScreen() {
 
     if (error) {
       console.log('[Login] ADIM 5: handleLogin error aldı, Alert basılıyor →', error);
-      Alert.alert('Giriş Başarısız', error);
+      Alert.alert(t('auth.loginFailed'), error);
       return;
     }
 
@@ -172,8 +174,8 @@ export default function LoginScreen() {
             resizeMode="contain"
           />
           <Text style={styles.brand}>CAPSHION</Text>
-          <Text style={styles.title}>Tekrar hoş geldin</Text>
-          <Text style={styles.subtitle}>Devam etmek için giriş yap</Text>
+          <Text style={styles.title}>{t('auth.welcomeBack')}</Text>
+          <Text style={styles.subtitle}>{t('auth.loginSubtitle')}</Text>
         </View>
 
         <GlassPanel style={styles.formWrap}>
@@ -186,7 +188,7 @@ export default function LoginScreen() {
             >
               <TextInput
                 style={styles.input}
-                placeholder="E-posta"
+                placeholder={t('auth.email')}
                 placeholderTextColor={GlassTheme.textPlaceholder}
                 value={email}
                 onChangeText={setEmail}
@@ -207,7 +209,7 @@ export default function LoginScreen() {
               <View style={styles.passwordRow}>
                 <TextInput
                   style={[styles.input, styles.passwordInput]}
-                  placeholder="Şifre"
+                  placeholder={t('auth.password')}
                   placeholderTextColor={GlassTheme.textPlaceholder}
                   value={password}
                   onChangeText={setPassword}
@@ -239,7 +241,7 @@ export default function LoginScreen() {
               {loading ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={styles.submitText}>Giriş Yap</Text>
+                <Text style={styles.submitText}>{t('auth.signIn')}</Text>
               )}
             </HapticButton>
           </View>
@@ -248,7 +250,7 @@ export default function LoginScreen() {
         {/* ── Social Login Divider ── */}
         <View style={styles.dividerRow}>
           <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>Veya şununla devam et</Text>
+          <Text style={styles.dividerText}>{t('auth.orContinueWith')}</Text>
           <View style={styles.dividerLine} />
         </View>
 
@@ -261,7 +263,7 @@ export default function LoginScreen() {
               activeOpacity={0.7}
             >
               <Ionicons name="logo-apple" size={20} color={GlassTheme.textMain} />
-              <Text style={styles.socialBtnText}>Apple ile Giriş Yap</Text>
+              <Text style={styles.socialBtnText}>{t('auth.withApple')}</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -270,14 +272,14 @@ export default function LoginScreen() {
             activeOpacity={0.7}
           >
             <Ionicons name="logo-google" size={20} color={GlassTheme.textMain} />
-            <Text style={styles.socialBtnText}>Google ile Giriş Yap</Text>
+            <Text style={styles.socialBtnText}>{t('auth.withGoogle')}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Hesabın yok mu?</Text>
+          <Text style={styles.footerText}>{t('auth.noAccount')}</Text>
           <HapticButton onPress={() => router.push('/(auth)/register')}>
-            <Text style={styles.footerLink}>Kaydol</Text>
+            <Text style={styles.footerLink}>{t('auth.signUp')}</Text>
           </HapticButton>
         </View>
       </ScrollView>

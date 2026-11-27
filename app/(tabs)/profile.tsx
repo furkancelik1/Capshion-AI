@@ -190,7 +190,7 @@ export default function ProfileScreen() {
       setEditingAge(false);
       setProfile((prev) => (prev ? { ...prev, age_range: ageRange } : prev));
     } catch {
-      Alert.alert("Hata", "Yaş aralığı güncellenemedi.");
+      Alert.alert(t("common.error"), t("profile.ageUpdateFailed"));
     }
   };
 
@@ -264,15 +264,15 @@ export default function ProfileScreen() {
 
       // 3. Başarılı olursa kullanıcıya bilgi ver
       Alert.alert(
-        "Başarılı!",
-        "Satın alma işlemi tamamlandı, bakiyeniz güncellendi.",
+        t("profile.purchaseDoneTitle"),
+        t("profile.purchaseDoneBody"),
       );
 
       fetchProfile({ silent: true });
     } catch (e: any) {
       // Kullanıcı kendi isteğiyle pencereyi kapatmadıysa hatayı göster
       if (!e.userCancelled) {
-        Alert.alert("Satın Alma Hatası", e.message);
+        Alert.alert(t("profile.purchaseErrorTitle"), e.message);
       }
     }
   };
@@ -323,7 +323,7 @@ export default function ProfileScreen() {
                 style={styles.upgradeGradient}
               >
                 <Ionicons name="diamond" size={16} color="#FFF" />
-                <Text style={styles.upgradeText}>Premium'a Yükselt</Text>
+                <Text style={styles.upgradeText}>{t("profile.upgrade")}</Text>
               </LinearGradient>
             </HapticButton>
           </BlurView>

@@ -2,6 +2,7 @@ import { GlassTheme } from "@/constants/LiquidGlass";
 import { BlurView } from "expo-blur";
 import { useEffect } from "react";
 import { StyleSheet, Text } from "react-native";
+import { useTranslation } from "react-i18next";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -18,6 +19,7 @@ export default function LiquidToast({
   visible: boolean;
   onHide: () => void;
 }) {
+  const { t } = useTranslation();
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(20);
 
@@ -47,7 +49,7 @@ export default function LiquidToast({
         tint="systemThinMaterialLight"
         style={styles.blur}
       >
-        <Text style={styles.text}>Kopyalandı! 📋</Text>
+        <Text style={styles.text}>{t("common.copiedTitle")}</Text>
       </BlurView>
     </Animated.View>
   );

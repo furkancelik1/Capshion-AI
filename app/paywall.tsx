@@ -16,6 +16,7 @@ import {
 import Purchases, { PACKAGE_TYPE, PRODUCT_CATEGORY, PurchasesPackage } from "react-native-purchases";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { usePostHog } from "posthog-react-native";
+import { useTranslation } from "react-i18next";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import AmbientGlow from "@/components/AmbientGlow";
 import HapticButton from "@/components/HapticButton";
@@ -42,12 +43,7 @@ const Luxe = {
 const PRIVACY_URL = "https://furkancelik1.github.io/capshion-policy/";
 const TERMS_URL = "https://furkancelik1.github.io/capshion-policy/terms.html";
 
-const PRO_FEATURES = [
-  "Sınırsız başlık üretimi — kredi harcanmaz",
-  "Tüm premium tonlar (Viral, Lüks, Hikaye Anlatıcı)",
-  "Serbest metin (custom prompt) ile üretim",
-  "Karusel modu (çoklu görsel)",
-];
+const PRO_FEATURE_KEYS = ["paywall.feature1", "paywall.feature2", "paywall.feature3", "paywall.feature4"] as const;
 
 function creditsInPackage(pkg: PurchasesPackage): number {
   const match = pkg.product.identifier.match(/\d+/);
@@ -83,6 +79,7 @@ function findMonthlySubscription(packages: PurchasesPackage[]): PurchasesPackage
 }
 
 export default function PaywallScreen() {
+  const { t } = useTranslation();
   const posthog = usePostHog();
   const { setPremiumStatus } = useAuth();
   const [subscriptionPkg, setSubscriptionPkg] = useState<PurchasesPackage | null>(null);
@@ -182,19 +179,19 @@ export default function PaywallScreen() {
       }
 
       refreshCredits();
-      Alert.alert("Tebrikler!", "Premium üyeliğiniz başarıyla aktif edildi.");
+      Alert.alert(t("paywall.subSuccessTitle"), t("paywall.subSuccessBody"));
       router.back();
     } catch (err: any) {
       if (!err?.userCancelled) {
         Alert.alert(
-          "Satın Alma Başarısız",
-          err?.message || "Satın alma işlemi tamamlanamadı, lütfen tekrar deneyin.",
+          t("paywall.purchaseFailedTitle"),
+          err?.message || t("paywall.purchaseFailedBody"),
         );
       }
     } finally {
       setPurchasingId(null);
     }
-  }, [subscriptionPkg, purchasingId, posthog, refreshCredits, setPremiumStatus]);
+  }, [subscriptionPkg, purchasingId, posthog, refreshCredits, setPremiumStatus, t]);
 
   const handleBuyCredits = useCallback(async (pkg: PurchasesPackage) => {
     if (purchasingId) return;
@@ -222,18 +219,18 @@ export default function PaywallScreen() {
       }
 
       refreshCredits();
-      Alert.alert("Başarılı!", "Krediler hesabına tanımlandı.");
+      Alert.alert(t("paywall.creditsSuccessTitle"), t("paywall.creditsSuccessBody"));
     } catch (err: any) {
       if (!err?.userCancelled) {
         Alert.alert(
-          "Satın Alma Başarısız",
-          err?.message || "Satın alma işlemi tamamlanamadı, lütfen tekrar deneyin.",
+          t("paywall.purchaseFailedTitle"),
+          err?.message || t("paywall.purchaseFailedBody"),
         );
       }
     } finally {
       setPurchasingId(null);
     }
-  }, [purchasingId, posthog, refreshCredits]);
+  }, [purchasingId, posthog, refreshCredits, t]);
 
   const handleRestore = useCallback(async () => {
     try {
@@ -245,19 +242,19 @@ export default function PaywallScreen() {
         router.back();
       } else {
         Alert.alert(
-          "Geri Yükleme Tamamlandı",
-          "Geri yüklenebilir bir satın alma bulunamadı.",
+          t("paywall.restoreDoneTitle"),
+          t("paywall.restoreNothing"),
         );
       }
     } catch (err: any) {
       Alert.alert(
-        "Geri Yükleme Başarısız",
-        err?.message || "Satın almalarınız geri yüklenemedi.",
+        t("paywall.restoreFailedTitle"),
+        err?.message || t("paywall.restoreFailedBody"),
       );
     } finally {
       setRestoring(false);
     }
-  }, [setPremiumStatus]);
+  }, [setPremiumStatus, t]);
 
   const subscriptionPriceLabel = subscriptionPkg?.product?.priceString ?? null;
   const subscriptionUnavailable = !loadingOfferings && !subscriptionPriceLabel;
@@ -286,14 +283,14 @@ export default function PaywallScreen() {
         >
           <Animated.View entering={FadeIn.duration(400)} style={styles.hero}>
             <Text style={styles.heroEyebrow}>CAPSHION PRO</Text>
-            <Text style={styles.heroTitle}>Daha fazla üretim,{"\n"}daha az beklemek</Text>
+            <Text style={styles.heroTitle}>{t("paywall.heroTitle")}</Text>
           </Animated.View>
 
           {/* ── Ana Odak: Capshion Pro Aboneliği ── */}
           <Animated.View entering={FadeInDown.duration(450).delay(60)} style={styles.proCard}>
             <View style={styles.proBadge}>
               <Ionicons name="diamond" size={13} color={Luxe.accent} />
-              <Text style={styles.proBadgeText}>EN AVANTAJLI</Text>
+              <Text style={styles.proBadgeText}>{t("paywall.bestValue")}</Text>
             </View>
 
             <Text style={styles.proTitle}>Capshion Pro</Text>
@@ -302,19 +299,19 @@ export default function PaywallScreen() {
                 <ActivityIndicator size="small" color={Luxe.textMuted} />
               ) : (
                 <Text style={styles.proPrice}>
-                  {subscriptionPriceLabel ?? "Şu anda uygun değil"}
+                  {subscriptionPriceLabel ?? t("paywall.unavailable")}
                 </Text>
               )}
               {!loadingOfferings && subscriptionPriceLabel && (
-                <Text style={styles.proPricePeriod}>/ ay</Text>
+                <Text style={styles.proPricePeriod}>{t("paywall.perMonth")}</Text>
               )}
             </View>
 
             <View style={styles.proFeatureList}>
-              {PRO_FEATURES.map((feature) => (
-                <View key={feature} style={styles.proFeatureRow}>
+              {PRO_FEATURE_KEYS.map((key) => (
+                <View key={key} style={styles.proFeatureRow}>
                   <Ionicons name="checkmark-circle" size={16} color={Luxe.accent} />
-                  <Text style={styles.proFeatureText}>{feature}</Text>
+                  <Text style={styles.proFeatureText}>{t(key)}</Text>
                 </View>
               ))}
             </View>
@@ -337,7 +334,7 @@ export default function PaywallScreen() {
                   <>
                     <Ionicons name="sparkles" size={17} color="#FFFFFF" />
                     <Text style={styles.proButtonText}>
-                      {subscriptionUnavailable ? "Şu Anda Kullanılamıyor" : "Pro'ya Geç"}
+                      {subscriptionUnavailable ? t("paywall.ctaUnavailable") : t("paywall.ctaGoPro")}
                     </Text>
                   </>
                 )}
@@ -346,9 +343,9 @@ export default function PaywallScreen() {
           </Animated.View>
 
           {/* ── Kredi Takviyesi ── */}
-          <Text style={styles.sectionLabel}>Kredi Takviyesi</Text>
+          <Text style={styles.sectionLabel}>{t("paywall.creditsSection")}</Text>
           <Text style={styles.sectionSubLabel}>
-            Abonelik olmadan tek seferlik kredi satın al.
+            {t("paywall.creditsSectionSub")}
           </Text>
 
           {loadingOfferings ? (
@@ -357,7 +354,7 @@ export default function PaywallScreen() {
             </View>
           ) : creditPkgs.length === 0 ? (
             <View style={styles.loadingBox}>
-              <Text style={styles.loadingText}>Şu anda kredi paketi bulunamadı.</Text>
+              <Text style={styles.loadingText}>{t("paywall.noCreditPacks")}</Text>
             </View>
           ) : (
             <View style={styles.creditRow}>
@@ -383,7 +380,7 @@ export default function PaywallScreen() {
                     >
                       {isPopular && (
                         <View style={styles.creditPopularTag}>
-                          <Text style={styles.creditPopularTagText}>POPÜLER</Text>
+                          <Text style={styles.creditPopularTagText}>{t("paywall.popular")}</Text>
                         </View>
                       )}
                       {isBusy ? (
@@ -391,7 +388,7 @@ export default function PaywallScreen() {
                       ) : (
                         <>
                           <Text style={styles.creditCardAmount}>{credits}</Text>
-                          <Text style={styles.creditCardUnit}>kredi</Text>
+                          <Text style={styles.creditCardUnit}>{t("paywall.creditUnit")}</Text>
                           <View style={styles.creditCardDivider} />
                           <Text style={styles.creditCardPrice}>
                             {pkg.product?.priceString ?? "—"}
@@ -414,26 +411,24 @@ export default function PaywallScreen() {
             {restoring ? (
               <ActivityIndicator size="small" color={Luxe.textMuted} />
             ) : (
-              <Text style={styles.restoreButtonText}>Satın Almayı Geri Yükle</Text>
+              <Text style={styles.restoreButtonText}>{t("paywall.restore")}</Text>
             )}
           </HapticButton>
 
           <Text style={styles.disclaimer}>
-            Capshion Pro aylık otomatik yenilenen bir aboneliktir. Ücret, satın alma
-            onayında {Platform.OS === "ios" ? "Apple ID" : "Google Play"} hesabından tahsil edilir.
-            Abonelik, dönem bitmeden en az 24 saat önce iptal edilmezse aynı fiyatla
-            otomatik yenilenir. Aboneliğini {Platform.OS === "ios" ? "App Store" : "Google Play"} hesap
-            ayarlarından yönetebilir ve iptal edebilirsin. Kredi paketleri tek seferliktir
-            ve süresi dolmaz.
+            {t("paywall.disclaimer", {
+              account: Platform.OS === "ios" ? "Apple ID" : "Google Play",
+              store: Platform.OS === "ios" ? "App Store" : "Google Play",
+            })}
           </Text>
 
           <View style={styles.legalRow}>
             <TouchableOpacity onPress={() => Linking.openURL(TERMS_URL)} hitSlop={8}>
-              <Text style={styles.legalLink}>Kullanım Koşulları</Text>
+              <Text style={styles.legalLink}>{t("paywall.terms")}</Text>
             </TouchableOpacity>
             <Text style={styles.legalDot}>·</Text>
             <TouchableOpacity onPress={() => Linking.openURL(PRIVACY_URL)} hitSlop={8}>
-              <Text style={styles.legalLink}>Gizlilik Politikası</Text>
+              <Text style={styles.legalLink}>{t("paywall.privacy")}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

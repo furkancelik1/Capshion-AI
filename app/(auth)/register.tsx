@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -26,6 +27,7 @@ import { GlassTheme } from '@/constants/LiquidGlass';
 import { api } from '@/services/api';
 
 export default function RegisterScreen() {
+  const { t } = useTranslation();
   const { signInWithEmail, signUpWithEmail, signInWithSocial } = useAuth();
   const { showToast } = useToast();
   const [email, setEmail] = useState('');
@@ -57,7 +59,7 @@ export default function RegisterScreen() {
         throw new Error(socialError);
       }
 
-      showToast('Giriş başarılı!', 'success');
+      showToast(t('auth.loginSuccess'), 'success');
       router.replace('/(tabs)');
     },
     [signInWithSocial, showToast],
@@ -73,11 +75,11 @@ export default function RegisterScreen() {
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
       });
-      if (!credential.identityToken) throw new Error('Apple identity token alınamadı.');
+      if (!credential.identityToken) throw new Error(t('auth.appleTokenMissing'));
       await handleSocialAuth('apple', credential.identityToken, credential.email || undefined);
     } catch (err: any) {
       if (err.code !== 'ERR_CANCELED') {
-        showToast(err.message || 'Apple ile giriş yapılamadı.', 'error');
+        showToast(err.message || t('auth.appleFailed'), 'error');
       }
     }
   }, [showToast, handleSocialAuth]);
@@ -106,7 +108,7 @@ export default function RegisterScreen() {
       const email = response?.data?.user?.email || response?.user?.email;
 
       if (!idToken) {
-        throw new Error('Google ID token alınamadı.');
+        throw new Error(t('auth.googleTokenMissing'));
       }
 
       await handleSocialAuth('google', idToken, email);
@@ -124,23 +126,23 @@ export default function RegisterScreen() {
         return;
       }
       if (err?.code === statusCodes?.PLAY_SERVICES_NOT_AVAILABLE) {
-        showToast('Google Play Hizmetleri kullanılamıyor veya güncel değil.', 'error');
+        showToast(t('auth.googlePlayUnavailable'), 'error');
         return;
       }
 
       console.error('[GoogleLogin] Giriş hatası:', err);
-      showToast(err.message || 'Google ile giriş yapılamadı.', 'error');
+      showToast(err.message || t('auth.googleFailed'), 'error');
     }
   }, [showToast, handleSocialAuth]);
 
   const handleRegister = async () => {
     if (password.length < 6) {
-      Alert.alert('Uyarı', 'Şifre en az 6 karakter olmalıdır.');
+      Alert.alert(t('auth.warning'), t('auth.passwordMin'));
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Uyarı', 'Şifreler eşleşmiyor.');
+      Alert.alert(t('auth.warning'), t('auth.passwordMismatch'));
       return;
     }
 
@@ -150,13 +152,13 @@ export default function RegisterScreen() {
       const { error } = await signUpWithEmail(email.trim(), password, ageRange);
 
       if (error) {
-        Alert.alert('Kayıt Başarısız', error);
+        Alert.alert(t('auth.registerFailed'), error);
         return;
       }
 
       router.replace('/(tabs)');
     } catch (err: any) {
-      Alert.alert('Kayıt Başarısız', err.message || 'Bilinmeyen bir hata oluştu.');
+      Alert.alert(t('auth.registerFailed'), err.message || t('auth.unknownError'));
     } finally {
       setSubmitting(false);
     }
@@ -181,8 +183,8 @@ export default function RegisterScreen() {
             resizeMode="contain"
           />
           <Text style={styles.brand}>CAPSHION</Text>
-          <Text style={styles.title}>Hesap Oluştur</Text>
-          <Text style={styles.subtitle}>Yaratıcı platformumuza katıl</Text>
+          <Text style={styles.title}>{t('auth.createAccount')}</Text>
+          <Text style={styles.subtitle}>{t('auth.subtitle')}</Text>
         </View>
 
         <GlassPanel style={styles.formWrap}>
@@ -195,7 +197,7 @@ export default function RegisterScreen() {
             >
               <TextInput
                 style={styles.input}
-                placeholder="E-posta"
+                placeholder={t('auth.email')}
                 placeholderTextColor={GlassTheme.textPlaceholder}
                 value={email}
                 onChangeText={setEmail}
@@ -216,7 +218,7 @@ export default function RegisterScreen() {
               <View style={styles.passwordRow}>
                 <TextInput
                   style={[styles.input, styles.passwordInput]}
-                  placeholder="Şifre"
+                  placeholder={t('auth.password')}
                   placeholderTextColor={GlassTheme.textPlaceholder}
                   value={password}
                   onChangeText={setPassword}
@@ -248,7 +250,7 @@ export default function RegisterScreen() {
               <View style={styles.passwordRow}>
                 <TextInput
                   style={[styles.input, styles.passwordInput]}
-                  placeholder="Şifre Tekrar"
+                  placeholder={t('auth.passwordRepeat')}
                   placeholderTextColor={GlassTheme.textPlaceholder}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
@@ -282,7 +284,7 @@ export default function RegisterScreen() {
               {submitting ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={styles.submitText}>Kaydol</Text>
+                <Text style={styles.submitText}>{t('auth.signUp')}</Text>
               )}
             </HapticButton>
           </View>
@@ -291,7 +293,7 @@ export default function RegisterScreen() {
         {/* ── Social Login Divider ── */}
         <View style={styles.dividerRow}>
           <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>Veya şununla devam et</Text>
+          <Text style={styles.dividerText}>{t('auth.orContinueWith')}</Text>
           <View style={styles.dividerLine} />
         </View>
 
@@ -304,7 +306,7 @@ export default function RegisterScreen() {
               activeOpacity={0.7}
             >
               <Ionicons name="logo-apple" size={20} color={GlassTheme.textMain} />
-              <Text style={styles.socialBtnText}>Apple ile Giriş Yap</Text>
+              <Text style={styles.socialBtnText}>{t('auth.withApple')}</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -313,14 +315,14 @@ export default function RegisterScreen() {
             activeOpacity={0.7}
           >
             <Ionicons name="logo-google" size={20} color={GlassTheme.textMain} />
-            <Text style={styles.socialBtnText}>Google ile Giriş Yap</Text>
+            <Text style={styles.socialBtnText}>{t('auth.withGoogle')}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Zaten hesabın var mı?</Text>
+          <Text style={styles.footerText}>{t('auth.haveAccount')}</Text>
           <HapticButton onPress={() => router.push('/(auth)/login')}>
-            <Text style={styles.footerLink}>Giriş Yap</Text>
+            <Text style={styles.footerLink}>{t('auth.signIn')}</Text>
           </HapticButton>
         </View>
       </ScrollView>

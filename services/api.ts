@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import i18next from 'i18next';
 
 const DEFAULT_HOST = Platform.select({
   android: '10.0.2.2',
@@ -120,6 +121,7 @@ async function request<T>(
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    'Accept-Language': i18next.language || 'en',
   };
 
   if (_token) {
@@ -153,7 +155,7 @@ async function request<T>(
     try {
       body = text ? JSON.parse(text) : {};
     } catch {
-      throw new ApiError(`Beklenmeyen yanıt: ${text.slice(0, 100)}`, res.status);
+      throw new ApiError(`${i18next.t('errors.unexpected')}: ${text.slice(0, 100)}`, res.status);
     }
 
     if (endpoint === '/auth/login') {
@@ -161,7 +163,7 @@ async function request<T>(
     }
 
     if (!res.ok) {
-      throw new ApiError(body?.error || body?.message || 'Bir hata oluştu', res.status);
+      throw new ApiError(body?.error || body?.message || i18next.t('errors.generic'), res.status);
     }
 
     return body as T;
@@ -169,9 +171,9 @@ async function request<T>(
     clearTimeout(timeout);
     if (err instanceof ApiError) throw err;
     if ((err as Error)?.name === 'AbortError') {
-      throw new ApiError('İstek zaman aşımına uğradı.', 408);
+      throw new ApiError(i18next.t('errors.timeout'), 408);
     }
-    throw new ApiError('Sunucuya bağlanılamadı.', 0);
+    throw new ApiError(i18next.t('errors.serverUnreachable'), 0);
   }
 }
 
@@ -180,6 +182,7 @@ async function requestMultipart<T>(endpoint: string, formData: FormData): Promis
 
   const headers: Record<string, string> = {
     Accept: 'application/json',
+    'Accept-Language': i18next.language || 'en',
   };
 
   const token = getToken();
@@ -205,11 +208,11 @@ async function requestMultipart<T>(endpoint: string, formData: FormData): Promis
     try {
       body = JSON.parse(text);
     } catch {
-      throw new ApiError(`Beklenmeyen yanıt: ${text.slice(0, 100)}`, res.status);
+      throw new ApiError(`${i18next.t('errors.unexpected')}: ${text.slice(0, 100)}`, res.status);
     }
 
     if (!res.ok) {
-      throw new ApiError(body?.error || body?.message || 'Bir hata oluştu', res.status);
+      throw new ApiError(body?.error || body?.message || i18next.t('errors.generic'), res.status);
     }
 
     return body as T;
@@ -217,9 +220,9 @@ async function requestMultipart<T>(endpoint: string, formData: FormData): Promis
     clearTimeout(timeout);
     if (err instanceof ApiError) throw err;
     if ((err as Error)?.name === 'AbortError') {
-      throw new ApiError('İstek zaman aşımına uğradı.', 408);
+      throw new ApiError(i18next.t('errors.timeout'), 408);
     }
-    throw new ApiError('Sunucuya bağlanılamadı.', 0);
+    throw new ApiError(i18next.t('errors.serverUnreachable'), 0);
   }
 }
 

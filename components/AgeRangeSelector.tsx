@@ -1,5 +1,6 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GlassTheme } from "../constants/LiquidGlass";
+import { useTranslation } from "react-i18next";
 
 const GOLD = "#D4AF37";
 const AGE_RANGES = ["18-24", "25-34", "35-44", "45+"] as const;
@@ -13,9 +14,10 @@ export default function AgeRangeSelector({
   value,
   onChange,
 }: AgeRangeSelectorProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.wrap}>
-      <Text style={styles.label}>Yaş Aralığını Seç</Text>
+      <Text style={styles.label}>{t("profile.selectAgeRange")}</Text>
       <View style={styles.row}>
         {AGE_RANGES.map((range) => {
           const selected = value === range;
