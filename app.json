@@ -14,7 +14,7 @@
       "backgroundColor": "#F2F2F7",
       "bundleIdentifier": "com.furkan.capshion",
       "googleServicesFile": "./GoogleService-Info.plist",
-      "buildNumber": "10",
+      "buildNumber": "11",
       "infoPlist": {
         "NSCameraUsageDescription": "Kamera, açıklama üretmek istediğin fotoğrafı çekebilmen için kullanılır.",
         "NSPhotoLibraryUsageDescription": "Fotoğraf arşivin, açıklama üretmek istediğin fotoğrafları seçebilmen için kullanılır.",
