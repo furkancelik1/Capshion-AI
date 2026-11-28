@@ -14,7 +14,7 @@
       "backgroundColor": "#F2F2F7",
       "bundleIdentifier": "com.furkan.capshion",
       "googleServicesFile": "./GoogleService-Info.plist",
-      "buildNumber": "12",
+      "buildNumber": "13",
       "infoPlist": {
         "NSCameraUsageDescription": "Capshion uses the camera so you can take the photo you want captions for.",
         "NSPhotoLibraryUsageDescription": "Capshion uses your photo library so you can pick the photos you want captions for.",
