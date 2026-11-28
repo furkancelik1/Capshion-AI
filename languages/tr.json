@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "Kamera, açıklama üretmek istediğin fotoğrafı çekebilmen için kullanılır.",
+    "NSPhotoLibraryUsageDescription": "Fotoğraf arşivin, açıklama üretmek istediğin fotoğrafları seçebilmen için kullanılır.",
+    "NSUserTrackingUsageDescription": "Bu izin yalnızca sana daha alakalı reklamlar göstermek için kullanılır. İzin vermesen de uygulamanın tüm özellikleri çalışır."
+  }
+}

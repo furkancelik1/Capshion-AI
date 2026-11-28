@@ -4,7 +4,7 @@
     "slug": "capshion",
     "owner": "furkan1010",
     "sdkVersion": "57.0.0",
-    "version": "1.0.10",
+    "version": "1.0.11",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "capshion",
@@ -16,9 +16,10 @@
       "googleServicesFile": "./GoogleService-Info.plist",
       "buildNumber": "12",
       "infoPlist": {
-        "NSCameraUsageDescription": "Kamera, açıklama üretmek istediğin fotoğrafı çekebilmen için kullanılır.",
-        "NSPhotoLibraryUsageDescription": "Fotoğraf arşivin, açıklama üretmek istediğin fotoğrafları seçebilmen için kullanılır.",
-        "ITSAppUsesNonExemptEncryption": false
+        "NSCameraUsageDescription": "Capshion uses the camera so you can take the photo you want captions for.",
+        "NSPhotoLibraryUsageDescription": "Capshion uses your photo library so you can pick the photos you want captions for.",
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleAllowMixedLocalizations": true
       },
       "usesAppleSignIn": true
     },
@@ -82,7 +83,7 @@
           "androidAppId": "ca-app-pub-6029770395883794~1220859464",
           "iosAppId": "ca-app-pub-6029770395883794~9896128669",
           "delayAppMeasurementInit": true,
-          "userTrackingUsageDescription": "Bu izin yalnızca sana daha alakalı reklamlar göstermek için kullanılır. İzin vermesen de uygulamanın tüm özellikleri çalışır."
+          "userTrackingUsageDescription": "This permission is only used to show you more relevant ads. All features work even if you don't allow it."
         }
       ],
       "expo-image",
@@ -91,7 +92,7 @@
       [
         "expo-tracking-transparency",
         {
-          "userTrackingPermission": "Bu izin yalnızca sana daha alakalı reklamlar göstermek için kullanılır. İzin vermesen de uygulamanın tüm özellikleri çalışır."
+          "userTrackingPermission": "This permission is only used to show you more relevant ads. All features work even if you don't allow it."
         }
       ],
       "@react-native-firebase/app",
@@ -122,6 +123,10 @@
       "eas": {
         "projectId": "1cf6210e-3a3c-4895-9850-8933aa9458c4"
       }
+    },
+    "locales": {
+      "en": "./languages/en.json",
+      "tr": "./languages/tr.json"
     }
   }
 }
